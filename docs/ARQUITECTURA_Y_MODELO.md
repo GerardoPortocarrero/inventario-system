@@ -1,63 +1,71 @@
-# Arquitectura y Modelo de Datos del Sistema de Inventario
+# Arquitectura y Diseño del Sistema de Inventario (Versión 1.0)
 
 *Última actualización: 2024-02-06*
 
 ## 1. Introducción
-Este documento formaliza el diseño conceptual del Sistema de Inventario, basado en los requerimientos y aclaraciones proporcionadas. El objetivo es establecer una base sólida y compartida antes de la implementación.
+Este documento formaliza el diseño conceptual y arquitectónico del Sistema de Inventario. El objetivo es establecer una base sólida y compartida para la implementación, reflejando todos los requisitos y decisiones tomadas.
 
-## 2. Arquitectura Conceptual
-Se mantiene la arquitectura de tres capas:
-- **Capa de Presentación:** Interfaces web y/o móvil para los distintos roles.
-- **Capa de Lógica de Negocio:** Intermediario que centraliza todas las reglas y es el único componente con acceso a la 'Capa de Datos'.
-- **Capa de Datos:** El sistema de persistencia de datos.
+## 2. Lógica de Negocio y Cantidades Clave
+El sistema opera con base en cantidades físicas y calculadas. La lógica definitiva es:
 
-## 3. Definiciones de Cantidades Principales (Lógica del Negocio)
-El sistema opera con base en varias cantidades, algunas físicas y otras calculadas en tiempo real. Esta es la lógica definitiva:
-
-*   **`ALMACEN`**: Representa el conteo físico de productos dentro de las instalaciones del almacén. Es una cantidad que solo se modifica por movimientos físicos:
-    *   **Aumenta** con la recepción de `CONSIGNACION`.
-    *   **Aumenta** con la recepción de `RECHAZO` que vuelve de distribución.
-    *   **Disminuye** cuando se cargan los camiones para `TRANSITO`.
-
-*   **`CONSIGNACION`**: Representa los productos que han llegado en un tráiler pero aún no han sido descargados e ingresados al `ALMACEN`.
-
-*   **`PREVENTA` (Órdenes de Pedido)**: Representa la suma de todos los productos en órdenes de pedido creadas por los preventistas que aún están pendientes. Esta cantidad se usa para el cálculo del `STOCK` y **no afecta al `ALMACEN` físico**.
-
-*   **`TRANSITO` (Calculado por Reconciliación)**: Representa los productos que están fuera del almacén para distribución. Se calcula en un momento específico (ej. en la madrugada) mediante la fórmula:
-    `TRANSITO = (Conteo de ALMACEN antes de cargar camiones) - (Conteo de ALMACEN después de cargar camiones)`
-
-*   **`STOCK` (Calculado en Tiempo Real)**: Este es el valor que ven los preventistas para saber qué pueden vender. Es un valor **calculado**, no una copia. Su fórmula, que se recalcula constantemente, es:
+*   **`ALMACEN`**: Conteo físico de productos en el almacén. Se modifica solo por movimientos físicos (recepción de `CONSIGNACION` y `RECHAZO`, y salida para `TRANSITO`).
+*   **`CONSIGNACION`**: Productos en tráileres que han llegado pero no han sido descargados al `ALMACEN`.
+*   **`PREVENTA`**: Suma de todos los productos en órdenes de pedido pendientes.
+*   **`TRANSITO` (Calculado)**: Productos en distribución, calculados por la diferencia de conteos del `ALMACEN` antes y después de cargar los camiones.
+*   **`STOCK` (Calculado)**: El valor para preventistas. Se calcula en tiempo real con la fórmula:
     **`STOCK = ALMACEN + CONSIGNACION - PREVENTA`**
 
-## 4. Jerarquía del Stock Físico
-La estructura física del inventario es estrictamente jerárquica:
-`PALET` > `CAMA` > `CAJA FISICA` > `PRODUCTO UNITARIO`
+## 3. Requisitos Funcionales (RF)
+*   **RF-1: Movimientos Físicos:** Registrar movimientos que afectan `ALMACEN` (`CONSIGNACION`, `RECHAZO`, `TRANSITO`).
+*   **RF-2: Jerarquía de Stock:** Agrupar `productos unitarios`, `cajas`, `camas` y `palets`.
+*   **RF-3: Gestión de Consignación:** Registrar productos en estado de `CONSIGNACION`.
+*   **RF-4: Cálculo de STOCK:** Calcular y mostrar el `STOCK` a preventistas con la fórmula oficial.
+*   **RF-5: Órdenes de Pedido:** Permitir a los preventistas crear órdenes de pedido.
+*   **RF-6: Cálculo de Tránsito:** Permitir el cálculo de `TRANSITO` por reconciliación de conteos.
+*   **RF-7: Trazabilidad por Códigos:** Asociar códigos (QR/Barras) a unidades de stock.
+*   **RF-8: Exportación de Datos:** Generar archivos para sistemas externos.
 
-## 5. Modelo de Datos Refinado (Conceptual)
-Las entidades principales para soportar esta lógica son:
+## 4. Requisitos No Funcionales (RNF)
+*   **Rendimiento:** Las consultas deben ser en tiempo real, asumiendo que la latencia principal es la conexión a internet del cliente.
+*   **Escalabilidad:** El sistema debe soportar inicialmente:
+    *   ~40 `Preventistas` activos.
+    *   100+ productos distintos.
+    *   ~2000 órdenes de pedido diarias (50 por preventista).
+*   **Disponibilidad:** El sistema debe operar 24/7.
+*   **Conectividad:** No se requiere modo offline. El sistema depende de una conexión a internet activa.
 
-#### Entidad: `Producto`
-- `ID_Producto`, `SKU`, `Nombre`, `Descripción`
+## 5. Pila de Tecnología
+*   **Plataforma General:** **Suite de Firebase**.
+*   **Base de Datos:** **Firestore (NoSQL)**.
+*   **Lógica de Backend:** **Firebase Cloud Functions**.
+*   **Autenticación:** **Firebase Authentication**.
+*   **Capa de Presentación (Frontend):** **React** con **Vite** como empaquetador.
+*   **UI Framework:** **Bootstrap**.
 
-#### Entidad: `UnidadDeStock`
-- Representa una unidad física.
-- `ID_Unidad`, `ID_Producto`, `ID_Padre`
-- `Tipo` (Enum: `PALET`, `CAMA`, `CAJA_FISICA`, `PRODUCTO_UNITARIO`)
-- `EstadoFisico` (Enum: `EN_CONSIGNACION`, `EN_ALMACEN`, `EN_TRANSITO`, `EN_RECHAZO`)
+## 6. Seguridad y Roles
+Se definen los siguientes roles de usuario:
+*   **`Administrador`**: Control total del sistema. CRUD (Crear, Leer, Actualizar, Borrar) sobre configuraciones, usuarios y catálogo de productos.
+*   **`Supervisor`**: Rol de solo lectura para monitorear el rendimiento. Puede ver el avance (órdenes de pedido, etc.) de todos los `Preventistas`. No puede modificar nada.
+*   **`Preventista`**: Rol operacional. Su función principal es crear y gestionar sus propias órdenes de pedido. Solo puede ver su propia información.
+*   **`Almacenero`**: Rol de operaciones físicas. Es el único, junto al Administrador, que puede modificar las cantidades del `ALMACEN` físico (ej. recibir `CONSIGNACION`, `RECHAZO`, y ejecutar la reconciliación de `TRANSITO`).
 
-#### Entidad: `OrdenDePedido`
-- `ID_Orden`, `ID_Usuario`, `Fecha_Creacion`, `Estado_Orden`
+## 7. Modelo de Datos (NoSQL - Firestore)
+El modelo relacional se adapta a una estructura NoSQL optimizada para Firestore:
 
-#### Entidad: `DetalleOrden`
-- `ID_Detalle`, `ID_Orden`, `ID_Producto`, `Cantidad`
+*   **Colección: `productos`**
+    *   Documento por cada producto (`ID_Producto`).
+    *   Campos: `sku`, `nombre`, `descripcion`, etc.
 
-## 6. Requisitos Funcionales (Versión Final)
+*   **Colección: `unidadesDeStock`**
+    *   Documento por cada unidad física (`ID_Unidad`).
+    *   Campos: `productoId`, `padreId` (para jerarquía), `tipo`, `estadoFisico` (`EN_ALMACEN`, etc.), `cantidadActual`.
+    *   Esta colección representará el `ALMACEN`, `CONSIGNACION`, etc.
 
-*   **RF-1: Registro de Movimientos Físicos:** El sistema debe permitir registrar los movimientos físicos que afectan al `ALMACEN`: recepción de `CONSIGNACION`, recepción de `RECHAZO` y carga para `TRANSITO`.
-*   **RF-2: Jerarquía de Stock:** El sistema debe permitir agrupar `productos unitarios` en `cajas fisicas`, `camas` y `palets`.
-*   **RF-3: Gestión de Consignación:** El sistema debe poder registrar los productos que se encuentran en estado de `CONSIGNACION`.
-*   **RF-4: Cálculo de STOCK para Preventa:** El sistema debe calcular y mostrar a los preventistas el `STOCK` disponible en tiempo real usando la fórmula: `STOCK = ALMACEN + CONSIGNACION - PREVENTA`.
-*   **RF-5: Creación de Órdenes de Pedido (Preventa):** Los preventistas deben poder crear órdenes de pedido, que se usarán para el cálculo de `PREVENTA`.
-*   **RF-6: Cálculo de Tránsito por Reconciliación:** El sistema debe proveer una interfaz o proceso para registrar los conteos del `ALMACEN` antes y después de la carga, para así calcular el `TRANSITO`.
-*   **RF-7: Trazabilidad por Códigos:** El sistema debe poder asociar un código (QR/Barras) a las unidades de stock.
-*   **RF-8: Exportación de Datos:** El sistema debe ofrecer una función para descargar datos para sistemas externos.
+*   **Colección: `ordenes`**
+    *   Documento por cada orden de pedido (`ID_Orden`).
+    *   Campos: `preventistaId`, `fechaCreacion`, `estadoOrden`.
+    *   **Subcolección `detalles`**: Dentro de cada orden, una subcolección con los productos y cantidades de esa orden. Este anidamiento es una práctica común y eficiente en NoSQL.
+
+*   **Colección: `usuarios`**
+    *   Documento por cada usuario (`ID_Usuario`).
+    *   Campos: `nombre`, `email`, y muy importante, `rol` (`Administrador`, `Supervisor`, etc.).
