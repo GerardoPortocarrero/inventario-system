@@ -1,71 +1,51 @@
-# Arquitectura y Diseño del Sistema de Inventario (Versión 1.0)
+# Arquitectura y Diseño del Sistema de Inventario (Versión 2.0)
 
-*Última actualización: 2024-02-06*
+*Última actualización: martes, 10 de febrero de 2026*
 
 ## 1. Introducción
-Este documento formaliza el diseño conceptual y arquitectónico del Sistema de Inventario. El objetivo es establecer una base sólida y compartida para la implementación, reflejando todos los requisitos y decisiones tomadas.
+Este documento formaliza el diseño conceptual y arquitectónico del Sistema de Inventario, reflejando la lógica de negocio y la pila tecnológica definitivas.
 
 ## 2. Lógica de Negocio y Cantidades Clave
-El sistema opera con base en cantidades físicas y calculadas. La lógica definitiva es:
+El sistema opera con un modelo denormalizado para optimizar el rendimiento de las operaciones de venta.
 
-*   **`ALMACEN`**: Conteo físico de productos en el almacén. Se modifica solo por movimientos físicos (recepción de `CONSIGNACION` y `RECHAZO`, y salida para `TRANSITO`).
-*   **`CONSIGNACION`**: Productos en tráileres que han llegado pero no han sido descargados al `ALMACEN`.
-*   **`PREVENTA`**: Suma de todos los productos en órdenes de pedido pendientes.
-*   **`TRANSITO` (Calculado)**: Productos en distribución, calculados por la diferencia de conteos del `ALMACEN` antes y después de cargar los camiones.
-*   **`STOCK` (Calculado)**: El valor para preventistas. Se calcula en tiempo real con la fórmula:
-    **`STOCK = ALMACEN + CONSIGNACION - PREVENTA`**
+*   **`ALMACEN` (Colección):** Representa el inventario físico real. Solo se modifica por movimientos físicos gestionados por el `Almacenero`.
+*   **`STOCK` (Colección):** Representa el inventario virtual para la venta. Es la fuente de verdad para los `Preventistas`.
+*   **Ciclo de Vida:**
+    1.  **Entrada de Mercancía (Consignación/Rechazo):** Un `Almacenero` procesa la entrada, y la cantidad se suma tanto a `ALMACEN` como a `STOCK`.
+    2.  **Venta:** Un `Preventista` crea una `orden`, y la cantidad se descuenta de `STOCK`.
+    3.  **Salida a Distribución (Tránsito):** El `Almacenero` actualiza `ALMACEN` tras la carga. `TRANSITO` se deriva de la diferencia en `ALMACEN` antes y después de esta acción.
 
 ## 3. Requisitos Funcionales (RF)
-*   **RF-1: Movimientos Físicos:** Registrar movimientos que afectan `ALMACEN` (`CONSIGNACION`, `RECHAZO`, `TRANSITO`).
-*   **RF-2: Jerarquía de Stock:** Agrupar `productos unitarios`, `cajas`, `camas` y `palets`.
-*   **RF-3: Gestión de Consignación:** Registrar productos en estado de `CONSIGNACION`.
-*   **RF-4: Cálculo de STOCK:** Calcular y mostrar el `STOCK` a preventistas con la fórmula oficial.
-*   **RF-5: Órdenes de Pedido:** Permitir a los preventistas crear órdenes de pedido.
-*   **RF-6: Cálculo de Tránsito:** Permitir el cálculo de `TRANSITO` por reconciliación de conteos.
-*   **RF-7: Trazabilidad por Códigos:** Asociar códigos (QR/Barras) a unidades de stock.
-*   **RF-8: Exportación de Datos:** Generar archivos para sistemas externos.
+*   **RF-1: Movimientos Físicos:** Registrar movimientos que afectan la colección `almacen`.
+*   **RF-4: Visualización de STOCK:** Mostrar a los preventistas el `STOCK` leyendo directamente de la colección `stock`.
+*   **RF-5: Órdenes de Pedido:** La creación de una orden descuenta de forma transaccional las cantidades de la colección `stock`.
+*   **RF-6: Registro de Tránsito:** Provee interfaz para que el `Almacenero` actualice `ALMACEN` y el sistema derive `TRANSITO`.
 
 ## 4. Requisitos No Funcionales (RNF)
-*   **Rendimiento:** Las consultas deben ser en tiempo real, asumiendo que la latencia principal es la conexión a internet del cliente.
-*   **Escalabilidad:** El sistema debe soportar inicialmente:
-    *   ~40 `Preventistas` activos.
-    *   100+ productos distintos.
-    *   ~2000 órdenes de pedido diarias (50 por preventista).
-*   **Disponibilidad:** El sistema debe operar 24/7.
-*   **Conectividad:** No se requiere modo offline. El sistema depende de una conexión a internet activa.
+*   **Rendimiento:** Las consultas de `STOCK` y la creación de órdenes de pedido deben ser en **tiempo real**. Con el modelo denormalizado, esto se logra con lecturas directas a la colección `stock`.
+*   **Escalabilidad:** El sistema debe estar diseñado para soportar la carga de trabajo inicial y permitir un crecimiento futuro.
+    *   **Carga inicial estimada:**
+        *   ~40 usuarios `Preventistas` concurrentes.
+        *   100+ productos distintos en el catálogo.
+        *   ~2000 órdenes de pedido diarias.
+*   **Disponibilidad:** El sistema debe estar operativo **24/7**. Se planificarán mantenimientos, si son necesarios, en horarios de bajo impacto.
+*   **Conectividad:** El sistema requiere una conexión a internet activa para todas sus funciones. **No se requiere un modo offline**.
+*   **Usabilidad:** La interfaz del frontend debe ser ligera, rápida y fácil de usar.
 
 ## 5. Pila de Tecnología
 *   **Plataforma General:** **Suite de Firebase**.
-*   **Base de Datos:** **Firestore (NoSQL)**.
-*   **Lógica de Backend:** **Firebase Cloud Functions**.
-*   **Autenticación:** **Firebase Authentication**.
-*   **Capa de Presentación (Frontend):** **React** con **Vite** como empaquetador.
-*   **UI Framework:** **Bootstrap**.
+*   **Base de Datos y Backend de Datos:** **Firestore (NoSQL)**.
+*   **Seguridad:** **Reglas de Seguridad de Firestore** y **Firebase Authentication**.
+*   **Lógica de Negocio y Frontend:** **React** con **Vite**.
+    *(Nota: No se utilizan Cloud Functions. La lógica de negocio reside en el cliente y en las Reglas de Seguridad de Firestore).*
 
 ## 6. Seguridad y Roles
-Se definen los siguientes roles de usuario:
-*   **`Administrador`**: Control total del sistema. CRUD (Crear, Leer, Actualizar, Borrar) sobre configuraciones, usuarios y catálogo de productos.
-*   **`Supervisor`**: Rol de solo lectura para monitorear el rendimiento. Puede ver el avance (órdenes de pedido, etc.) de todos los `Preventistas`. No puede modificar nada.
-*   **`Preventista`**: Rol operacional. Su función principal es crear y gestionar sus propias órdenes de pedido. Solo puede ver su propia información.
-*   **`Almacenero`**: Rol de operaciones físicas. Es el único, junto al Administrador, que puede modificar las cantidades del `ALMACEN` físico (ej. recibir `CONSIGNACION`, `RECHAZO`, y ejecutar la reconciliación de `TRANSITO`).
+*   **`Preventista`**: Puede crear `ordenes` y actualizar (descontar) `stock`. No puede ver `ordenes` de otros.
+*   **`Almacenero`**: Puede modificar `almacen` y `stock` para reflejar movimientos físicos.
 
 ## 7. Modelo de Datos (NoSQL - Firestore)
-El modelo relacional se adapta a una estructura NoSQL optimizada para Firestore:
-
-*   **Colección: `productos`**
-    *   Documento por cada producto (`ID_Producto`).
-    *   Campos: `sku`, `nombre`, `descripcion`, etc.
-
-*   **Colección: `unidadesDeStock`**
-    *   Documento por cada unidad física (`ID_Unidad`).
-    *   Campos: `productoId`, `padreId` (para jerarquía), `tipo`, `estadoFisico` (`EN_ALMACEN`, etc.), `cantidadActual`.
-    *   Esta colección representará el `ALMACEN`, `CONSIGNACION`, etc.
-
-*   **Colección: `ordenes`**
-    *   Documento por cada orden de pedido (`ID_Orden`).
-    *   Campos: `preventistaId`, `fechaCreacion`, `estadoOrden`.
-    *   **Subcolección `detalles`**: Dentro de cada orden, una subcolección con los productos y cantidades de esa orden. Este anidamiento es una práctica común y eficiente en NoSQL.
-
-*   **Colección: `usuarios`**
-    *   Documento por cada usuario (`ID_Usuario`).
-    *   Campos: `nombre`, `email`, y muy importante, `rol` (`Administrador`, `Supervisor`, etc.).
+*   **`productos`:** Catálogo maestro.
+*   **`stock`:** Inventario virtual para la venta.
+*   **`almacen`:** Inventario físico.
+*   **`ordenes`:** Registros de ventas.
+*   **`usuarios`:** Roles y datos de usuario.
