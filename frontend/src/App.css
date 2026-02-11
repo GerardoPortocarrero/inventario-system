@@ -1,20 +1,66 @@
 /* App.css */
 /* Estilos generales para el layout de la aplicación */
 
-body {
+/* 1. Definición de Variables CSS para el tema oscuro (por defecto) */
+:root {
+  /* Colores Base (Core) */
+  --color-red-primary: #F40009;
+  --color-red-dark: #c00007;
+  --color-blue-primary: #007bff;
+  --color-gray-light: #adb5bd;
+  --color-gray-medium: #6c757d;
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+
+  /* Tema Oscuro (Por Defecto) */
+  --theme-background-primary: #111111;
+  --theme-background-secondary: #1a1a1a;
+  --theme-text-primary: var(--color-white);
+  --theme-text-secondary: #a0a0a0;
+  --theme-border-default: #333333;
+  --theme-card-bg: #212529; /* Color de card original */
+  --theme-input-bg: #1a1a1a;
+}
+
+/* 2. Sobrescribir variables para el tema claro cuando el body tiene clase .theme-light */
+body.theme-light {
+  --theme-background-primary: #f8f9fa;
+  --theme-background-secondary: #e9ecef;
+  --theme-text-primary: #212529;
+  --theme-text-secondary: var(--color-gray-medium);
+  --theme-border-default: #dee2e6;
+  --theme-card-bg: var(--color-white);
+  --theme-input-bg: var(--color-white);
+}
+
+html, body, #root { /* Asegura que html, body y el div #root ocupen el 100% del alto */
+  height: 100%;
+  width: 100%;
   margin: 0;
+  padding: 0;
+}
+
+body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--theme-background-primary) !important; /* FORZAR BACKGROUND DEL TEMA */
+  color: var(--theme-text-primary) !important; /* FORZAR COLOR DE TEXTO DEL TEMA */
 }
 
+/* Contenedor principal de la aplicación */
 .app-wrapper {
   min-height: 100vh;
+  display: flex;
+  flex-direction: row; /* Sidebar a la izquierda, contenido a la derecha */
 }
 
+/* Contenido principal que se ajusta con el sidebar */
 .main-content {
+  flex-grow: 1; /* Ocupa el espacio restante */
   transition: margin-left 0.3s ease-in-out;
-  /* El ancho del sidebar es 250px */
+  display: flex;
+  flex-direction: column;
 }
 
 /* En pantallas grandes, cuando el sidebar está abierto y hay un usuario autenticado */
@@ -24,105 +70,71 @@ body {
   }
 }
 
-/* Asegurar que el contenido principal ocupe todo el espacio disponible */
-.flex-grow-1 {
-  flex-grow: 1;
-}
-
-/* Clases para tema oscuro/claro - se manejan en el body por JS */
-.bg-dark {
-  background-color: #111111 !important; /* Color de fondo principal oscuro */
-}
-
-.text-white {
-  color: #FFFFFF !important;
-}
-
-.bg-light {
-  background-color: #f8f9fa !important; /* Color de fondo principal claro */
-}
-
-.text-dark {
-  color: #212529 !important;
-}
-
 /* Sobrescribir estilos de Bootstrap para que coincidan con la guía de estilo */
-/* Estos estilos podrían ir en un archivo CSS personalizado que se cargue después de Bootstrap */
-/* Para mantener la simplicidad, los pondremos aquí por ahora, pero lo ideal sería un custom.scss */
-
 /* Todos los elementos con border-radius a 0 */
 * {
   border-radius: 0 !important;
 }
 
 /* Eliminar box-shadow */
-.card, .modal-content, .btn, .form-control {
+.card, .modal-content, .btn, .form-control, .alert {
   box-shadow: none !important;
 }
 
 /* Botones: Fondo rojo primario, texto blanco. En hover, el fondo se oscurece */
-.btn-primary {
-  background-color: #F40009 !important;
-  border-color: #F40009 !important;
-  color: #FFFFFF !important;
+.btn-primary.btn, .btn.btn-primary { /* Mayor especificidad */
+  background-color: var(--color-red-primary) !important;
+  border-color: var(--color-red-primary) !important;
+  color: var(--color-white) !important;
 }
 
-.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
-  background-color: #c00007 !important;
-  border-color: #c00007 !important;
-  color: #FFFFFF !important;
+.btn-primary.btn:hover, .btn-primary.btn:focus, .btn-primary.btn:active,
+.btn.btn-primary:hover, .btn.btn-primary:focus, .btn.btn-primary:active { /* Mayor especificidad */
+  background-color: var(--color-red-dark) !important;
+  border-color: var(--color-red-dark) !important;
+  color: var(--color-white) !important;
 }
 
 /* Formularios: Solo border-bottom */
 .form-control, .form-select {
   border: none !important;
-  border-bottom: 1px solid #333333 !important; /* Borde oscuro por defecto */
-  background-color: transparent !important; /* Fondo transparente */
-  color: inherit !important; /* Heredar color de texto */
-  padding-left: 0 !important; /* Eliminar padding izquierdo */
+  border-bottom: 1px solid var(--theme-border-default) !important; /* Borde de tema */
+  background-color: var(--theme-input-bg) !important; /* Fondo de input de tema */
+  color: var(--theme-text-primary) !important; /* Heredar color de texto de tema */
+  padding-left: 0.5rem !important; /* Asegurar un padding mínimo */
 }
 
 .form-control:focus, .form-select:focus {
-  border-color: #F40009 !important; /* Borde rojo al enfocar */
+  border-color: var(--color-red-primary) !important; /* Borde rojo al enfocar */
   box-shadow: none !important; /* Sin sombra al enfocar */
-  background-color: transparent !important;
+  background-color: var(--theme-input-bg) !important;
 }
 
 /* Asegurar que los placeholders tengan el color correcto */
 .form-control::placeholder {
-  color: #a0a0a0; /* Color de texto secundario */
-  opacity: 1; /* Para Firefox */
-}
-
-.form-control:-ms-input-placeholder {
-  color: #a0a0a0;
-}
-
-.form-control::-ms-input-placeholder {
-  color: #a0a0a0;
+  color: var(--theme-text-secondary) !important;
+  opacity: 1 !important;
 }
 
 /* Tarjetas y Modales */
-.card {
-  background-color: #212529 !important; /* Fondo de tarjeta/modal oscuro */
-  border: 1px solid #333333 !important; /* Borde sutil */
+.card.card, div.card { /* ESPECIFICIDAD EXTREMA PARA EL CARD */
+  /* El color del fondo de la tarjeta del login debe ser transparente */
+  background-color: transparent !important; /* Fondo transparente */
+  border: 1px solid var(--theme-border-default) !important;
+  color: var(--theme-text-primary) !important;
 }
 
 .modal-content {
-  background-color: #212529 !important; /* Fondo de modal oscuro */
-  border: 1px solid #333333 !important; /* Borde sutil */
-}
-
-/* Texto secundario para labels y placeholders */
-.text-secondary {
-  color: #a0a0a0 !important;
+  background-color: var(--theme-card-bg) !important;
+  border: 1px solid var(--theme-border-default) !important;
+  color: var(--theme-text-primary) !important;
 }
 
 /* Links */
 a {
-  color: #F40009 !important; /* Color rojo primario para enlaces */
+  color: var(--color-red-primary) !important;
 }
 
 a:hover {
-  color: #c00007 !important; /* Rojo oscuro en hover */
+  color: var(--color-red-dark) !important;
 }
