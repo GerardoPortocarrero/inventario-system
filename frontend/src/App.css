@@ -1,0 +1,128 @@
+/* App.css */
+/* Estilos generales para el layout de la aplicación */
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-wrapper {
+  min-height: 100vh;
+}
+
+.main-content {
+  transition: margin-left 0.3s ease-in-out;
+  /* El ancho del sidebar es 250px */
+}
+
+/* En pantallas grandes, cuando el sidebar está abierto y hay un usuario autenticado */
+@media (min-width: 992px) {
+  .app-wrapper.sidebar-open .main-content.content-shifted {
+    margin-left: 250px;
+  }
+}
+
+/* Asegurar que el contenido principal ocupe todo el espacio disponible */
+.flex-grow-1 {
+  flex-grow: 1;
+}
+
+/* Clases para tema oscuro/claro - se manejan en el body por JS */
+.bg-dark {
+  background-color: #111111 !important; /* Color de fondo principal oscuro */
+}
+
+.text-white {
+  color: #FFFFFF !important;
+}
+
+.bg-light {
+  background-color: #f8f9fa !important; /* Color de fondo principal claro */
+}
+
+.text-dark {
+  color: #212529 !important;
+}
+
+/* Sobrescribir estilos de Bootstrap para que coincidan con la guía de estilo */
+/* Estos estilos podrían ir en un archivo CSS personalizado que se cargue después de Bootstrap */
+/* Para mantener la simplicidad, los pondremos aquí por ahora, pero lo ideal sería un custom.scss */
+
+/* Todos los elementos con border-radius a 0 */
+* {
+  border-radius: 0 !important;
+}
+
+/* Eliminar box-shadow */
+.card, .modal-content, .btn, .form-control {
+  box-shadow: none !important;
+}
+
+/* Botones: Fondo rojo primario, texto blanco. En hover, el fondo se oscurece */
+.btn-primary {
+  background-color: #F40009 !important;
+  border-color: #F40009 !important;
+  color: #FFFFFF !important;
+}
+
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+  background-color: #c00007 !important;
+  border-color: #c00007 !important;
+  color: #FFFFFF !important;
+}
+
+/* Formularios: Solo border-bottom */
+.form-control, .form-select {
+  border: none !important;
+  border-bottom: 1px solid #333333 !important; /* Borde oscuro por defecto */
+  background-color: transparent !important; /* Fondo transparente */
+  color: inherit !important; /* Heredar color de texto */
+  padding-left: 0 !important; /* Eliminar padding izquierdo */
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #F40009 !important; /* Borde rojo al enfocar */
+  box-shadow: none !important; /* Sin sombra al enfocar */
+  background-color: transparent !important;
+}
+
+/* Asegurar que los placeholders tengan el color correcto */
+.form-control::placeholder {
+  color: #a0a0a0; /* Color de texto secundario */
+  opacity: 1; /* Para Firefox */
+}
+
+.form-control:-ms-input-placeholder {
+  color: #a0a0a0;
+}
+
+.form-control::-ms-input-placeholder {
+  color: #a0a0a0;
+}
+
+/* Tarjetas y Modales */
+.card {
+  background-color: #212529 !important; /* Fondo de tarjeta/modal oscuro */
+  border: 1px solid #333333 !important; /* Borde sutil */
+}
+
+.modal-content {
+  background-color: #212529 !important; /* Fondo de modal oscuro */
+  border: 1px solid #333333 !important; /* Borde sutil */
+}
+
+/* Texto secundario para labels y placeholders */
+.text-secondary {
+  color: #a0a0a0 !important;
+}
+
+/* Links */
+a {
+  color: #F40009 !important; /* Color rojo primario para enlaces */
+}
+
+a:hover {
+  color: #c00007 !important; /* Rojo oscuro en hover */
+}

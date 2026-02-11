@@ -1,0 +1,55 @@
+/* Sidebar.css */
+/* Estilos para el layout de Sidebar + Contenido */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 250px; /* Ancho del sidebar */
+  background-color: #212529; /* Fondo oscuro, puedes cambiarlo con variables CSS del tema */
+  z-index: 100;
+  padding: 48px 0 0; /* Espacio para el header si lo hubiera */
+  transition: transform 0.3s ease-in-out;
+}
+
+.sidebar .nav-link {
+  color: #a0a0a0; /* Color de texto secundario */
+  padding: 1rem;
+}
+
+.sidebar .nav-link:hover {
+  background-color: #343a40;
+  color: #F40009; /* Color rojo primario al pasar el cursor */
+}
+
+.sidebar .nav-link .me-2 {
+  font-size: 1.2rem;
+}
+
+.sidebar-sticky {
+  position: relative;
+  top: 0;
+  height: calc(100vh - 48px);
+  padding-top: 0.5rem;
+  overflow-x: hidden;
+  overflow-y: auto; /* Scroll si los enlaces no caben */
+}
+
+/* Estilos para pantallas pequeñas (móviles) donde el sidebar se oculta */
+@media (max-width: 992px) {
+  .sidebar {
+    transform: translateX(-100%); /* Oculto por defecto */
+  }
+
+  .sidebar.open {
+    transform: translateX(0); /* Visible cuando tiene la clase 'open' */
+  }
+}
+
+/* Ajuste del contenido principal cuando el sidebar está visible en pantallas grandes */
+@media (min-width: 992px) {
+  .main-content {
+    margin-left: 250px; /* Mismo ancho que el sidebar */
+  }
+}
