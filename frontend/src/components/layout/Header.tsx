@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Navbar, Container, Button } from 'react-bootstrap';
 import { FaBars, FaSun, FaMoon } from 'react-icons/fa';
 
 // Importa el logo (asumiendo que estará en assets)
 import logo from '../../assets/logo.png'; // Placeholder, reemplazar con el logo real
 
-function Header({ toggleSidebar, isDarkMode, toggleDarkMode }) {
+interface HeaderProps {
+  toggleSidebar: () => void;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+}
+
+const Header: FC<HeaderProps> = ({ toggleSidebar, isDarkMode, toggleDarkMode }) => {
   return (
     <Navbar bg={isDarkMode ? 'dark' : 'light'} variant={isDarkMode ? 'dark' : 'light'} className="p-0">
       <Container fluid className="d-flex justify-content-between align-items-center">
@@ -33,6 +39,6 @@ function Header({ toggleSidebar, isDarkMode, toggleDarkMode }) {
       </Container>
     </Navbar>
   );
-}
+};
 
 export default Header;

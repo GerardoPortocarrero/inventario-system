@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Nav } from 'react-bootstrap';
 import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt } from 'react-icons/fa';
-import './Sidebar.css'; // Crearemos este archivo para los estilos personalizados del Sidebar
+import './Sidebar.css';
 
-function Sidebar({ isSidebarOpen }) {
+interface SidebarProps {
+  isSidebarOpen: boolean;
+}
+
+const Sidebar: FC<SidebarProps> = ({ isSidebarOpen }) => {
   // TODO: Añadir lógica para mostrar/ocultar enlaces según el rol del usuario (useAuth)
 
   return (
@@ -66,6 +70,6 @@ function Sidebar({ isSidebarOpen }) {
       </div>
     </Nav>
   );
-}
+};
 
 export default Sidebar;

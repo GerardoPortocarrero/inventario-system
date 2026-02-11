@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, FC } from 'react'; // Importa FC
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import Header from './components/layout/Header';
@@ -8,10 +8,14 @@ import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 
-function App() {
+// Importa los archivos CSS (las extensiones no cambian)
+import './App.css';
+import './components/layout/Sidebar.css';
+
+const App: FC = () => { // Define el tipo de componente funcional
   const { currentUser, loading } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true); // Tipado
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => { // Tipado
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark' || savedTheme === null;
   });
@@ -21,8 +25,8 @@ function App() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+  const toggleSidebar = () => setIsSidebarOpen(prev => !prev); // Uso de prev para actualizar estado
+  const toggleDarkMode = () => setIsDarkMode(prev => !prev); // Uso de prev para actualizar estado
 
   if (loading) {
     return (
@@ -35,10 +39,15 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Si no hay usuario, solo renderiza la ruta de login */}
         {!currentUser && (
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={
+            // El div no necesita la clase 'login-page-wrapper' si el CSS global ya lo centra
+            <LoginPage />
+          } />
         )}
 
+        {/* Si hay usuario, renderiza el layout principal */}
         {currentUser && (
           <Route path="/*" element={
             <div className={`app-wrapper ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
@@ -52,6 +61,7 @@ function App() {
                 <Container fluid className="py-4 flex-grow-1">
                   <Routes>
                     <Route path="/dashboard" element={<Dashboard />} />
+                    {/* Otras rutas protegidas aquí */}
                     <Route path="*" element={<Navigate to="/dashboard" />} />
                   </Routes>
                 </Container>
@@ -60,6 +70,7 @@ function App() {
           } />
         )}
 
+        {/* Redirecciones generales */}
         <Route path="*" element={<Navigate to={currentUser ? "/dashboard" : "/login"} />} />
       </Routes>
     </Router>

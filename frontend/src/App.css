@@ -18,7 +18,7 @@
   --theme-text-primary: var(--color-white);
   --theme-text-secondary: #a0a0a0;
   --theme-border-default: #333333;
-  --theme-card-bg: #212529; /* Color de card original */
+  --theme-card-bg: #212529;
   --theme-input-bg: #1a1a1a;
 }
 
@@ -33,7 +33,7 @@ body.theme-light {
   --theme-input-bg: var(--color-white);
 }
 
-html, body, #root { /* Asegura que html, body y el div #root ocupen el 100% del alto */
+html, body, #root { /* Asegura que html y body y el div #root ocupen el 100% del alto */
   height: 100%;
   width: 100%;
   margin: 0;
@@ -118,9 +118,8 @@ body {
 
 /* Tarjetas y Modales */
 .card.card, div.card { /* ESPECIFICIDAD EXTREMA PARA EL CARD */
-  /* El color del fondo de la tarjeta del login debe ser transparente */
   background-color: transparent !important; /* Fondo transparente */
-  border: 1px solid var(--theme-border-default) !important;
+  border: none !important; /* <--- QUITADO EL BORDE */
   color: var(--theme-text-primary) !important;
 }
 

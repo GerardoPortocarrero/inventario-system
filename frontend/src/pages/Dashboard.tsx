@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Container } from 'react-bootstrap';
 
-function Dashboard() {
+const Dashboard: FC = () => { // Define el tipo de componente funcional
   return (
     <Container className="my-4">
       <h2>Dashboard</h2>
@@ -9,6 +9,6 @@ function Dashboard() {
       {/* Aquí se mostrarán los widgets o resúmenes para cada rol */}
     </Container>
   );
-}
+};
 
 export default Dashboard;
