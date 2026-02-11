@@ -35,17 +35,17 @@ const LoginPage: FC = () => {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center vh-100 flex-column"> {/* Añadido flex-column para apilar logo y card */}
-      <div className="text-center mb-4 p-2" style={{ backgroundColor: 'white', borderRadius: '5px' }}> {/* Contenedor para el logo y título con fondo blanco */}
+    <div className="d-flex align-items-center justify-content-center vh-100 flex-column">
+      {/* Contenedor del logo con fondo blanco y bordes ligeramente redondeados */}
+      <div className="mb-3 p-2" style={{ backgroundColor: 'white', borderRadius: '8px', maxWidth: '300px', width: '100%' }}> {/* Añadido maxWidth y width para que coincida con la Card */}
         <img
           src={logo}
           alt="Logo Inventario A Y A"
-          className="mb-2" // Reducir margin-bottom si el título está pegado
-          style={{ width: '80px', height: '80px', display: 'block', margin: '0 auto' }} // Centrar imagen con margin:auto
+          style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto' }} // Logo al 100% del ancho del contenedor
         />
-        <h2 className="text-center" style={{ color: 'black' }}>Inventario A Y A</h2> {/* Texto cambiado y forzado a negro */}
       </div>
-      <Card style={{ maxWidth: '400px', width: '100%' }}>
+      <h2 className="text-center mb-4" style={{ color: 'var(--theme-text-primary)' }}>Inventario A Y A</h2>
+      <Card style={{ maxWidth: '300px', width: '100%' }}> {/* Login menos ancho */}
         <Card.Body>
           {error && <Alert variant="danger">{error}</Alert>}
           <Form onSubmit={handleSubmit}>

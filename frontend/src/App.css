@@ -26,7 +26,7 @@
 body.theme-light {
   --theme-background-primary: #f8f9fa;
   --theme-background-secondary: #e9ecef;
-  --theme-text-primary: #212529;
+  --theme-text-primary: #213547;
   --theme-text-secondary: var(--color-gray-medium);
   --theme-border-default: #dee2e6;
   --theme-card-bg: var(--color-white);
@@ -119,8 +119,13 @@ body {
 /* Tarjetas y Modales */
 .card.card, div.card { /* ESPECIFICIDAD EXTREMA PARA EL CARD */
   background-color: transparent !important; /* Fondo transparente */
-  border: none !important; /* <--- QUITADO EL BORDE */
+  border: none !important; /* QUITAR BORDE */
   color: var(--theme-text-primary) !important;
+}
+
+/* Quitar padding del Card.Body */
+.card-body {
+  padding: 0 !important;
 }
 
 .modal-content {
