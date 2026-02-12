@@ -48,26 +48,18 @@ body {
   color: var(--theme-text-primary) !important; /* FORZAR COLOR DE TEXTO DEL TEMA */
 }
 
-/* Contenedor principal de la aplicación */
-.app-wrapper {
-  min-height: 100vh;
+/* Contenedor principal del layout con sidebar fijo */
+.app-layout {
   display: flex;
-  flex-direction: row; /* Sidebar a la izquierda, contenido a la derecha */
+  min-height: 100vh; /* Asegura que ocupe toda la altura del viewport */
 }
 
-/* Contenido principal que se ajusta con el sidebar */
-.main-content {
-  flex-grow: 1; /* Ocupa el espacio restante */
-  transition: margin-left 0.3s ease-in-out;
+/* Contenido principal que se posiciona a la derecha del sidebar fijo */
+.app-content {
+  flex-grow: 1; /* Ocupa el espacio horizontal restante */
+  margin-left: 250px; /* Ancho del sidebar */
   display: flex;
-  flex-direction: column;
-}
-
-/* En pantallas grandes, cuando el sidebar está abierto y hay un usuario autenticado */
-@media (min-width: 992px) {
-  .app-wrapper.sidebar-open .main-content.content-shifted {
-    margin-left: 250px;
-  }
+  flex-direction: column; /* El contenido interno debe apilarse verticalmente */
 }
 
 /* Sobrescribir estilos de Bootstrap para que coincidan con la guía de estilo */
@@ -141,4 +133,20 @@ a {
 
 a:hover {
   color: var(--color-red-dark) !important;
+}
+
+/* Estilos para el Header de la aplicación */
+.app-header {
+  background-color: var(--theme-background-primary) !important; /* Fondo principal */
+  border-bottom: 1px solid var(--theme-border-default) !important; /* Borde inferior */
+  padding: 0 !important; /* Remove default padding from Navbar */
+}
+
+/* Estilos para los botones de link dentro del header (iconos) */
+.app-header .btn-link {
+  color: var(--theme-text-secondary) !important; /* Color secundario por defecto */
+}
+
+.app-header .btn-link:hover {
+  color: var(--color-red-primary) !important; /* Rojo primario en hover */
 }

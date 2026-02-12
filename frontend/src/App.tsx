@@ -14,7 +14,6 @@ import './components/layout/Sidebar.css';
 
 const App: FC = () => { // Define el tipo de componente funcional
   const { currentUser, loading } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true); // Tipado
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => { // Tipado
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark' || savedTheme === null;
@@ -25,7 +24,6 @@ const App: FC = () => { // Define el tipo de componente funcional
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
-  const toggleSidebar = () => setIsSidebarOpen(prev => !prev); // Uso de prev para actualizar estado
   const toggleDarkMode = () => setIsDarkMode(prev => !prev); // Uso de prev para actualizar estado
 
   if (loading) {
@@ -50,11 +48,10 @@ const App: FC = () => { // Define el tipo de componente funcional
         {/* Si hay usuario, renderiza el layout principal */}
         {currentUser && (
           <Route path="/*" element={
-            <div className={`app-wrapper ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-              <Sidebar isSidebarOpen={isSidebarOpen} />
-              <div className={`main-content ${isSidebarOpen ? 'content-shifted' : ''}`}>
+            <div className="app-layout"> {/* Nueva clase para el layout principal */}
+              <Sidebar />
+              <div className="app-content"> {/* Nueva clase para el contenido principal */}
                 <Header
-                  toggleSidebar={toggleSidebar}
                   isDarkMode={isDarkMode}
                   toggleDarkMode={toggleDarkMode}
                 />
