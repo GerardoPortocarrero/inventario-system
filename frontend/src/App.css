@@ -158,3 +158,24 @@ a:hover {
 .app-header .btn-link:hover {
   color: var(--color-red-primary) !important; /* Rojo primario en hover */
 }
+
+/* Asegurar que el icono de hamburguesa en el header tenga el color correcto en responsive */
+.app-header .btn.d-lg-none {
+  color: var(--theme-text-secondary) !important;
+}
+
+.app-header .btn.d-lg-none:hover {
+  color: var(--color-red-primary) !important;
+}
+
+/* Estilos para el overlay que cierra el sidebar en responsive */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99; /* Justo por debajo del z-index del sidebar (100) */
+  background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente opcional */
+}
+

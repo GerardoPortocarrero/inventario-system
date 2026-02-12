@@ -51,12 +51,15 @@ const App: FC = () => { // Define el tipo de componente funcional
         {currentUser && (
           <Route path="/*" element={
             <div className={`app-wrapper ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-              <Sidebar isSidebarOpen={isSidebarOpen} />
+              <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} /> {/* Pasa toggleSidebar a Sidebar */}
+              {/* Overlay para cerrar el sidebar en responsive */}
+              {isSidebarOpen && <div className="sidebar-overlay d-lg-none" onClick={toggleSidebar}></div>}
               <div className={`main-content ${isSidebarOpen ? 'content-shifted' : ''}`}>
                 <Header
-                  toggleSidebar={toggleSidebar} // Pasa toggleSidebar de nuevo
+                  toggleSidebar={toggleSidebar}
                   isDarkMode={isDarkMode}
                   toggleDarkMode={toggleDarkMode}
+                  isSidebarOpen={isSidebarOpen}
                 />
                 <Container fluid className="py-4 flex-grow-1">
                   <Routes>
