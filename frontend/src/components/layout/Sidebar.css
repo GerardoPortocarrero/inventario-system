@@ -10,7 +10,21 @@
   background-color: var(--theme-background-primary); /* Fondo principal */
   z-index: 100;
   padding: 48px 0 0; /* Espacio para el header si lo hubiera */
-  border-right: 1px solid var(--theme-border-default); /* Borde derecho para separar del contenido */
+  transition: transform 0.3s ease-in-out; /* Reintroduce la transición */
+  border-right: 1px solid var(--theme-border-default); /* Borde derecho por defecto */
+}
+
+/* Estilos para pantallas pequeñas (móviles) donde el sidebar se oculta */
+@media (max-width: 992px) {
+  .sidebar {
+    transform: translateX(-100%); /* Oculto por defecto */
+    border-right: none; /* Elimina el borde en pantallas pequeñas cuando está oculto */
+  }
+
+  .sidebar.open {
+    transform: translateX(0); /* Visible cuando tiene la clase 'open' */
+    border-right: 1px solid var(--theme-border-default); /* Reintroduce el borde cuando está abierto */
+  }
 }
 
 .sidebar .nav-link {
@@ -36,7 +50,6 @@
   position: relative;
   top: 0;
   height: calc(100vh - 48px);
-  padding-top: 0.5rem;
   overflow-x: hidden;
   overflow-y: auto; /* Scroll si los enlaces no caben */
 }

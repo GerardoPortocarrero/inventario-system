@@ -48,18 +48,26 @@ body {
   color: var(--theme-text-primary) !important; /* FORZAR COLOR DE TEXTO DEL TEMA */
 }
 
-/* Contenedor principal del layout con sidebar fijo */
-.app-layout {
+/* Contenedor principal de la aplicación */
+.app-wrapper {
+  min-height: 100vh;
   display: flex;
-  min-height: 100vh; /* Asegura que ocupe toda la altura del viewport */
+  flex-direction: row; /* Sidebar a la izquierda, contenido a la derecha */
 }
 
-/* Contenido principal que se posiciona a la derecha del sidebar fijo */
-.app-content {
-  flex-grow: 1; /* Ocupa el espacio horizontal restante */
-  margin-left: 250px; /* Ancho del sidebar */
+/* Contenido principal que se ajusta con el sidebar */
+.main-content {
+  flex-grow: 1; /* Ocupa el espacio restante */
+  transition: margin-left 0.3s ease-in-out;
   display: flex;
-  flex-direction: column; /* El contenido interno debe apilarse verticalmente */
+  flex-direction: column;
+}
+
+/* Ajuste del contenido principal cuando el sidebar está visible en pantallas grandes */
+@media (min-width: 992px) {
+  .main-content {
+    margin-left: 250px; /* Mismo ancho que el sidebar */
+  }
 }
 
 /* Sobrescribir estilos de Bootstrap para que coincidan con la guía de estilo */

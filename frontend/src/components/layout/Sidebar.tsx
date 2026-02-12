@@ -5,16 +5,16 @@ import './Sidebar.css';
 import { useLocation } from 'react-router-dom'; // Importa useLocation
 
 interface SidebarProps {
-  // isSidebarOpen: boolean; // Ya no es necesario
+  isSidebarOpen: boolean; // Reintroduce la prop
 }
 
-const Sidebar: FC<SidebarProps> = () => { // Elimina isSidebarOpen de los props
+const Sidebar: FC<SidebarProps> = ({ isSidebarOpen }) => { // Acepta isSidebarOpen como prop
   const location = useLocation(); // Hook para obtener la ubicación actual
 
   // TODO: Añadir lógica para mostrar/ocultar enlaces según el rol del usuario (useAuth)
 
   return (
-    <Nav className="sidebar"> {/* Elimina la clase condicional 'open' */}
+    <Nav className={`sidebar ${isSidebarOpen ? 'open' : ''}`}> {/* Reintroduce la clase condicional 'open' */}
       <div className="sidebar-sticky">
         {/* Enlaces comunes/principales */}
         <Nav.Item>
@@ -63,7 +63,7 @@ const Sidebar: FC<SidebarProps> = () => { // Elimina isSidebarOpen de los props
         </Nav.Item>
 
         {/* Separador y enlace de Logout */}
-        <hr className="text-white-50" />
+        <hr />
         <Nav.Item>
           <Nav.Link href="/logout" className={location.pathname === '/logout' ? 'active' : ''}>
             <FaSignOutAlt className="me-2" />

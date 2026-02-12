@@ -6,14 +6,20 @@ import { FaBars, FaSun, FaMoon } from 'react-icons/fa';
 import logo from '../../assets/logo.png'; // Placeholder, reemplazar con el logo real
 
 interface HeaderProps {
+  toggleSidebar: () => void; // Reintroduce la prop
   isDarkMode: boolean;
   toggleDarkMode: () => void;
 }
 
-const Header: FC<HeaderProps> = ({ isDarkMode, toggleDarkMode }) => {
+const Header: FC<HeaderProps> = ({ toggleSidebar, isDarkMode, toggleDarkMode }) => {
   return (
     <Navbar className="app-header" variant="dark">
       <Container fluid className="d-flex justify-content-between align-items-center">
+        {/* Botón para Sidebar en móvil */}
+        <Button variant="link" className="d-lg-none" onClick={toggleSidebar}>
+          <FaBars size={24} />
+        </Button>
+
         {/* Logo centrado */}
         <Navbar.Brand href="#home" className="mx-auto">
           <img
