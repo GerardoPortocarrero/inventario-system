@@ -11,10 +11,14 @@
   width: fit-content; /* El ancho se adapta al contenido, sin min/max para diagnóstico */
   background-color: var(--theme-background-primary);
   z-index: 100; /* Z-index adecuado para overlay */
-  padding: 48px 0 0;
   transition: transform 0.3s ease-in-out;
   transform: translateX(-100%); /* Oculto por defecto */
   border-right: none; /* Sin borde en overlay cuando está oculto */
+
+  /* Nuevas propiedades Flexbox para el layout interno */
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 1rem;
 }
 
 .sidebar.open {
@@ -38,6 +42,12 @@
   .sidebar .nav-link {
     white-space: nowrap; /* En escritorio, el texto no salta de línea */
   }
+}
+
+.sidebar-title {
+  font-size: 1.1rem; /* Tamaño de letra más pequeño */
+  padding: 0.5rem 1rem; /* Padding interno para el título */
+  flex-shrink: 0; /* Evita que el título se encoja */
 }
 
 .sidebar .nav-item {
@@ -69,7 +79,8 @@
 .sidebar-sticky {
   position: relative;
   top: 0;
-  height: calc(100vh - 48px); /* Ajuste por el padding del header */
+  height: auto; /* Ya no se necesita un height fijo si su padre es flex */
+  flex-grow: 1; /* Ocupa todo el espacio vertical restante */
   overflow-x: hidden;
   overflow-y: auto;
 }
