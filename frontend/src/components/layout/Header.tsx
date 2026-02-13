@@ -9,7 +9,6 @@ interface HeaderProps {
   toggleSidebar: () => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
-  // isSidebarOpen: boolean; // Eliminada
 }
 
 const Header: FC<HeaderProps> = ({ toggleSidebar, isDarkMode, toggleDarkMode }) => { // Elimina isSidebarOpen de la desestructuración

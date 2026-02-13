@@ -12,6 +12,9 @@
   --color-white: #FFFFFF;
   --color-black: #000000;
 
+  /* Variable para el ancho del sidebar en desktop */
+  --sidebar-width-desktop: 200px;
+
   /* Tema Oscuro (Por Defecto) */
   --theme-background-primary: #111111;
   --theme-background-secondary: #1a1a1a;
@@ -58,17 +61,12 @@ body {
 /* Contenido principal que se ajusta con el sidebar */
 .main-content {
   flex-grow: 1; /* Ocupa el espacio restante */
-  transition: margin-left 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out; /* Transición general para otras propiedades */
   display: flex;
   flex-direction: column;
 }
 
-/* Ajuste del contenido principal cuando el sidebar está visible en pantallas grandes */
-@media (min-width: 992px) {
-  .main-content {
-    margin-left: 200px; /* Mismo ancho que el sidebar */
-  }
-}
+/* No hay margin-left fijo en main-content para desktop */
 
 /* Sobrescribir estilos de Bootstrap para que coincidan con la guía de estilo */
 /* Todos los elementos con border-radius a 0 */

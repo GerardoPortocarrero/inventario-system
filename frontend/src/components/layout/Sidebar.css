@@ -1,49 +1,66 @@
 /* Sidebar.css */
 /* Estilos para el layout de Sidebar + Contenido */
 
+/* --- Mobile-first (Default) --- */
+/* El sidebar se posiciona de forma fija para crear un overlay en pantallas pequeñas */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  width: 200px; /* Ancho del sidebar ajustado para reducir espacio vacío */
-  background-color: var(--theme-background-primary); /* Fondo principal */
-  z-index: 100;
-  padding: 48px 0 0; /* Espacio para el header si lo hubiera */
-  transition: transform 0.3s ease-in-out; /* Reintroduce la transición */
-  border-right: 1px solid var(--theme-border-default); /* Borde derecho por defecto */
+  width: 85vw; /* Ancho adaptable para móvil */
+  max-width: 280px; /* Ancho máximo para el overlay */
+  background-color: var(--theme-background-primary);
+  z-index: 100; /* Z-index adecuado para overlay */
+  padding: 48px 0 0;
+  transition: transform 0.3s ease-in-out;
+  transform: translateX(-100%); /* Oculto por defecto */
+  border-right: none; /* Sin borde en overlay cuando está oculto */
 }
 
-/* Estilos para pantallas pequeñas (móviles) donde el sidebar se oculta */
-@media (max-width: 992px) {
+.sidebar.open {
+  transform: translateX(0); /* Visible cuando está abierto */
+  border-right: 1px solid var(--theme-border-default); /* Borde solo cuando está abierto */
+}
+
+/* --- Desktop Layout --- */
+/* En pantallas grandes, el sidebar se convierte en un elemento flex en el flujo */
+@media (min-width: 992px) {
   .sidebar {
-    transform: translateX(-100%); /* Oculto por defecto */
-    border-right: none; /* Elimina el borde en pantallas pequeñas cuando está oculto */
+    position: static; /* Ya no es fijo, forma parte del flujo */
+    width: fit-content; /* Ancho se adapta al contenido */
+    height: 100vh; /* Ocupa todo el alto */
+    transform: none !important; /* Siempre visible, anula transform de móvil */
+    flex-shrink: 0; /* Evita que el sidebar se encoja */
+    z-index: auto; /* Ya no necesita z-index alto */
+    border-right: 1px solid var(--theme-border-default); /* Borde siempre visible */
   }
 
-  .sidebar.open {
-    transform: translateX(0); /* Visible cuando tiene la clase 'open' */
-    border-right: 1px solid var(--theme-border-default); /* Reintroduce el borde cuando está abierto */
+  .sidebar .nav-link {
+    white-space: nowrap; /* En escritorio, el texto no salta de línea */
   }
 }
 
 .sidebar .nav-item {
-  padding: 0; /* Elimina cualquier padding predeterminado del Nav.Item */
+  padding: 0;
 }
 
 .sidebar .nav-link {
-  color: var(--color-white) !important; /* Color de texto blanco por defecto */
-  padding: 0.75rem 1rem; /* Ajusta el padding del enlace para un diseño más compacto */
+  display: flex; /* Para alinear ícono y texto */
+  align-items: center; /* Centrado vertical */
+  color: var(--color-white) !important;
+  padding: 0.75rem 1rem; /* Padding consistente */
+  /* white-space: normal; // Por defecto, el texto salta de línea en móvil */
 }
 
 .sidebar .nav-link:hover {
-  background-color: var(--color-red-dark); /* Fondo rojo oscuro al pasar el cursor */
-  color: var(--color-white) !important; /* Texto blanco al pasar el cursor */
+  background-color: var(--color-red-dark);
+  color: var(--color-white) !important;
 }
 
-.sidebar .nav-link.active { /* Estilo para el enlace activo */
-  background-color: var(--color-red-primary); /* Fondo rojo primario */
-  color: var(--color-white) !important; /* Texto blanco */
+.sidebar .nav-link.active {
+  background-color: var(--color-red-primary);
+  color: var(--color-white) !important;
 }
 
 .sidebar .nav-link .me-2 {
@@ -53,9 +70,8 @@
 .sidebar-sticky {
   position: relative;
   top: 0;
-  height: calc(100vh - 48px);
+  height: calc(100vh - 48px); /* Ajuste por el padding del header */
   overflow-x: hidden;
-  overflow-y: auto; /* Scroll si los enlaces no caben */
+  overflow-y: auto;
 }
-
 
