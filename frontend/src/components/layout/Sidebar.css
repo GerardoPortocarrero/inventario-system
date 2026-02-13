@@ -8,8 +8,7 @@
   top: 0;
   left: 0;
   bottom: 0;
-  width: 85vw; /* Ancho adaptable para móvil */
-  max-width: 280px; /* Ancho máximo para el overlay */
+  width: fit-content; /* El ancho se adapta al contenido, sin min/max para diagnóstico */
   background-color: var(--theme-background-primary);
   z-index: 100; /* Z-index adecuado para overlay */
   padding: 48px 0 0;

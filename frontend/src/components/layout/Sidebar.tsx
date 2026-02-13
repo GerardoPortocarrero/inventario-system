@@ -18,7 +18,9 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
     <>
       <Nav className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-sticky">
-
+          <h4 className="sidebar-title text-center my-3" style={{ color: 'var(--theme-text-primary)' }}>
+            Inventario A Y A
+          </h4>
           {/* Enlaces comunes/principales */}
           <Nav.Item>
             <Nav.Link href="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''} onClick={toggleSidebar}>
