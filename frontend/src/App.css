@@ -66,7 +66,7 @@ body {
 /* Ajuste del contenido principal cuando el sidebar está visible en pantallas grandes */
 @media (min-width: 992px) {
   .main-content {
-    margin-left: 250px; /* Mismo ancho que el sidebar */
+    margin-left: 200px; /* Mismo ancho que el sidebar */
   }
 }
 

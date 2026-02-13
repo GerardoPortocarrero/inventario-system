@@ -6,7 +6,7 @@
   top: 0;
   left: 0;
   bottom: 0;
-  width: 250px; /* Ancho del sidebar */
+  width: 200px; /* Ancho del sidebar ajustado para reducir espacio vacío */
   background-color: var(--theme-background-primary); /* Fondo principal */
   z-index: 100;
   padding: 48px 0 0; /* Espacio para el header si lo hubiera */
@@ -27,9 +27,13 @@
   }
 }
 
+.sidebar .nav-item {
+  padding: 0; /* Elimina cualquier padding predeterminado del Nav.Item */
+}
+
 .sidebar .nav-link {
   color: var(--color-white) !important; /* Color de texto blanco por defecto */
-  padding: 1rem;
+  padding: 0.75rem 1rem; /* Ajusta el padding del enlace para un diseño más compacto */
 }
 
 .sidebar .nav-link:hover {

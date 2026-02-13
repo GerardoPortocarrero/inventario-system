@@ -38,7 +38,7 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
           <Nav.Item>
             <Nav.Link href="/almacen" className={location.pathname === '/almacen' ? 'active' : ''} onClick={toggleSidebar}>
               <FaBoxOpen className="me-2" />
-              Gestión de Almacén
+              Controlador
             </Nav.Link>
           </Nav.Item>
 
@@ -54,13 +54,13 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
           <Nav.Item>
             <Nav.Link href="/admin/users" className={location.pathname === '/admin/users' ? 'active' : ''} onClick={toggleSidebar}>
               <FaUsers className="me-2" />
-              Gestión de Usuarios
+              Usuarios
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link href="/admin/products" className={location.pathname === '/admin/products' ? 'active' : ''} onClick={toggleSidebar}>
               <FaBoxOpen className="me-2" />
-              Gestión de Productos
+              Productos
             </Nav.Link>
           </Nav.Item>
 
