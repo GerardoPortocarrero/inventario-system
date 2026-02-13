@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import type { FC } from 'react'; // Importa FC como type-only
 import { Navbar, Container, Button } from 'react-bootstrap';
 import { FaBars, FaSun, FaMoon } from 'react-icons/fa'; // Elimina FaTimes
 import './Header.css';

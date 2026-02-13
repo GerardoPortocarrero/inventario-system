@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import type { FC } from 'react'; // Importa FC como type-only
 import { Nav } from 'react-bootstrap';
 import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt } from 'react-icons/fa';
 import './Sidebar.css';

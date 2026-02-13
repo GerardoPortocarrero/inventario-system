@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, FC } from 'react';
-import { app } from '../api/firebase';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { FC } from 'react'; // Importación type-only para FC
+import { app } from '../api/firebase.ts'; // Ruta de importación actualizada
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import type { User } from 'firebase/auth'; // Importación type-only para User
 
 // Define la interfaz para el contexto de autenticación
 interface AuthContextType {

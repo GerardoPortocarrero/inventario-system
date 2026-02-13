@@ -1,4 +1,5 @@
-import React, { useState, FC } from 'react';
+import { useState } from 'react';
+import type { FC } from 'react'; // Importa FC como type-only
 import { Form, Button, Card, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';

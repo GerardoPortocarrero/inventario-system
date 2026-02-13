@@ -1,4 +1,5 @@
-import React, { useState, useEffect, FC } from 'react'; // Importa FC
+import { useState, useEffect } from 'react';
+import type { FC } from 'react'; // Importa FC como type-only
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import Header from './components/layout/Header';

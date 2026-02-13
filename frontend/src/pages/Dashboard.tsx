@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import type { FC } from 'react'; // Importa FC como type-only
 import { Container } from 'react-bootstrap';
 
 const Dashboard: FC = () => { // Define el tipo de componente funcional
