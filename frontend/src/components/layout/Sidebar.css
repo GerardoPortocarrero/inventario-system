@@ -18,7 +18,6 @@
   /* Nuevas propiedades Flexbox para el layout interno */
   display: flex;
   flex-direction: column;
-  padding-bottom: 1rem;
 }
 
 .sidebar.open {
@@ -54,7 +53,7 @@
 
 .sidebar-title {
   font-size: 1.2rem; /* Tamaño de letra ligeramente más grande */
-  padding: 0.5rem 1rem; /* Padding interno para el título */
+  padding: 0rem 1.5rem; /* Padding interno para el título */
   /* flex-shrink: 0; // Ya lo tiene el padre */
 }
 
@@ -63,7 +62,21 @@
 }
 
 .sidebar-sticky > .nav-item:last-child {
-  margin-top: auto; /* Empuja el último Nav.Item (Cerrar Sesión) al fondo */
+  /* margin-top: auto; // Movido al padre para agrupar hr y link */
+}
+
+.sidebar-logout-section {
+  margin-top: auto; /* Empuja esta sección al fondo */
+  flex-shrink: 0; /* Asegura que no se encoja */
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logout-section hr {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  width: 80%; /* Hacer la línea más corta para estética */
+  align-self: center; /* Centrar la línea */
 }
 
 .sidebar .nav-link {
@@ -95,5 +108,9 @@
   flex-grow: 1; /* Ocupa todo el espacio vertical restante */
   overflow-x: hidden;
   overflow-y: auto;
+
+  /* Nuevas propiedades Flexbox para organizar sus hijos */
+  display: flex;
+  flex-direction: column;
 }
 

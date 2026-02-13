@@ -1,6 +1,7 @@
 import React, { FC } from 'react';
 import { Navbar, Container, Button } from 'react-bootstrap';
 import { FaBars, FaSun, FaMoon } from 'react-icons/fa'; // Elimina FaTimes
+import './Header.css';
 
 // Importa el logo (asumiendo que estará en assets)
 import logo from '../../assets/logo.png'; // Placeholder, reemplazar con el logo real
@@ -24,8 +25,8 @@ const Header: FC<HeaderProps> = ({ toggleSidebar, isDarkMode, toggleDarkMode }) 
         <Navbar.Brand href="#home" className="mx-auto">
           <img
             src={logo}
-            width="30"
-            height="30"
+            width="45"
+            height="45"
             className="d-inline-block align-top"
             alt="Logo"
           />{' '}

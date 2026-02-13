@@ -69,14 +69,16 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
             </Nav.Link>
           </Nav.Item>
 
-          {/* Separador y enlace de Logout */}
-          <hr />
-          <Nav.Item>
-            <Nav.Link href="/logout" className={location.pathname === '/logout' ? 'active' : ''} onClick={toggleSidebar}>
-              <FaSignOutAlt className="me-2" />
-              Cerrar Sesión
-            </Nav.Link>
-          </Nav.Item>
+          {/* Sección de Logout */}
+          <div className="sidebar-logout-section">
+            <hr />
+            <Nav.Item>
+              <Nav.Link href="/logout" className={location.pathname === '/logout' ? 'active' : ''} onClick={toggleSidebar}>
+                <FaSignOutAlt className="me-2" />
+                Cerrar Sesión
+              </Nav.Link>
+            </Nav.Item>
+          </div>
         </div>
       </Nav>
     </>

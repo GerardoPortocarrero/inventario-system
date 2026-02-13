@@ -61,7 +61,7 @@ const App: FC = () => { // Define el tipo de componente funcional
                   toggleDarkMode={toggleDarkMode}
                   // isSidebarOpen no es necesario para el Header
                 />
-                <Container fluid className="py-4 flex-grow-1">
+                <Container fluid className="py-3 flex-grow-1">
                   <Routes>
                     <Route path="/dashboard" element={<Dashboard />} />
                     {/* Otras rutas protegidas aquí */}
