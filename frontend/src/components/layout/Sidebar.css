@@ -44,14 +44,26 @@
   }
 }
 
+.sidebar-title-item {
+  height: 56px; /* Altura igual que el header */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* Asegura que no se encoja */
+}
+
 .sidebar-title {
-  font-size: 1.1rem; /* Tamaño de letra más pequeño */
+  font-size: 1.2rem; /* Tamaño de letra ligeramente más grande */
   padding: 0.5rem 1rem; /* Padding interno para el título */
-  flex-shrink: 0; /* Evita que el título se encoja */
+  /* flex-shrink: 0; // Ya lo tiene el padre */
 }
 
 .sidebar .nav-item {
   padding: 0;
+}
+
+.sidebar-sticky > .nav-item:last-child {
+  margin-top: auto; /* Empuja el último Nav.Item (Cerrar Sesión) al fondo */
 }
 
 .sidebar .nav-link {
