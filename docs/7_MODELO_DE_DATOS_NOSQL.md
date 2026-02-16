@@ -61,13 +61,23 @@ La estructura se basará en las siguientes colecciones principales:
     ```
 
 ### Colección: `usuarios`
-*   **Propósito:** Almacena la información de los usuarios y sus roles. Se vinculará con Firebase Authentication.
+*   **Propósito:** Almacena la información de los usuarios y su rol. Se vinculará con Firebase Authentication.
 *   **Estructura del Documento:** El ID del documento será el UID de Firebase Auth.
     ```json
     {
       "nombre": "Juan Pérez",
       "email": "juan.perez@ejemplo.com",
-      "rol": "Preventista", // Administrador, Supervisor, Preventista, Almacenero
+      "rolId": "preventista", // Referencia al ID del documento en la colección 'roles'
       "activo": true
+    }
+    ```
+
+### Colección: `roles`
+*   **Propósito:** Define los roles disponibles en el sistema y sus propiedades. Permite una gestión centralizada de los permisos.
+*   **Estructura del Documento:** El ID del documento es el identificador único del rol (ej. "admin", "preventista").
+    ```json
+    {
+      "nombre": "Preventista",
+      "descripcion": "Rol operacional de ventas. Su enfoque es crear y dar seguimiento a sus propias órdenes."
     }
     ```

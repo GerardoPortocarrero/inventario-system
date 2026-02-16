@@ -1,22 +1,30 @@
 import { useState, useEffect } from 'react';
-import type { FC } from 'react'; // Importa FC como type-only
+import type { FC } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
+import ProtectedRoute from './components/ProtectedRoute'; // Importa el componente de ruta protegida
 import { useAuth } from './context/AuthContext';
 
+// Importa las páginas
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
+import UnauthorizedPage from './pages/UnauthorizedPage';
+import PreventistaPage from './pages/PreventistaPage';
+import AlmacenPage from './pages/AlmacenPage';
+import SupervisorPage from './pages/SupervisorPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminProductsPage from './pages/AdminProductsPage';
 
-// Importa los archivos CSS (las extensiones no cambian)
+// Importa los archivos CSS
 import './App.css';
 import './components/layout/Sidebar.css';
 
-const App: FC = () => { // Define el tipo de componente funcional
+const App: FC = () => {
   const { currentUser, loading } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false); // Reintroduce isSidebarOpen, oculto por defecto en móviles
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => { // Tipado
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark' || savedTheme === null;
   });
@@ -26,8 +34,8 @@ const App: FC = () => { // Define el tipo de componente funcional
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
-  const toggleSidebar = () => setIsSidebarOpen(prev => !prev); // Reintroduce toggleSidebar
-  const toggleDarkMode = () => setIsDarkMode(prev => !prev); // Uso de prev para actualizar estado
+  const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
+  const toggleDarkMode = () => setIsDarkMode(prev => !prev);
 
   if (loading) {
     return (
@@ -37,46 +45,52 @@ const App: FC = () => { // Define el tipo de componente funcional
     );
   }
 
+  // Estructura de rutas separada para mayor claridad
+  const AppRoutes: FC = () => {
+    if (!currentUser) {
+      return (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
+      );
+    }
+
+    return (
+      <div className="app-wrapper">
+        <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+        {isSidebarOpen && <div className="sidebar-overlay d-lg-none" onClick={toggleSidebar}></div>}
+        <div className="main-content">
+          <Header
+            toggleSidebar={toggleSidebar}
+            isDarkMode={isDarkMode}
+            toggleDarkMode={toggleDarkMode}
+          />
+          <Container fluid className="py-3 flex-grow-1">
+            <Routes>
+              {/* Ruta pública para usuarios autenticados */}
+              <Route path="/dashboard" element={<Dashboard />} />
+
+              {/* Rutas Protegidas */}
+              <Route path="/preventista" element={<ProtectedRoute allowedRoles={['preventista']}><PreventistaPage /></ProtectedRoute>} />
+              <Route path="/almacen" element={<ProtectedRoute allowedRoles={['almacenero']}><AlmacenPage /></ProtectedRoute>} />
+              <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['supervisor']}><SupervisorPage /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />
+              <Route path="/admin/products" element={<ProtectedRoute allowedRoles={['admin']}><AdminProductsPage /></ProtectedRoute>} />
+
+              {/* Página de no autorizado y redirecciones */}
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              <Route path="*" element={<Navigate to="/dashboard" />} />
+            </Routes>
+          </Container>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Router>
-      <Routes>
-        {/* Si no hay usuario, solo renderiza la ruta de login */}
-        {!currentUser && (
-          <Route path="/login" element={
-            // El div no necesita la clase 'login-page-wrapper' si el CSS global ya lo centra
-            <LoginPage />
-          } />
-        )}
-
-        {/* Si hay usuario, renderiza el layout principal */}
-        {currentUser && (
-          <Route path="/*" element={
-            <div className={`app-wrapper`}>
-              <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} /> {/* Pasa toggleSidebar a Sidebar */}
-              {/* Overlay para cerrar el sidebar en responsive */}
-              {isSidebarOpen && <div className="sidebar-overlay d-lg-none" onClick={toggleSidebar}></div>}
-              <div className={`main-content`}>
-                <Header
-                  toggleSidebar={toggleSidebar}
-                  isDarkMode={isDarkMode}
-                  toggleDarkMode={toggleDarkMode}
-                  // isSidebarOpen no es necesario para el Header
-                />
-                <Container fluid className="py-3 flex-grow-1">
-                  <Routes>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    {/* Otras rutas protegidas aquí */}
-                    <Route path="*" element={<Navigate to="/dashboard" />} />
-                  </Routes>
-                </Container>
-              </div>
-            </div>
-          } />
-        )}
-
-        {/* Redirecciones generales */}
-        <Route path="*" element={<Navigate to={currentUser ? "/dashboard" : "/login"} />} />
-      </Routes>
+      <AppRoutes />
     </Router>
   );
 }
