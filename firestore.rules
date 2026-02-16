@@ -2,22 +2,101 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Regla para la colección 'roles'
-    match /roles/{roleId} {
-      // CUALQUIER usuario autenticado puede LEER la lista de roles.
-      // Esto es seguro y necesario para los formularios.
-      allow read: if request.auth != null;
+    // Helper function to get user data from their 'usuarios' document
+    // NOTE: This will perform a read operation for every request.
+    // For performance, it's better to store role/sedeId in custom claims if possible,
+    // but fetching from the 'usuarios' document is the current pattern.
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/usuarios/$(userId)).data;
     }
 
-    // Regla para la colección 'usuarios'
+    // Helper functions for roles
+    function isAdmin() {
+      return request.auth != null && getUserData(request.auth.uid).rolId == 'admin';
+    }
+    function isSupervisor() {
+      return request.auth != null && getUserData(request.auth.uid).rolId == 'supervisor';
+    }
+    function isPreventista() {
+      return request.auth != null && getUserData(request.auth.uid).rolId == 'preventista';
+    }
+    function isAlmacenero() {
+      return request.auth != null && getUserData(request.auth.uid).rolId == 'almacenero';
+    }
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to get user's sedeId
+    function userSedeId() {
+      return getUserData(request.auth.uid).sedeId;
+    }
+
+    // Rules for 'roles' collection: Authenticated users can read
+    match /roles/{roleId} {
+      allow read: if isAuthenticated();
+    }
+
+    // Rules for 'sedes' collection: Authenticated users can read
+    match /sedes/{sedeId} {
+      // Admin can create/update sedes
+      allow create, update, delete: if isAdmin();
+      // All authenticated users can read sedes (needed for dropdowns)
+      allow read: if isAuthenticated();
+    }
+
+    // Rules for 'usuarios' collection
     match /usuarios/{userId} {
-      // Un usuario puede LEER un documento si:
-      // 1. El que pide los datos es un 'admin'.
-      // O
-      // 2. Está pidiendo su propio documento de usuario.
-      allow read: if request.auth != null &&
-                    (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rolId == 'admin' ||
-                     request.auth.uid == userId);
+      // A user can read/write their own document
+      allow read, update: if request.auth.uid == userId;
+
+      // Admin can read/write any user document
+      allow read, create, update, delete: if isAdmin();
+
+      // Validate new/updated user documents for required fields
+      // Ensure sedeId is present and rolId is valid (can be improved with roles list)
+      allow create, update: if request.resource.data.sedeId is string &&
+                               request.resource.data.rolId is string &&
+                               request.resource.data.nombre is string &&
+                               request.resource.data.email is string;
+    }
+
+    // Rules for 'productos' collection
+    match /productos/{productId} {
+      // Admin has global read/write
+      allow read, create, update, delete: if isAdmin();
+
+      // Almacenero can create/update products in their sede
+      allow create, update: if isAlmacenero() && request.resource.data.sedeId == userSedeId();
+
+      // Preventista and Supervisor can only read products in their sede
+      allow read: if (isPreventista() || isSupervisor()) && resource.data.sedeId == userSedeId();
+    }
+
+
+    // Rules for 'unidadesDeStock' collection (represents stock/almacen)
+    match /unidadesDeStock/{unitId} {
+      // Admin has global read/write
+      allow read, create, update, delete: if isAdmin();
+
+      // Almacenero can read/write stock in their own sede
+      allow read, create, update, delete: if isAlmacenero() && resource.data.sedeId == userSedeId();
+
+      // Preventista and Supervisor can read stock in their own sede
+      allow read: if (isPreventista() || isSupervisor()) && resource.data.sedeId == userSedeId();
+    }
+
+    // Rules for 'ordenes' collection
+    match /ordenes/{orderId} {
+      // Admin has global read/write
+      allow read, create, update, delete: if isAdmin();
+
+      // Preventista can read/write their own orders in their own sede
+      allow read, create, update: if isPreventista() && resource.data.sedeId == userSedeId() &&
+                                    request.resource.data.preventistaId == request.auth.uid;
+
+      // Supervisor can read all orders in their own sede
+      allow read: if isSupervisor() && resource.data.sedeId == userSedeId();
     }
   }
 }

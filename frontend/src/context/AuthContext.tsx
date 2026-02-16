@@ -9,6 +9,7 @@ import { doc, getDoc } from 'firebase/firestore';
 interface AuthContextType {
   currentUser: User | null;
   userRole: string | null; // El ID del rol (ej. "admin", "preventista")
+  userSedeId: string | null; // El ID de la sede a la que pertenece el usuario
   login: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -27,26 +28,30 @@ export function useAuth() {
 export const AuthProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null); // Estado para el rolId
+  const [userSedeId, setUserSedeId] = useState<string | null>(null); // Estado para el sedeId del usuario
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Si hay un usuario, busca su rol en Firestore
+        // Si hay un usuario, busca su rol y sedeId en Firestore
         const userDocRef = doc(db, 'usuarios', user.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
-          // El rol está en el campo 'rolId' según la nueva documentación
+          // El rol y sedeId están en el documento del usuario
           setUserRole(userDoc.data().rolId);
+          setUserSedeId(userDoc.data().sedeId);
         } else {
           console.error("Error: El usuario está autenticado pero no tiene un documento correspondiente en la colección 'usuarios' de Firestore.");
           setUserRole(null);
+          setUserSedeId(null);
         }
         setCurrentUser(user);
       } else {
         // Si no hay usuario, se limpia el estado
         setCurrentUser(null);
         setUserRole(null);
+        setUserSedeId(null);
       }
       setLoading(false);
     });
@@ -64,7 +69,8 @@ export const AuthProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const value: AuthContextType = {
     currentUser,
-    userRole, // Provee el rol del usuario
+    userRole,
+    userSedeId, // Provee el sedeId del usuario
     login,
     logout,
     loading,
