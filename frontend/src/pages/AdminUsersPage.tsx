@@ -1,9 +1,13 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo } from 'react'; // Importar useMemo
-import { Container, Row, Col, Card, Form, Button, Table, Alert } from 'react-bootstrap';
+import { useState, useEffect, useMemo } from 'react';
+import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap'; // Eliminamos 'Table' ya que ahora usamos GenericTable
 import { db } from '../api/firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import { FaPencilAlt, FaTrash } from 'react-icons/fa'; // Importar los iconos
+import { FaPencilAlt, FaTrash } from 'react-icons/fa';
+
+// Importar los nuevos componentes y la interfaz Column
+import SearchInput from '../components/SearchInput';
+import GenericTable, { type Column } from '../components/GenericTable';
 
 // Define la interfaz para los datos de un rol y un usuario
 interface Role {
@@ -19,13 +23,11 @@ interface UserProfile {
 }
 
 const AdminUsersPage: FC = () => {
-  // Estado para el modo oscuro, inicializado desde localStorage
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark' || savedTheme === null;
   });
 
-  // Escuchar cambios en localStorage para el tema (si el usuario lo cambia en otro lugar)
   useEffect(() => {
     const handleStorageChange = () => {
       setIsDarkMode(localStorage.getItem('theme') === 'dark');
@@ -36,34 +38,29 @@ const AdminUsersPage: FC = () => {
     };
   }, []);
 
-  // Estados para el formulario
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rolId, setRolId] = useState('');
 
-  // Estados para la carga de datos y la UI
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>(''); // Estado para el término de búsqueda
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Carga inicial de roles y usuarios
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Cargar Roles
         const rolesCollection = collection(db, 'roles');
         const rolesSnapshot = await getDocs(rolesCollection);
         const rolesList = rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
         setRoles(rolesList);
         if (rolesList.length > 0) {
-          setRolId(rolesList[0].id); // Selecciona el primer rol por defecto
+          setRolId(rolesList[0].id);
         }
 
-        // Cargar Usuarios
         const usersCollection = collection(db, 'usuarios');
         const usersSnapshot = await getDocs(usersCollection);
         const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
@@ -82,14 +79,9 @@ const AdminUsersPage: FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    // TODO: Implementar la lógica de creación de usuario
-    // 1. Usar una Cloud Function (preferido) o el SDK de Admin para crear el usuario en Firebase Auth.
-    // 2. Si es exitoso, crear el documento del usuario en la colección 'usuarios' de Firestore.
     alert(`TODO: Crear usuario:\nNombre: ${nombre}\nEmail: ${email}\nRol: ${rolId}`);
   };
 
-  // Filtrar usuarios basado en el término de búsqueda
   const filteredUsers = useMemo(() => {
     return users.filter(user =>
       user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,13 +89,39 @@ const AdminUsersPage: FC = () => {
     );
   }, [users, searchTerm]);
 
+  // Definición de las columnas para GenericTable
+  const userTableColumns: Column<UserProfile>[] = useMemo(() => {
+    return [
+      { accessorKey: 'nombre', header: 'Nombre' },
+      { accessorKey: 'email', header: 'Email' },
+      {
+        accessorKey: 'rolId', // Usamos accessorKey para el rolId para consistencia, aunque el render lo formatea
+        header: 'Rol',
+        render: (user: UserProfile) => roles.find(r => r.id === user.rolId)?.nombre || user.rolId
+      },
+      {
+        header: 'Acciones', // No hay accessorKey para las acciones, solo render
+        render: (_user: UserProfile) => ( // Renombrado a _user para indicar que no se usa directamente en el JSX
+          <>
+            <Button variant="outline-secondary" size="sm" className="me-2">
+              <FaPencilAlt />
+            </Button>
+            <Button variant="outline-danger" size="sm">
+              <FaTrash />
+            </Button>
+          </>
+        ),
+      },
+    ];
+  }, [roles]); // Re-renderizar si los roles cambian
+
   return (
     <Container fluid>
       <Row>
-        {/* Columna del Formulario para Crear Usuario */}
-        <Col md={4} className="mb-3"> {/* Añadir mb-3 para espaciado en móviles */}
-          <Card> {/* Card ya es transparente y sin borde por App.css */}
-            <Card.Body className="p-3"> {/* Añadir padding interno */}
+        <Col md={4} className="mb-3">
+          <Card>
+            <Card.Body className="p-3">
+              <h5 className="mb-3">Crear Nuevo Usuario</h5>
               <Form onSubmit={handleCreateUser}>
                 <Form.Group className="mb-3" controlId="formUserName">
                   <Form.Label>Nombre Completo</Form.Label>
@@ -163,57 +181,26 @@ const AdminUsersPage: FC = () => {
           </Card>
         </Col>
 
-        {/* Columna de la Tabla de Usuarios */}
         <Col md={8}>
-          <Card> {/* Card ya es transparente y sin borde por App.css */}
-            <Card.Body className="p-3"> {/* Añadir padding interno */}
-              <Form.Group className="mb-3" controlId="formSearchUser">
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por nombre o email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </Form.Group>
+          <Card>
+            <Card.Body className="p-3">
+              <SearchInput
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                placeholder="Buscar por nombre o email..."
+                className="mb-3"
+              />
 
               {loading ? (
                 <p>Cargando usuarios...</p>
               ) : (
-                <div style={{ maxHeight: '70vh', overflowY: 'auto' }}> {/* Contenedor scrollable */}
-                  <Table responsive variant={isDarkMode ? 'dark' : ''}> {/* Eliminar 'striped', 'bordered', 'hover' */}
-                    <thead>
-                      <tr>
-                        <th>Nombre</th>
-                        <th>Email</th>
-                        <th>Rol</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="text-center">No se encontraron usuarios.</td>
-                        </tr>
-                      ) : (
-                        filteredUsers.map(user => (
-                          <tr key={user.id}>
-                            <td>{user.nombre}</td>
-                            <td>{user.email}</td>
-                            <td>{roles.find(r => r.id === user.rolId)?.nombre || user.rolId}</td>
-                            <td>
-                              <Button variant="outline-secondary" size="sm" className="me-2">
-                                <FaPencilAlt />
-                              </Button>
-                              <Button variant="outline-danger" size="sm">
-                                <FaTrash />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </Table>
-                </div>
+                <GenericTable<UserProfile>
+                  data={filteredUsers}
+                  columns={userTableColumns}
+                  variant={isDarkMode ? 'dark' : ''}
+                  maxHeight="70vh"
+                  noRecordsMessage="No se encontraron usuarios."
+                />
               )}
             </Card.Body>
           </Card>
