@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { Nav, Button } from 'react-bootstrap';
+import { Nav } from 'react-bootstrap';
 import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt } from 'react-icons/fa';
 import './Sidebar.css';
 import { useLocation, useNavigate } from 'react-router-dom';

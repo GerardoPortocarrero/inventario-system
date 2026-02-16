@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Regla para la colección 'roles'
+    match /roles/{roleId} {
+      // CUALQUIER usuario autenticado puede LEER la lista de roles.
+      // Esto es seguro y necesario para los formularios.
+      allow read: if request.auth != null;
+    }
+
+    // Regla para la colección 'usuarios'
+    match /usuarios/{userId} {
+      // Un usuario puede LEER un documento si:
+      // 1. El que pide los datos es un 'admin'.
+      // O
+      // 2. Está pidiendo su propio documento de usuario.
+      allow read: if request.auth != null &&
+                    (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rolId == 'admin' ||
+                     request.auth.uid == userId);
+    }
+  }
+}

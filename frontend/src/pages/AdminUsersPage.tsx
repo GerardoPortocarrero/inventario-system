@@ -1,11 +1,176 @@
-import type { FC } from 'react';
-import { Container } from 'react-bootstrap';
+import { FC, useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Form, Button, Table, Alert } from 'react-bootstrap';
+import { db } from '../api/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+
+// Define la interfaz para los datos de un rol y un usuario
+interface Role {
+  id: string;
+  nombre: string;
+}
+
+interface UserProfile {
+  id: string;
+  nombre: string;
+  email: string;
+  rolId: string;
+}
 
 const AdminUsersPage: FC = () => {
+  // Estados para el formulario
+  const [nombre, setNombre] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rolId, setRolId] = useState('');
+
+  // Estados para la carga de datos y la UI
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Carga inicial de roles y usuarios
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Cargar Roles
+        const rolesCollection = collection(db, 'roles');
+        const rolesSnapshot = await getDocs(rolesCollection);
+        const rolesList = rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
+        setRoles(rolesList);
+        if (rolesList.length > 0) {
+          setRolId(rolesList[0].id); // Selecciona el primer rol por defecto
+        }
+
+        // Cargar Usuarios
+        const usersCollection = collection(db, 'usuarios');
+        const usersSnapshot = await getDocs(usersCollection);
+        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+        setUsers(usersList);
+
+      } catch (err) {
+        setError('Error al cargar los datos. Verifique los permisos de Firestore.');
+        console.error(err);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // TODO: Implementar la lógica de creación de usuario
+    // 1. Usar una Cloud Function (preferido) o el SDK de Admin para crear el usuario en Firebase Auth.
+    // 2. Si es exitoso, crear el documento del usuario en la colección 'usuarios' de Firestore.
+    alert(`TODO: Crear usuario:\nNombre: ${nombre}\nEmail: ${email}\nRol: ${rolId}`);
+  };
+
   return (
-    <Container>
-      <h2>Gestión de Usuarios</h2>
-      <p>Aquí se podrán crear, editar y eliminar usuarios del sistema.</p>
+    <Container fluid>
+      <Row>
+        {/* Columna del Formulario para Crear Usuario */}
+        <Col md={4}>
+          <Card>
+            <Card.Body>
+              <Form onSubmit={handleCreateUser}>
+                <Form.Group className="mb-3" controlId="formUserName">
+                  <Form.Label>Nombre Completo</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ej. Juan Pérez"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    required
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3" controlId="formUserEmail">
+                  <Form.Label>Correo Electrónico</Form.Label>
+                  <Form.Control
+                    type="email"
+                    placeholder="Ej. juan.perez@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3" controlId="formUserPassword">
+                  <Form.Label>Contraseña</Form.Label>
+                  <Form.Control
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3" controlId="formUserRole">
+                  <Form.Label>Rol</Form.Label>
+                  <Form.Select
+                    value={rolId}
+                    onChange={(e) => setRolId(e.target.value)}
+                    required
+                    disabled={loading}
+                  >
+                    {roles.map(role => (
+                      <option key={role.id} value={role.id}>{role.nombre}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+                
+                {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
+
+                <Button variant="primary" type="submit" className="w-100 mt-3">
+                  Crear Usuario
+                </Button>
+              </Form>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Columna de la Tabla de Usuarios */}
+        <Col md={8}>
+          <Card>
+            <Card.Header>Usuarios Existentes</Card.Header>
+            <Card.Body>
+              {loading ? (
+                <p>Cargando usuarios...</p>
+              ) : (
+                <Table striped bordered hover responsive>
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Email</th>
+                      <th>Rol</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map(user => (
+                      <tr key={user.id}>
+                        <td>{user.nombre}</td>
+                        <td>{user.email}</td>
+                        <td>{roles.find(r => r.id === user.rolId)?.nombre || user.rolId}</td>
+                        <td>
+                          <Button variant="outline-secondary" size="sm" className="me-2">Editar</Button>
+                          <Button variant="outline-danger" size="sm">Eliminar</Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
     </Container>
   );
 };
