@@ -1,7 +1,9 @@
-import { FC, useState, useEffect } from 'react';
+import type { FC } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Table, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { FaPencilAlt, FaTrash } from 'react-icons/fa'; // Importar los iconos
 
 // Define la interfaz para los datos de un rol y un usuario
 interface Role {
@@ -17,6 +19,23 @@ interface UserProfile {
 }
 
 const AdminUsersPage: FC = () => {
+  // Estado para el modo oscuro, inicializado desde localStorage
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'dark' || savedTheme === null;
+  });
+
+  // Escuchar cambios en localStorage para el tema (si el usuario lo cambia en otro lugar)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setIsDarkMode(localStorage.getItem('theme') === 'dark');
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   // Estados para el formulario
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -74,7 +93,7 @@ const AdminUsersPage: FC = () => {
       <Row>
         {/* Columna del Formulario para Crear Usuario */}
         <Col md={4}>
-          <Card>
+          <Card className={isDarkMode ? 'text-white bg-dark' : ''}>
             <Card.Body>
               <Form onSubmit={handleCreateUser}>
                 <Form.Group className="mb-3" controlId="formUserName">
@@ -137,13 +156,12 @@ const AdminUsersPage: FC = () => {
 
         {/* Columna de la Tabla de Usuarios */}
         <Col md={8}>
-          <Card>
-            <Card.Header>Usuarios Existentes</Card.Header>
+          <Card className={isDarkMode ? 'text-white bg-dark' : ''}> {/* Adaptar Card al tema */}
             <Card.Body>
               {loading ? (
                 <p>Cargando usuarios...</p>
               ) : (
-                <Table striped bordered hover responsive>
+                <Table striped bordered hover responsive variant={isDarkMode ? 'dark' : ''}>
                   <thead>
                     <tr>
                       <th>Nombre</th>
@@ -159,8 +177,12 @@ const AdminUsersPage: FC = () => {
                         <td>{user.email}</td>
                         <td>{roles.find(r => r.id === user.rolId)?.nombre || user.rolId}</td>
                         <td>
-                          <Button variant="outline-secondary" size="sm" className="me-2">Editar</Button>
-                          <Button variant="outline-danger" size="sm">Eliminar</Button>
+                          <Button variant="outline-secondary" size="sm" className="me-2">
+                            <FaPencilAlt />
+                          </Button>
+                          <Button variant="outline-danger" size="sm">
+                            <FaTrash />
+                          </Button>
                         </td>
                       </tr>
                     ))}
