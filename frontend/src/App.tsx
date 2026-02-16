@@ -16,6 +16,7 @@ import AlmacenPage from './pages/AlmacenPage';
 import SupervisorPage from './pages/SupervisorPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminProductsPage from './pages/AdminProductsPage';
+import AdminSedesPage from './pages/AdminSedesPage'; // Importa la nueva página de sedes
 
 // Importa los archivos CSS
 import './App.css';
@@ -77,6 +78,7 @@ const App: FC = () => {
               <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['supervisor']}><SupervisorPage /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />
               <Route path="/admin/products" element={<ProtectedRoute allowedRoles={['admin']}><AdminProductsPage /></ProtectedRoute>} />
+              <Route path="/admin/sedes" element={<ProtectedRoute allowedRoles={['admin']}><AdminSedesPage /></ProtectedRoute>} />
 
               {/* Página de no autorizado y redirecciones */}
               <Route path="/unauthorized" element={<UnauthorizedPage />} />

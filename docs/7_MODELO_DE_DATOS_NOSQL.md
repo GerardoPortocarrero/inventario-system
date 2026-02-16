@@ -10,8 +10,6 @@ La estructura se basará en las siguientes colecciones principales:
     ```json
     {
       "nombre": "Sede Central",
-      "direccion": "Calle Falsa 123", // Ejemplo de campo adicional
-      "creadoEn": "2024-02-06T10:00:00Z"
     }
     ```
 
