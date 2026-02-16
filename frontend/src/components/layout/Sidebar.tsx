@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Nav } from 'react-bootstrap';
-import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding } from 'react-icons/fa'; // Importar FaBuilding
+import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag } from 'react-icons/fa'; // Importar FaUserTag
 import './Sidebar.css';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -86,6 +86,12 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
                 <Nav.Link href="/admin/users" className={location.pathname === '/admin/users' ? 'active' : ''} onClick={toggleSidebar}>
                   <FaUsers className="me-2" />
                   Usuarios
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item> {/* Nuevo enlace para Roles */}
+                <Nav.Link href="/admin/roles" className={location.pathname === '/admin/roles' ? 'active' : ''} onClick={toggleSidebar}>
+                  <FaUserTag className="me-2" /> {/* Icono de roles */}
+                  Roles
                 </Nav.Link>
               </Nav.Item>
               <Nav.Item>

@@ -15,8 +15,9 @@ import PreventistaPage from './pages/PreventistaPage';
 import AlmacenPage from './pages/AlmacenPage';
 import SupervisorPage from './pages/SupervisorPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminRolesPage from './pages/AdminRolesPage'; // Importa la nueva página de roles
 import AdminProductsPage from './pages/AdminProductsPage';
-import AdminSedesPage from './pages/AdminSedesPage'; // Importa la nueva página de sedes
+import AdminSedesPage from './pages/AdminSedesPage';
 
 // Importa los archivos CSS
 import './App.css';
@@ -77,6 +78,7 @@ const App: FC = () => {
               <Route path="/almacen" element={<ProtectedRoute allowedRoles={['almacenero']}><AlmacenPage /></ProtectedRoute>} />
               <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['supervisor']}><SupervisorPage /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />
+              <Route path="/admin/roles" element={<ProtectedRoute allowedRoles={['admin']}><AdminRolesPage /></ProtectedRoute>} /> {/* Nueva ruta para roles */}
               <Route path="/admin/products" element={<ProtectedRoute allowedRoles={['admin']}><AdminProductsPage /></ProtectedRoute>} />
               <Route path="/admin/sedes" element={<ProtectedRoute allowedRoles={['admin']}><AdminSedesPage /></ProtectedRoute>} />
 

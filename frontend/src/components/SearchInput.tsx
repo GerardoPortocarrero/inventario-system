@@ -9,7 +9,7 @@ interface SearchInputProps {
   className?: string;
 }
 
-const SearchInput: FC<SearchInputProps> = ({ searchTerm, onSearchChange, placeholder = UI_TEXTS.PLACEHOLDER_SEARCH_SEDES, className }) => {
+const SearchInput: FC<SearchInputProps> = ({ searchTerm, onSearchChange, placeholder = UI_TEXTS.PLACEHOLDER_SEARCH_USERS, className }) => { // Changed default placeholder
   return (
     <Form.Group className={className} controlId="searchInput">
       <Form.Control

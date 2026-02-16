@@ -25,7 +25,7 @@ const GenericTable = <T extends { id: string }>({
   variant,
   maxHeight = '70vh', // Altura máxima por defecto para scroll
   noRecordsMessage = UI_TEXTS.NO_RECORDS_FOUND // Usar constante
-}: GenericTableProps<T>) => { // Corrected: Removed the FC<GenericTableProps<T>> return type annotation
+}: GenericTableProps<T>) => {
   return (
     <div style={{ maxHeight: maxHeight, overflowY: 'auto' }}>
       <Table responsive variant={variant}>

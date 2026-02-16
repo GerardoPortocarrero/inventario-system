@@ -91,6 +91,5 @@ La estructura se basará en las siguientes colecciones principales:
     ```json
     {
       "nombre": "Preventista",
-      "descripcion": "Rol operacional de ventas. Su enfoque es crear y dar seguimiento a sus propias órdenes."
     }
     ```
