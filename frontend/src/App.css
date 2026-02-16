@@ -143,6 +143,15 @@ a:hover {
   color: var(--color-red-dark) !important;
 }
 
+/* Estilos específicos para botones de acción en tablas */
+.btn.btn-link {
+  color: var(--theme-text-secondary) !important; /* Color neutro por defecto */
+}
+
+.btn.btn-link:hover {
+  color: var(--color-red-primary) !important; /* Rojo primario en hover */
+}
+
 /* Estilos para Tablas */
 .table {
   color: var(--theme-text-primary) !important; /* Color de texto general de la tabla */
