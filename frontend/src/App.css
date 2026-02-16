@@ -177,6 +177,12 @@ a:hover {
   background-color: var(--theme-background-secondary) !important;
 }
 
+/* Align content of the last column to the right for tables */
+.table th:last-child,
+.table td:last-child {
+  text-align: end;
+}
+
 /* Fondo de tabla oscuro */
 .table-dark tbody tr {
   background-color: var(--theme-background-primary) !important; /* Todas las filas igual al fondo principal */

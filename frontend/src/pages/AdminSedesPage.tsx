@@ -93,10 +93,10 @@ const AdminSedesPage: FC = () => {
         header: 'Acciones',
         render: (_sede: Sede) => (
           <>
-            <Button variant="outline-secondary" size="sm" className="me-2">
+            <Button variant="link" size="sm" className="me-2">
               <FaPencilAlt />
             </Button>
-            <Button variant="outline-danger" size="sm">
+            <Button variant="link" size="sm">
               <FaTrash />
             </Button>
           </>
