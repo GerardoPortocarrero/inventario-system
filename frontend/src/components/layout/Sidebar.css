@@ -72,13 +72,6 @@
   flex-direction: column;
 }
 
-.sidebar-logout-section hr {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-  width: 100%; /* Hacer la línea más corta para estética */
-  align-self: center; /* Centrar la línea */
-}
-
 .sidebar .nav-link {
   display: flex; /* Para alinear ícono y texto */
   align-items: center; /* Centrado vertical */

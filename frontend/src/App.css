@@ -177,3 +177,9 @@ a:hover {
   background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente opcional */
 }
 
+hr {
+  margin-top: 0rem !important;
+  margin-bottom: 0.5rem !important;
+  width: 100% !important; /* Hacer la línea más corta para estética */
+  align-self: center !important; /* Centrar la línea */
+}
