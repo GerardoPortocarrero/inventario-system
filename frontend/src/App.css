@@ -178,7 +178,7 @@ a:hover {
 }
 
 hr {
-  margin-top: 0rem !important;
+  margin-top: 0.5rem !important;
   margin-bottom: 0.5rem !important;
   width: 100% !important; /* Hacer la línea más corta para estética */
   align-self: center !important; /* Centrar la línea */
