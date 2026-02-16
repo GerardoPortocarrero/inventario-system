@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { Form } from 'react-bootstrap';
+import { UI_TEXTS } from '../constants';
 
 interface SearchInputProps {
   searchTerm: string;
@@ -8,7 +9,7 @@ interface SearchInputProps {
   className?: string;
 }
 
-const SearchInput: FC<SearchInputProps> = ({ searchTerm, onSearchChange, placeholder = 'Buscar...', className }) => {
+const SearchInput: FC<SearchInputProps> = ({ searchTerm, onSearchChange, placeholder = UI_TEXTS.PLACEHOLDER_SEARCH_SEDES, className }) => {
   return (
     <Form.Group className={className} controlId="searchInput">
       <Form.Control

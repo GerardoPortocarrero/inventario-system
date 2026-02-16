@@ -1,5 +1,6 @@
 import React from 'react';
 import { Table } from 'react-bootstrap';
+import { UI_TEXTS } from '../constants'; // Importar constantes
 
 // Define la interfaz para la configuración de una columna
 export interface Column<T> {
@@ -23,7 +24,7 @@ const GenericTable = <T extends { id: string }>({
   columns,
   variant,
   maxHeight = '70vh', // Altura máxima por defecto para scroll
-  noRecordsMessage = 'No hay registros para mostrar.'
+  noRecordsMessage = UI_TEXTS.NO_RECORDS_FOUND // Usar constante
 }: GenericTableProps<T>) => { // Corrected: Removed the FC<GenericTableProps<T>> return type annotation
   return (
     <div style={{ maxHeight: maxHeight, overflowY: 'auto' }}>

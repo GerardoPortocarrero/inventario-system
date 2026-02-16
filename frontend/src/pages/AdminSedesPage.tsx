@@ -3,10 +3,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
-import { FaPencilAlt, FaTrash } from 'react-icons/fa'; // Iconos para acciones
+
+import { FaPencilAlt, FaTrash } from 'react-icons/fa';
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
+import { UI_TEXTS } from '../constants'; // Importar constantes
 
 // Define la interfaz para una Sede
 interface Sede {
@@ -47,7 +49,7 @@ const AdminSedesPage: FC = () => {
       const sedesList = sedesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sede));
       setSedes(sedesList);
     } catch (err) {
-      setError('Error al cargar las sedes. Verifique los permisos de Firestore.');
+      setError(UI_TEXTS.ERROR_GENERIC_LOAD);
       console.error(err);
     }
     setLoading(false);
@@ -62,7 +64,7 @@ const AdminSedesPage: FC = () => {
     setError(null);
 
     if (!nombreSede.trim()) {
-      setError('El nombre de la sede no puede estar vacío.');
+      setError(UI_TEXTS.SEDE_NAME_EMPTY);
       return;
     }
 
@@ -74,7 +76,7 @@ const AdminSedesPage: FC = () => {
       setNombreSede(''); // Limpiar el formulario
       await fetchSedes(); // Recargar la lista de sedes
     } catch (err) {
-      setError('Error al crear la sede. Verifique los permisos de Firestore.');
+      setError(UI_TEXTS.ERROR_GENERIC_CREATE);
       console.error(err);
     }
   };
@@ -88,9 +90,9 @@ const AdminSedesPage: FC = () => {
   // Definición de las columnas para GenericTable
   const sedesTableColumns: Column<Sede>[] = useMemo(() => {
     return [
-      { accessorKey: 'nombre', header: 'Nombre' },
+      { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
       {
-        header: 'Acciones',
+        header: UI_TEXTS.TABLE_HEADER_ACTIONS,
         render: (_sede: Sede) => (
           <>
             <Button variant="link" size="sm" className="me-2">
@@ -113,10 +115,10 @@ const AdminSedesPage: FC = () => {
             <Card.Body className="p-3">
               <Form onSubmit={handleCreateSede}>
                 <Form.Group className="mb-3" controlId="formSedeName">
-                  <Form.Label>Nombre de la Sede</Form.Label>
+                  <Form.Label>{UI_TEXTS.SEDE_NAME}</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Ej. Sede Principal"
+                    placeholder={UI_TEXTS.PLACEHOLDER_SEDE_NAME}
                     value={nombreSede}
                     onChange={(e) => setNombreSede(e.target.value)}
                     required
@@ -126,7 +128,7 @@ const AdminSedesPage: FC = () => {
                 {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
 
                 <Button variant="primary" type="submit" className="w-100 mt-3">
-                  Crear Sede
+                  {UI_TEXTS.CREATE_SEDE}
                 </Button>
               </Form>
             </Card.Body>
@@ -139,19 +141,19 @@ const AdminSedesPage: FC = () => {
               <SearchInput
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
-                placeholder="Buscar por nombre de sede..."
+                placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_SEDES}
                 className="mb-3"
               />
 
               {loading ? (
-                <p>Cargando sedes...</p>
+                <p>{UI_TEXTS.LOADING}</p>
               ) : (
                 <GenericTable<Sede>
                   data={filteredSedes}
                   columns={sedesTableColumns}
                   variant={isDarkMode ? 'dark' : ''}
                   maxHeight="70vh"
-                  noRecordsMessage="No se encontraron sedes."
+                  noRecordsMessage={UI_TEXTS.NO_RECORDS_FOUND}
                 />
               )}
             </Card.Body>

@@ -2,14 +2,15 @@ import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
-import { collection, getDocs, setDoc, doc } from 'firebase/firestore'; // Añadir setDoc y doc
-import { createUserWithEmailAndPassword } from 'firebase/auth'; // Importar para crear usuario
-import { auth } from '../api/firebase'; // Asegurarse de que 'auth' esté importado
+import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../api/firebase';
 
 import { FaPencilAlt, FaTrash } from 'react-icons/fa';
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
+import { UI_TEXTS } from '../constants'; // Importar constantes
 
 // Define la interfaz para los datos de un rol
 interface Role {
@@ -91,7 +92,7 @@ const AdminUsersPage: FC = () => {
       setUsers(usersList);
 
     } catch (err) {
-      setError('Error al cargar los datos. Verifique los permisos de Firestore.');
+      setError(UI_TEXTS.ERROR_GENERIC_LOAD);
       console.error(err);
     }
     setLoading(false);
@@ -107,13 +108,13 @@ const AdminUsersPage: FC = () => {
     setLoading(true); // Indicar que se está creando el usuario
 
     if (!nombre.trim() || !email.trim() || !password.trim() || !rolId || !selectedSedeId) {
-      setError('Todos los campos son obligatorios.');
+      setError(UI_TEXTS.REQUIRED_FIELDS);
       setLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+      setError(UI_TEXTS.PASSWORD_MIN_LENGTH);
       setLoading(false);
       return;
     }
@@ -148,12 +149,12 @@ const AdminUsersPage: FC = () => {
 
       setError(null);
       await fetchUsersAndSedesAndRoles(); // Recargar todos los datos, incluyendo los usuarios actualizados
-      alert('Usuario creado exitosamente. Nota: El usuario recién creado ha iniciado sesión automáticamente.');
+      alert(`${UI_TEXTS.USER_CREATED_SUCCESS} ${UI_TEXTS.TODO_USER_CREATION_NOTE}`);
 
     } catch (err: any) {
-      let errorMessage = 'Error al crear el usuario.';
+      let errorMessage = UI_TEXTS.ERROR_GENERIC_CREATE;
       if (err.code === 'auth/email-already-in-use') {
-        errorMessage = 'El correo electrónico ya está en uso.';
+        errorMessage = UI_TEXTS.EMAIL_ALREADY_IN_USE;
       } else if (err.message) {
         errorMessage = err.message;
       }
@@ -173,20 +174,20 @@ const AdminUsersPage: FC = () => {
 
   const userTableColumns: Column<UserProfile>[] = useMemo(() => {
     return [
-      { accessorKey: 'nombre', header: 'Nombre' },
-      { accessorKey: 'email', header: 'Email' },
+      { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
+      { accessorKey: 'email', header: UI_TEXTS.TABLE_HEADER_EMAIL },
       {
         accessorKey: 'rolId',
-        header: 'Rol',
+        header: UI_TEXTS.TABLE_HEADER_ROLE,
         render: (user: UserProfile) => roles.find(r => r.id === user.rolId)?.nombre || user.rolId
       },
       {
         accessorKey: 'sedeId',
-        header: 'Sede',
+        header: UI_TEXTS.TABLE_HEADER_SEDE,
         render: (user: UserProfile) => sedes.find(s => s.id === user.sedeId)?.nombre || user.sedeId
       },
       {
-        header: 'Acciones',
+        header: UI_TEXTS.TABLE_HEADER_ACTIONS,
         render: (_user: UserProfile) => (
           <>
             <Button variant="link" size="sm" className="me-2">
@@ -197,6 +198,7 @@ const AdminUsersPage: FC = () => {
             </Button>
           </>
         ),
+        colClassName: 'text-end'
       },
     ];
   }, [roles, sedes]);
@@ -209,10 +211,10 @@ const AdminUsersPage: FC = () => {
             <Card.Body className="p-3">
               <Form onSubmit={handleCreateUser}>
                 <Form.Group className="mb-3" controlId="formUserName">
-                  <Form.Label>Nombre Completo</Form.Label>
+                  <Form.Label>{UI_TEXTS.FULL_NAME}</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Ej. Juan Pérez"
+                    placeholder={UI_TEXTS.PLACEHOLDER_FULL_NAME}
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
                     required
@@ -220,10 +222,10 @@ const AdminUsersPage: FC = () => {
                 </Form.Group>
 
                 <Form.Group className="mb-3" controlId="formUserEmail">
-                  <Form.Label>Correo Electrónico</Form.Label>
+                  <Form.Label>{UI_TEXTS.EMAIL}</Form.Label>
                   <Form.Control
                     type="email"
-                    placeholder="Ej. juan.perez@email.com"
+                    placeholder={UI_TEXTS.PLACEHOLDER_EMAIL}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -231,10 +233,10 @@ const AdminUsersPage: FC = () => {
                 </Form.Group>
 
                 <Form.Group className="mb-3" controlId="formUserPassword">
-                  <Form.Label>Contraseña</Form.Label>
+                  <Form.Label>{UI_TEXTS.PASSWORD}</Form.Label>
                   <Form.Control
                     type="password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={UI_TEXTS.PLACEHOLDER_PASSWORD}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -243,7 +245,7 @@ const AdminUsersPage: FC = () => {
                 </Form.Group>
 
                 <Form.Group className="mb-3" controlId="formUserRole">
-                  <Form.Label>Rol</Form.Label>
+                  <Form.Label>{UI_TEXTS.ROLE}</Form.Label>
                   <Form.Select
                     value={rolId}
                     onChange={(e) => setRolId(e.target.value)}
@@ -258,7 +260,7 @@ const AdminUsersPage: FC = () => {
                 
                 {/* Nuevo campo de selección de Sede */}
                 <Form.Group className="mb-3" controlId="formUserSede">
-                  <Form.Label>Sede</Form.Label>
+                  <Form.Label>{UI_TEXTS.SEDE}</Form.Label>
                   <Form.Select
                     value={selectedSedeId}
                     onChange={(e) => setSelectedSedeId(e.target.value)}
@@ -274,7 +276,7 @@ const AdminUsersPage: FC = () => {
                 {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
 
                 <Button variant="primary" type="submit" className="w-100 mt-3">
-                  Crear Usuario
+                  {UI_TEXTS.CREATE_USER}
                 </Button>
               </Form>
             </Card.Body>
@@ -287,19 +289,19 @@ const AdminUsersPage: FC = () => {
               <SearchInput
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
-                placeholder="Buscar por nombre o email o sede..."
+                placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS}
                 className="mb-3"
               />
 
               {loading ? (
-                <p>Cargando usuarios...</p>
+                <p>{UI_TEXTS.LOADING}</p>
               ) : (
                 <GenericTable<UserProfile>
                   data={filteredUsers}
                   columns={userTableColumns}
                   variant={isDarkMode ? 'dark' : ''}
                   maxHeight="70vh"
-                  noRecordsMessage="No se encontraron usuarios."
+                  noRecordsMessage={UI_TEXTS.NO_RECORDS_FOUND}
                 />
               )}
             </Card.Body>
