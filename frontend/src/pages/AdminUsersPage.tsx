@@ -161,7 +161,7 @@ const AdminUsersPage: FC = () => {
               {loading ? (
                 <p>Cargando usuarios...</p>
               ) : (
-                <Table striped bordered hover responsive variant={isDarkMode ? 'dark' : ''}>
+                <Table responsive variant={isDarkMode ? 'dark' : ''}>
                   <thead>
                     <tr>
                       <th>Nombre</th>
