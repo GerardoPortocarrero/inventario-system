@@ -23,6 +23,7 @@
   --theme-border-default: #333333;
   --theme-card-bg: #212529;
   --theme-input-bg: #1a1a1a;
+  --theme-table-border-color: rgba(255,255,255, 0.1); /* Nuevo color de borde para tablas */
 }
 
 /* 2. Sobrescribir variables para el tema claro cuando el body tiene clase .theme-light */
@@ -34,6 +35,7 @@ body.theme-light {
   --theme-border-default: #dee2e6;
   --theme-card-bg: var(--color-white);
   --theme-input-bg: var(--color-white);
+  --theme-table-border-color: rgba(0,0,0, 0.1); /* Nuevo color de borde para tablas en tema claro */
 }
 
 html, body, #root { /* Asegura que html y body y el div #root ocupen el 100% del alto */
@@ -150,17 +152,13 @@ a:hover {
 /* Headers de tabla */
 .table thead th {
   color: var(--theme-text-secondary) !important; /* Color de texto secundario para headers */
-  border-bottom: 1px solid var(--theme-border-default) !important; /* Borde sutil inferior */
+  border-bottom: 1px solid var(--theme-table-border-color) !important; /* Borde sutil inferior */
   border-top: none !important; /* Quitar borde superior si existe */
 }
 
 /* Bordes sutiles entre filas para todas las variantes */
 .table tbody tr {
-  border-bottom: 1px solid var(--theme-border-default) !important; /* Borde sutil entre filas */
-}
-
-.table tbody tr:last-child {
-  border-bottom: none !important; /* No borde en la última fila */
+  border-bottom: 1px solid var(--theme-table-border-color) !important; /* Borde sutil entre filas */
 }
 
 /* Eliminar bordes laterales para todas las variantes */
@@ -193,7 +191,7 @@ a:hover {
   --bs-table-bg: var(--theme-background-primary) !important;
   --bs-table-striped-bg: var(--theme-background-primary) !important; /* Actualizar BS var */
   --bs-table-hover-bg: var(--theme-background-primary) !important; /* Actualizar BS var */
-  --bs-table-border-color: var(--theme-border-default) !important;
+  --bs-table-border-color: var(--theme-table-border-color) !important; /* Usar nuevo color de borde */
   color: var(--theme-text-primary) !important;
 }
 
@@ -211,7 +209,7 @@ a:hover {
   --bs-table-bg: var(--theme-background-primary) !important;
   --bs-table-striped-bg: var(--theme-background-primary) !important; /* Actualizar BS var */
   --bs-table-hover-bg: var(--theme-background-primary) !important; /* Actualizar BS var */
-  --bs-table-border-color: var(--theme-border-default) !important;
+  --bs-table-border-color: var(--theme-table-border-color) !important; /* Usar nuevo color de borde */
   color: var(--theme-text-primary) !important;
 }
 
