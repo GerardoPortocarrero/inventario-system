@@ -32,9 +32,10 @@ service cloud.firestore {
       return getUserData(request.auth.uid).sedeId;
     }
 
-    // Rules for 'roles' collection: Authenticated users can read
+    // Rules for 'roles' collection
     match /roles/{roleId} {
       allow read: if isAuthenticated();
+      allow create: if isAdmin();
     }
 
     // Rules for 'sedes' collection: Authenticated users can read
