@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
 import { FaPencilAlt, FaTrash } from 'react-icons/fa'; // Iconos para acciones
 
 import SearchInput from '../components/SearchInput';
@@ -34,6 +34,7 @@ const AdminRolesPage: FC = () => {
   }, []);
 
   const [nombreRol, setNombreRol] = useState(''); // Para el input del formulario
+  const [idRol, setIdRol] = useState(''); // Nuevo estado para el ID del rol
   // const [descripcionRol, setDescripcionRol] = useState(''); // REMOVED: No longer in documentation
   const [roles, setRoles] = useState<Role[]>([]); // Lista de roles
   const [loading, setLoading] = useState(true);
@@ -63,18 +64,19 @@ const AdminRolesPage: FC = () => {
     e.preventDefault();
     setError(null);
 
-    if (!nombreRol.trim()) {
-      setError(UI_TEXTS.REQUIRED_FIELDS); // Use a more general required field message
+    if (!idRol.trim() || !nombreRol.trim()) {
+      setError(UI_TEXTS.REQUIRED_FIELDS);
       return;
     }
 
     try {
-      const rolesCollection = collection(db, 'roles');
-      await addDoc(rolesCollection, {
+      // const rolesCollection = collection(db, 'roles'); // REMOVED
+      await setDoc(doc(db, 'roles', idRol), {
         nombre: nombreRol,
         // REMOVED: descripcion: descripcionRol,
       });
       setNombreRol(''); // Limpiar el formulario
+      setIdRol(''); // Limpiar el ID del rol
       // setDescripcionRol(''); // REMOVED
       await fetchRoles(); // Recargar la lista de roles
     } catch (err) {
@@ -93,6 +95,7 @@ const AdminRolesPage: FC = () => {
   // Definición de las columnas para GenericTable
   const rolesTableColumns: Column<Role>[] = useMemo(() => {
     return [
+      { accessorKey: 'id', header: 'ID' }, // Nuevo: Mostrar el ID del rol
       { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
       // REMOVED: { accessorKey: 'descripcion', header: 'Descripción' },
       {
@@ -120,6 +123,17 @@ const AdminRolesPage: FC = () => {
             <Card.Body className="p-3">
               {/* REMOVED: h5 title */}
               <Form onSubmit={handleCreateRole}>
+                <Form.Group className="mb-3" controlId="formRoleId">
+                  <Form.Label>ID de Rol</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Ej. admin, preventista"
+                    value={idRol}
+                    onChange={(e) => setIdRol(e.target.value)}
+                    required
+                  />
+                </Form.Group>
+
                 <Form.Group className="mb-3" controlId="formRoleName">
                   <Form.Label>{UI_TEXTS.TABLE_HEADER_NAME}</Form.Label>
                   <Form.Control
