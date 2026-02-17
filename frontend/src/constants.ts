@@ -43,3 +43,8 @@ export const UI_TEXTS = {
   TABLE_HEADER_ACTIONS: 'Acciones',
   TABLE_HEADER_CREATED_AT: 'Fecha de Creación', // Not used for sedes anymore, but kept for completeness
 };
+
+export const SPINNER_VARIANTS = {
+  OVERLAY: 'overlay',
+  IN_PAGE: 'in-page',
+} as const;

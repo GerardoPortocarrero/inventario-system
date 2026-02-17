@@ -6,6 +6,8 @@ import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute'; // Importa el componente de ruta protegida
 import { useAuth } from './context/AuthContext';
+import GlobalSpinner from './components/GlobalSpinner'; // Import GlobalSpinner
+import { SPINNER_VARIANTS } from './constants'; // Import SPINNER_VARIANTS
 
 // Importa las páginas
 import LoginPage from './pages/LoginPage';
@@ -40,11 +42,7 @@ const App: FC = () => {
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
 
   if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <h2>Cargando...</h2>
-      </div>
-    );
+    return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
   }
 
   // Estructura de rutas separada para mayor claridad

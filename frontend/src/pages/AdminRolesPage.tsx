@@ -7,7 +7,8 @@ import { FaPencilAlt, FaTrash } from 'react-icons/fa'; // Iconos para acciones
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
-import { UI_TEXTS } from '../constants'; // Importar constantes
+import { UI_TEXTS, SPINNER_VARIANTS } from '../constants'; // Importar constantes y SPINNER_VARIANTS
+import GlobalSpinner from '../components/GlobalSpinner'; // Importar GlobalSpinner
 
 // Define la interfaz para un Rol (reutilizada de AdminUsersPage.tsx)
 interface Role {
@@ -154,7 +155,7 @@ const AdminRolesPage: FC = () => {
               />
 
               {loading ? (
-                <p>{UI_TEXTS.LOADING}</p>
+                <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
               ) : (
                 <GenericTable<Role>
                   data={filteredRoles}

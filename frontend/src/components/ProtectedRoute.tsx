@@ -1,6 +1,8 @@
 import type { FC, ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import GlobalSpinner from './GlobalSpinner'; // Import GlobalSpinner
+import { SPINNER_VARIANTS } from '../constants'; // Import SPINNER_VARIANTS
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -11,11 +13,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, allowedRoles }) => 
   const { userRole, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <h2>Cargando...</h2>
-      </div>
-    );
+    return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
   }
 
   // Comprueba si el rol del usuario está en la lista de roles permitidos.

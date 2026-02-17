@@ -76,6 +76,11 @@ body {
   border-radius: 0 !important;
 }
 
+/* Override para que el spinner sea circular */
+.spinner-border {
+  border-radius: 50% !important;
+}
+
 /* Eliminar box-shadow */
 .card, .modal-content, .btn, .form-control, .alert {
   box-shadow: none !important;
@@ -93,6 +98,11 @@ body {
   background-color: var(--color-red-dark) !important;
   border-color: var(--color-red-dark) !important;
   color: var(--color-white) !important;
+}
+
+/* Estilo para el spinner primario */
+.spinner-primary {
+  color: var(--color-red-primary) !important;
 }
 
 /* Formularios: Solo border-bottom */

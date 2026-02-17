@@ -10,7 +10,8 @@ import { FaPencilAlt, FaTrash } from 'react-icons/fa';
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
-import { UI_TEXTS } from '../constants'; // Importar constantes
+import { UI_TEXTS, SPINNER_VARIANTS } from '../constants'; // Importar constantes y SPINNER_VARIANTS
+import GlobalSpinner from '../components/GlobalSpinner'; // Importar GlobalSpinner
 
 // Define la interfaz para los datos de un rol
 interface Role {
@@ -294,7 +295,7 @@ const AdminUsersPage: FC = () => {
               />
 
               {loading ? (
-                <p>{UI_TEXTS.LOADING}</p>
+                <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
               ) : (
                 <GenericTable<UserProfile>
                   data={filteredUsers}
