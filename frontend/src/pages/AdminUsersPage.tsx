@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react'; // Importar Fragment
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
@@ -7,11 +7,15 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../api/firebase';
 
 import { FaPencilAlt, FaTrash } from 'react-icons/fa';
+import useMediaQuery from '../hooks/useMediaQuery'; // Importar el hook useMediaQuery
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
 import { UI_TEXTS, SPINNER_VARIANTS } from '../constants'; // Importar constantes y SPINNER_VARIANTS
 import GlobalSpinner from '../components/GlobalSpinner'; // Importar GlobalSpinner
+import FabButton from '../components/FabButton'; // Importar FabButton
+import GenericCreationModal from '../components/GenericCreationModal'; // Importar GenericCreationModal
+
 
 // Define la interfaz para los datos de un rol
 interface Role {
@@ -51,6 +55,12 @@ const AdminUsersPage: FC = () => {
     };
   }, []);
 
+  const isMobile = useMediaQuery('(max-width: 768px)'); // Hook para detectar vista móvil
+
+  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal
+  const handleShow = () => setShowModal(true);
+  const handleClose = () => setShowModal(false);
+
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -63,6 +73,96 @@ const AdminUsersPage: FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Componente funcional para el formulario de creación de usuarios
+  const UserCreationForm: React.FC<{
+    onSubmit: (e: React.FormEvent) => Promise<void>;
+    nombre: string;
+    setNombre: (name: string) => void;
+    email: string;
+    setEmail: (email: string) => void;
+    password: string;
+    setPassword: (password: string) => void;
+    rolId: string;
+    setRolId: (rolId: string) => void;
+    selectedSedeId: string;
+    setSelectedSedeId: (sedeId: string) => void;
+    roles: Role[];
+    sedes: Sede[];
+    loading: boolean;
+    error: string | null;
+  }> = ({ onSubmit, nombre, setNombre, email, setEmail, password, setPassword, rolId, setRolId, selectedSedeId, setSelectedSedeId, roles, sedes, loading, error }) => (
+    <Form onSubmit={onSubmit}>
+      <Form.Group className="mb-3" controlId="formUserName">
+        <Form.Label>{UI_TEXTS.FULL_NAME}</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder={UI_TEXTS.PLACEHOLDER_FULL_NAME}
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          required
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3" controlId="formUserEmail">
+        <Form.Label>{UI_TEXTS.EMAIL}</Form.Label>
+        <Form.Control
+          type="email"
+          placeholder={UI_TEXTS.PLACEHOLDER_EMAIL}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3" controlId="formUserPassword">
+        <Form.Label>{UI_TEXTS.PASSWORD}</Form.Label>
+        <Form.Control
+          type="password"
+          placeholder={UI_TEXTS.PLACEHOLDER_PASSWORD}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={6}
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3" controlId="formUserRole">
+        <Form.Label>{UI_TEXTS.ROLE}</Form.Label>
+        <Form.Select
+          value={rolId}
+          onChange={(e) => setRolId(e.target.value)}
+          required
+          disabled={loading}
+        >
+          {roles.map(role => (
+            <option key={role.id} value={role.id}>{role.nombre}</option>
+          ))}
+        </Form.Select>
+      </Form.Group>
+      
+      {/* Nuevo campo de selección de Sede */}
+      <Form.Group className="mb-3" controlId="formUserSede">
+        <Form.Label>{UI_TEXTS.SEDE}</Form.Label>
+        <Form.Select
+          value={selectedSedeId}
+          onChange={(e) => setSelectedSedeId(e.target.value)}
+          required
+          disabled={loading}
+        >
+          {sedes.map(sede => (
+            <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+          ))}
+        </Form.Select>
+      </Form.Group>
+
+      {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
+
+      <Button variant="primary" type="submit" className="w-100 mt-3">
+        {UI_TEXTS.CREATE_USER}
+      </Button>
+    </Form>
+  );
 
   // Función para cargar todos los datos necesarios (roles, sedes, usuarios)
   const fetchUsersAndSedesAndRoles = async () => {
@@ -205,110 +305,89 @@ const AdminUsersPage: FC = () => {
   }, [roles, sedes]);
 
   return (
-    <Container fluid>
-      <Row>
-        <Col md={4} className="mb-3">
-          <Card>
-            <Card.Body className="p-3">
-              <Form onSubmit={handleCreateUser}>
-                <Form.Group className="mb-3" controlId="formUserName">
-                  <Form.Label>{UI_TEXTS.FULL_NAME}</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder={UI_TEXTS.PLACEHOLDER_FULL_NAME}
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    required
+    <Fragment>
+      <Container fluid>
+        <Row>
+          {!isMobile && ( // Mostrar el formulario solo en vista de escritorio
+            <Col md={4} className="mb-3">
+              <Card>
+                <Card.Body className="p-3">
+                  <UserCreationForm
+                    onSubmit={handleCreateUser}
+                    nombre={nombre}
+                    setNombre={setNombre}
+                    email={email}
+                    setEmail={setEmail}
+                    password={password}
+                    setPassword={setPassword}
+                    rolId={rolId}
+                    setRolId={setRolId}
+                    selectedSedeId={selectedSedeId}
+                    setSelectedSedeId={setSelectedSedeId}
+                    roles={roles}
+                    sedes={sedes}
+                    loading={loading}
+                    error={error}
                   />
-                </Form.Group>
+                </Card.Body>
+              </Card>
+            </Col>
+          )}
 
-                <Form.Group className="mb-3" controlId="formUserEmail">
-                  <Form.Label>{UI_TEXTS.EMAIL}</Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder={UI_TEXTS.PLACEHOLDER_EMAIL}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3" controlId="formUserPassword">
-                  <Form.Label>{UI_TEXTS.PASSWORD}</Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder={UI_TEXTS.PLACEHOLDER_PASSWORD}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3" controlId="formUserRole">
-                  <Form.Label>{UI_TEXTS.ROLE}</Form.Label>
-                  <Form.Select
-                    value={rolId}
-                    onChange={(e) => setRolId(e.target.value)}
-                    required
-                    disabled={loading}
-                  >
-                    {roles.map(role => (
-                      <option key={role.id} value={role.id}>{role.nombre}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-                
-                {/* Nuevo campo de selección de Sede */}
-                <Form.Group className="mb-3" controlId="formUserSede">
-                  <Form.Label>{UI_TEXTS.SEDE}</Form.Label>
-                  <Form.Select
-                    value={selectedSedeId}
-                    onChange={(e) => setSelectedSedeId(e.target.value)}
-                    required
-                    disabled={loading}
-                  >
-                    {sedes.map(sede => (
-                      <option key={sede.id} value={sede.id}>{sede.nombre}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-
-                {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
-
-                <Button variant="primary" type="submit" className="w-100 mt-3">
-                  {UI_TEXTS.CREATE_USER}
-                </Button>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col md={8}>
-          <Card>
-            <Card.Body className="p-3">
-              <SearchInput
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS}
-                className="mb-3"
-              />
-
-              {loading ? (
-                <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
-              ) : (
-                <GenericTable<UserProfile>
-                  data={filteredUsers}
-                  columns={userTableColumns}
-                  variant={isDarkMode ? 'dark' : ''}
-                  noRecordsMessage={UI_TEXTS.NO_RECORDS_FOUND}
+          <Col md={isMobile ? 12 : 8}> {/* La tabla ocupa 12 columnas en móvil, 8 en escritorio */}
+            <Card>
+              <Card.Body className="p-3">
+                <SearchInput
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS}
+                  className="mb-3"
                 />
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+
+                {loading ? (
+                  <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
+                ) : (
+                  <GenericTable<UserProfile>
+                    data={filteredUsers}
+                    columns={userTableColumns}
+                    variant={isDarkMode ? 'dark' : ''}
+                    noRecordsMessage={UI_TEXTS.NO_RECORDS_FOUND}
+                  />
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+      
+      {isMobile && <FabButton onClick={handleShow} />} {/* FAB button for mobile */}
+
+      {isMobile && ( // Modal para la vista móvil
+        <GenericCreationModal
+          show={showModal}
+          onHide={handleClose}
+          title={UI_TEXTS.CREATE_USER} // Usar una constante para "Crear Usuario"
+        >
+          <UserCreationForm
+            onSubmit={handleCreateUser}
+            nombre={nombre}
+            setNombre={setNombre}
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            rolId={rolId}
+            setRolId={setRolId}
+            selectedSedeId={selectedSedeId}
+            setSelectedSedeId={setSelectedSedeId}
+            roles={roles}
+            sedes={sedes}
+            loading={loading}
+            error={error}
+          />
+        </GenericCreationModal>
+      )}
+    </Fragment>
   );
 };
 

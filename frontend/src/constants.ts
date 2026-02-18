@@ -28,6 +28,8 @@ export const UI_TEXTS = {
   // Buttons
   CREATE_USER: 'Crear Usuario',
   CREATE_SEDE: 'Crear Sede',
+  CREATE_ROLE: 'Crear Rol', // Nuevo
+  CLOSE: 'Cerrar', // Nuevo
 
   // Alerts / Validation
   REQUIRED_FIELDS: 'Todos los campos son obligatorios.',

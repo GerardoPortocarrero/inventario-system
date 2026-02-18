@@ -1,0 +1,28 @@
+/* FabButton.css */
+
+.fab-button {
+  position: fixed;
+  bottom: 20px; /* Distancia desde la parte inferior */
+  right: 20px; /* Distancia desde la derecha */
+  width: 56px; /* Tamaño estándar de un FAB */
+  height: 56px; /* Tamaño estándar de un FAB */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem; /* Tamaño del icono */
+  z-index: 1000; /* Asegurarse de que esté por encima de otros elementos */
+  background-color: var(--color-red-primary) !important; /* Color primario del tema */
+  border-color: var(--color-red-primary) !important; /* Color de borde primario del tema */
+  color: var(--color-white) !important; /* Color de texto blanco */
+  box-shadow: none !important; /* Asegurar que no tenga sombra */
+  border-radius: 0 !important; /* Asegurar que no tenga border-radius */
+}
+
+.fab-button:hover,
+.fab-button:focus,
+.fab-button:active {
+  background-color: var(--color-red-dark) !important; /* Color de hover del tema */
+  border-color: var(--color-red-dark) !important; /* Color de borde de hover del tema */
+  color: var(--color-white) !important; /* Color de texto blanco */
+  box-shadow: none !important; /* Asegurar que no tenga sombra */
+}

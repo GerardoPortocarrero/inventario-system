@@ -1,14 +1,17 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react'; // Importar Fragment
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
 import { FaPencilAlt, FaTrash } from 'react-icons/fa'; // Iconos para acciones
+import useMediaQuery from '../hooks/useMediaQuery'; // Importar el hook useMediaQuery
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
 import { UI_TEXTS, SPINNER_VARIANTS } from '../constants'; // Importar constantes y SPINNER_VARIANTS
 import GlobalSpinner from '../components/GlobalSpinner'; // Importar GlobalSpinner
+import FabButton from '../components/FabButton'; // Importar FabButton
+import GenericCreationModal from '../components/GenericCreationModal'; // Importar GenericCreationModal
 
 // Define la interfaz para un Rol (reutilizada de AdminUsersPage.tsx)
 interface Role {
@@ -33,6 +36,12 @@ const AdminRolesPage: FC = () => {
     };
   }, []);
 
+  const isMobile = useMediaQuery('(max-width: 768px)'); // Hook para detectar vista móvil
+
+  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal
+  const handleShow = () => setShowModal(true);
+  const handleClose = () => setShowModal(false);
+
   const [nombreRol, setNombreRol] = useState(''); // Para el input del formulario
   const [idRol, setIdRol] = useState(''); // Nuevo estado para el ID del rol
   // const [descripcionRol, setDescripcionRol] = useState(''); // REMOVED: No longer in documentation
@@ -40,6 +49,46 @@ const AdminRolesPage: FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Componente funcional para el formulario de creación de roles
+  const RoleCreationForm: React.FC<{
+    onSubmit: (e: React.FormEvent) => Promise<void>;
+    idRol: string;
+    setIdRol: (id: string) => void;
+    nombreRol: string;
+    setNombreRol: (name: string) => void;
+    error: string | null;
+  }> = ({ onSubmit, idRol, setIdRol, nombreRol, setNombreRol, error }) => (
+    <Form onSubmit={onSubmit}>
+      <Form.Group className="mb-3" controlId="formRoleId">
+        <Form.Label>ID de Rol</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder="Ej. admin, preventista"
+          value={idRol}
+          onChange={(e) => setIdRol(e.target.value)}
+          required
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3" controlId="formRoleName">
+        <Form.Label>{UI_TEXTS.TABLE_HEADER_NAME}</Form.Label>
+        <Form.Control
+          type="text"
+          placeholder={UI_TEXTS.PLACEHOLDER_SEDE_NAME.replace('Sede', 'Rol')} // Reutilizar placeholder
+          value={nombreRol}
+          onChange={(e) => setNombreRol(e.target.value)}
+          required
+        />
+      </Form.Group>
+      
+      {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
+
+      <Button variant="primary" type="submit" className="w-100 mt-3">
+        {UI_TEXTS.CREATE_SEDE.replace('Sede', 'Rol')}
+      </Button>
+    </Form>
+  );
 
   // Función para cargar los roles
   const fetchRoles = async () => {
@@ -116,73 +165,72 @@ const AdminRolesPage: FC = () => {
   }, []);
 
   return (
-    <Container fluid>
-      <Row>
-        <Col md={4} className="mb-3">
-          <Card>
-            <Card.Body className="p-3">
-              {/* REMOVED: h5 title */}
-              <Form onSubmit={handleCreateRole}>
-                <Form.Group className="mb-3" controlId="formRoleId">
-                  <Form.Label>ID de Rol</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Ej. admin, preventista"
-                    value={idRol}
-                    onChange={(e) => setIdRol(e.target.value)}
-                    required
+    <Fragment>
+      <Container fluid>
+        <Row>
+          {!isMobile && ( // Mostrar el formulario solo en vista de escritorio
+            <Col md={4} className="mb-3">
+              <Card>
+                <Card.Body className="p-3">
+                  <RoleCreationForm
+                    onSubmit={handleCreateRole}
+                    idRol={idRol}
+                    setIdRol={setIdRol}
+                    nombreRol={nombreRol}
+                    setNombreRol={setNombreRol}
+                    error={error}
                   />
-                </Form.Group>
+                </Card.Body>
+              </Card>
+            </Col>
+          )}
 
-                <Form.Group className="mb-3" controlId="formRoleName">
-                  <Form.Label>{UI_TEXTS.TABLE_HEADER_NAME}</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder={UI_TEXTS.PLACEHOLDER_SEDE_NAME.replace('Sede', 'Rol')} // Reutilizar placeholder
-                    value={nombreRol}
-                    onChange={(e) => setNombreRol(e.target.value)}
-                    required
-                  />
-                </Form.Group>
-
-                {/* REMOVED: Form.Group for descripcionRol */}
-                
-                {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
-
-                <Button variant="primary" type="submit" className="w-100 mt-3">
-                  {UI_TEXTS.CREATE_SEDE.replace('Sede', 'Rol')}
-                </Button>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col md={8}>
-          <Card>
-            <Card.Body className="p-3">
-              {/* REMOVED: h5 title */}
-              <SearchInput
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_SEDES.replace('sede', 'rol')} // Reutilizar placeholder de búsqueda
-                className="mb-3"
-              />
-
-              {loading ? (
-                <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
-              ) : (
-                <GenericTable<Role>
-                  data={filteredRoles}
-                  columns={rolesTableColumns}
-                  variant={isDarkMode ? 'dark' : ''}
-                  noRecordsMessage={UI_TEXTS.NO_RECORDS_FOUND}
+          <Col md={isMobile ? 12 : 8}> {/* La tabla ocupa 12 columnas en móvil, 8 en escritorio */}
+            <Card>
+              <Card.Body className="p-3">
+                {/* REMOVED: h5 title */}
+                <SearchInput
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  placeholder={UI_TEXTS.PLACEHOLDER_SEDE_NAME.replace('sede', 'rol')} // Reutilizar placeholder de búsqueda
+                  className="mb-3"
                 />
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+
+                {loading ? (
+                  <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
+                ) : (
+                  <GenericTable<Role>
+                    data={filteredRoles}
+                    columns={rolesTableColumns}
+                    variant={isDarkMode ? 'dark' : ''}
+                    noRecordsMessage={UI_TEXTS.NO_RECORDS_FOUND}
+                  />
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+      
+      {isMobile && <FabButton onClick={handleShow} />} {/* FAB button for mobile */}
+
+      {isMobile && ( // Modal para la vista móvil
+        <GenericCreationModal
+          show={showModal}
+          onHide={handleClose}
+          title={UI_TEXTS.CREATE_ROLE} // Usar una constante para "Crear Rol"
+        >
+          <RoleCreationForm
+            onSubmit={handleCreateRole}
+            idRol={idRol}
+            setIdRol={setIdRol}
+            nombreRol={nombreRol}
+            setNombreRol={setNombreRol}
+            error={error}
+          />
+        </GenericCreationModal>
+      )}
+    </Fragment>
   );
 };
 
