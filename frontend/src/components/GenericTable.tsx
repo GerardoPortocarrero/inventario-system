@@ -70,14 +70,22 @@ const GenericTable = <T extends { id: string }>({
 
             {/* Contenedor explícito para los botones de acción */}
             {columns.find(column => column.header === UI_TEXTS.TABLE_HEADER_ACTIONS) && (
-              <div className="card-actions-container border-top pt-2 pb-2 d-flex justify-content-end gap-2 px-2"> {/* Separador, padding y alineación */}
-                <Button variant="primary" size="sm">
-                  Editar
-                </Button>
-                <Button variant="danger" size="sm">
-                  Eliminar
-                </Button>
-              </div>
+              <>
+                {/* Separador de línea fina */}
+                <div
+                  style={{ height: '1px', backgroundColor: 'var(--theme-border-default)' }}
+                ></div>
+                <div 
+                  className="card-actions-container pt-2 pb-2 d-flex justify-content-end gap-2 px-2"
+                >
+                  <Button variant="primary" size="sm">
+                    Editar
+                  </Button>
+                  <Button variant="danger" size="sm">
+                    Eliminar
+                  </Button>
+                </div>
+              </>
             )}
           </Card>
         ))}
