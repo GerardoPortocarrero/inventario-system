@@ -68,7 +68,7 @@ const AdminSedesPage: FC = () => {
 
   const isMobile = useMediaQuery('(max-width: 768px)'); // Hook para detectar vista móvil
 
-  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal de creación/edición
+  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal
   const handleShow = () => setShowModal(true);
   
   const handleClose = () => {
@@ -162,7 +162,7 @@ const AdminSedesPage: FC = () => {
     if (!deletingSede) return;
     try {
       await deleteDoc(doc(db, 'sedes', deletingSede.id));
-      alert(`Sede "${deletingSede.nombre}" eliminada exitosamente.`);
+      alert(`Sede "${deletingSede.nombre ?? 'Desconocido'}" eliminada exitosamente.`); // Añadir nullish coalescing
       handleCloseDeleteModal(); // Cerrar modal de eliminación y limpiar
     } catch (err) {
       setError(UI_TEXTS.ERROR_GENERIC_CREATE); // Reutilizar para error de eliminación
@@ -269,8 +269,7 @@ const AdminSedesPage: FC = () => {
       >
         <p>
           ¿Está seguro que desea eliminar la sede "
-          <strong>{deletingSede?.nombre}</strong>" con ID "
-          <strong>{deletingSede?.id}</strong>"? Esta acción no se puede deshacer.
+          <strong>{deletingSede?.nombre ?? 'Desconocido'}</strong>"? Esta acción no se puede deshacer.
         </p>
         <div className="d-flex justify-content-end gap-2">
           <Button variant="secondary" onClick={handleCloseDeleteModal} className="rounded-0 shadow-none">

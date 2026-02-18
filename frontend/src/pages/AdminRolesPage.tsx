@@ -290,8 +290,7 @@ const AdminRolesPage: FC = () => {
       >
         <p>
           ¿Está seguro que desea eliminar el rol "
-          <strong>{deletingRole?.nombre}</strong>" con ID "
-          <strong>{deletingRole?.id}</strong>"? Esta acción no se puede deshacer.
+          <strong>{deletingRole?.nombre ?? 'Desconocido'}</strong>"? Esta acción no se puede deshacer.
         </p>
         <div className="d-flex justify-content-end gap-2">
           <Button variant="secondary" onClick={handleCloseDeleteModal} className="rounded-0 shadow-none">

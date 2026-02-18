@@ -323,8 +323,12 @@ const AdminUsersPage: FC = () => {
       await deleteDoc(doc(db, 'usuarios', deletingUser.id));
       alert(`Usuario "${deletingUser.nombre ?? 'Desconocido'}" eliminado exitosamente.`);
       handleCloseDeleteModal(); // Cerrar modal de eliminación y limpiar
-    } catch (err) {
-      setError(UI_TEXTS.ERROR_GENERIC_CREATE); // Reutilizar para error de eliminación
+    } catch (err: any) { // Catch all errors, including auth errors if any.
+      let errorMessage = UI_TEXTS.ERROR_GENERIC_CREATE;
+      if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
       console.error("Error deleting user:", err);
     }
   };
