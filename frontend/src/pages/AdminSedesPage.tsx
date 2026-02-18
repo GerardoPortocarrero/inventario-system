@@ -249,7 +249,6 @@ const AdminSedesPage: FC = () => {
         <GenericCreationModal
           show={showModal}
           onHide={handleClose}
-          title={editingSede ? UI_TEXTS.EDIT_SEDE : UI_TEXTS.CREATE_SEDE} // Cambiar título del modal
         >
           <SedeCreationForm
             onSubmit={handleSaveSede} // Usar handleSaveSede
@@ -265,7 +264,6 @@ const AdminSedesPage: FC = () => {
       <GenericCreationModal
         show={showDeleteModal}
         onHide={handleCloseDeleteModal}
-        title={UI_TEXTS.CONFIRM_DELETE}
         dialogClassName="delete-modal-dialog" // Añadir la clase para el estilo
       >
         <p>

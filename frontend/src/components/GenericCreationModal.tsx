@@ -6,17 +6,13 @@ import { Modal } from 'react-bootstrap'; // Remover Button
 interface GenericCreationModalProps {
   show: boolean;
   onHide: () => void;
-  title: string;
   children: React.ReactNode; // Contenido del formulario o confirmación
   dialogClassName?: string; // Nuevo prop para clases CSS personalizadas para el diálogo
 }
 
-const GenericCreationModal: React.FC<GenericCreationModalProps> = ({ show, onHide, title, children, dialogClassName }) => {
+const GenericCreationModal: React.FC<GenericCreationModalProps> = ({ show, onHide, children, dialogClassName }) => {
   return (
     <Modal show={show} onHide={onHide} centered dialogClassName={dialogClassName}>
-      <Modal.Header> {/* closeButton eliminado */}
-        <Modal.Title>{title}</Modal.Title>
-      </Modal.Header>
       <Modal.Body>
         {children}
       </Modal.Body>

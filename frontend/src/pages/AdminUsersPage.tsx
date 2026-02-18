@@ -435,7 +435,6 @@ const AdminUsersPage: FC = () => {
         <GenericCreationModal
           show={showModal}
           onHide={handleClose}
-          title={editingUser ? UI_TEXTS.EDIT_USER : UI_TEXTS.CREATE_USER} // Cambiar título del modal
         >
           <UserCreationForm
             onSubmit={(e, isEditingForm) => handleSaveUser(e, isEditingForm)} // Pasar isEditingForm
@@ -462,7 +461,6 @@ const AdminUsersPage: FC = () => {
       <GenericCreationModal
         show={showDeleteModal}
         onHide={handleCloseDeleteModal}
-        title={UI_TEXTS.CONFIRM_DELETE}
         dialogClassName="delete-modal-dialog" // Añadir la clase para el estilo
       >
         <p>

@@ -268,7 +268,6 @@ const AdminRolesPage: FC = () => {
         <GenericCreationModal
           show={showModal}
           onHide={handleClose}
-          title={editingRole ? UI_TEXTS.EDIT_ROLE : UI_TEXTS.CREATE_ROLE} // Cambiar título del modal
         >
           <RoleCreationForm
             onSubmit={handleSaveRole} // Usar handleSaveRole
@@ -286,7 +285,6 @@ const AdminRolesPage: FC = () => {
       <GenericCreationModal
         show={showDeleteModal}
         onHide={handleCloseDeleteModal}
-        title={UI_TEXTS.CONFIRM_DELETE}
         dialogClassName="delete-modal-dialog" // Añadir la clase para el estilo
       >
         <p>
