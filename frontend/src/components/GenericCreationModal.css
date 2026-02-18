@@ -1,0 +1,26 @@
+.generic-modal .modal-content {
+  border: 1px solid var(--theme-border-default) !important;
+  background-color: var(--theme-background-primary) !important;
+}
+
+.modal-header-custom {
+  border-bottom: none; /* Eliminado el borde para mayor limpieza */
+  background-color: var(--theme-background-primary);
+}
+
+.close-button-custom {
+  color: var(--theme-text-secondary) !important;
+  font-size: 1.2rem;
+  transition: color 0.2s ease;
+  line-height: 1;
+}
+
+.close-button-custom:hover {
+  color: var(--color-red-primary) !important;
+  text-decoration: none !important;
+}
+
+/* El body ahora también comparte el fondo principal */
+.generic-modal .modal-body {
+  background-color: var(--theme-background-primary);
+}

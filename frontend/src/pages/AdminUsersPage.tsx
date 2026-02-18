@@ -57,7 +57,8 @@ const UserCreationForm: React.FC<{
   loading: boolean;
   error: string | null;
   isEditing: boolean; // Nuevo prop para indicar si se está editando
-}> = ({ onSubmit, nombre, setNombre, email, setEmail, password, setPassword, rolId, setRolId, selectedSedeId, setSelectedSedeId, roles, sedes, loading, error, isEditing }) => (
+  onCancel?: () => void; // Nuevo prop para cancelar
+}> = ({ onSubmit, nombre, setNombre, email, setEmail, password, setPassword, rolId, setRolId, selectedSedeId, setSelectedSedeId, roles, sedes, loading, error, isEditing, onCancel }) => (
   <Form onSubmit={(e) => onSubmit(e, isEditing)}> {/* Pasar isEditing al onSubmit */}
     <Form.Group className="mb-3" controlId="formUserName">
       <Form.Label>{UI_TEXTS.FULL_NAME}</Form.Label>
@@ -125,9 +126,16 @@ const UserCreationForm: React.FC<{
 
     {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
 
-    <Button variant="primary" type="submit" className="w-100 mt-3">
-      {isEditing ? UI_TEXTS.UPDATE_USER : UI_TEXTS.CREATE_USER} {/* Cambiar texto del botón */}
-    </Button>
+    <div className="d-flex gap-2 mt-3">
+      {onCancel && (
+        <Button variant="secondary" onClick={onCancel} className="w-100">
+          {UI_TEXTS.CLOSE}
+        </Button>
+      )}
+      <Button variant="primary" type="submit" className="w-100">
+        {isEditing ? UI_TEXTS.UPDATE_USER : UI_TEXTS.CREATE_USER}
+      </Button>
+    </div>
   </Form>
 );
 
@@ -453,6 +461,7 @@ const AdminUsersPage: FC = () => {
           loading={loading}
           error={error}
           isEditing={!!editingUser}
+          onCancel={handleClose}
         />
       </GenericCreationModal>
 
