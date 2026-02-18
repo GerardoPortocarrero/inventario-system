@@ -1,33 +1,78 @@
 import React from 'react';
-import { Table } from 'react-bootstrap';
-import { UI_TEXTS } from '../constants'; // Importar constantes
+import { Table, Card, Row, Col } from 'react-bootstrap';
+import { UI_TEXTS } from '../constants';
+import useMediaQuery from '../hooks/useMediaQuery';
+import './GenericTable.css'; // Importar los estilos para la tarjeta
 
 // Define la interfaz para la configuración de una columna
 export interface Column<T> {
-  header: string; // El texto del encabezado de la columna
-  accessorKey?: keyof T; // La clave del dato en el objeto para acceso directo (opcional)
-  // Función para renderizar el contenido de la celda, útil para botones o formatos especiales (opcional)
+  header: string;
+  accessorKey?: keyof T;
   render?: (item: T) => React.ReactNode;
 }
 
 // Define la interfaz para las props de GenericTable
 interface GenericTableProps<T> {
-  data: T[]; // Los datos a mostrar en la tabla
-  columns: Column<T>[]; // Configuración de las columnas
-  variant?: 'dark' | 'light' | ''; // Variante de tema para la tabla
-  maxHeight?: string; // Altura máxima para hacer la tabla scrollable
-  noRecordsMessage?: string; // Mensaje cuando no hay registros
+  data: T[];
+  columns: Column<T>[];
+  variant?: 'dark' | 'light' | '';
+  noRecordsMessage?: string;
 }
 
 const GenericTable = <T extends { id: string }>({
   data,
   columns,
   variant,
-  maxHeight = '70vh', // Altura máxima por defecto para scroll
-  noRecordsMessage = UI_TEXTS.NO_RECORDS_FOUND // Usar constante
+  noRecordsMessage = UI_TEXTS.NO_RECORDS_FOUND
 }: GenericTableProps<T>) => {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
+  if (data.length === 0) {
+    return (
+      <div className="text-center p-4">
+        {noRecordsMessage}
+      </div>
+    );
+  }
+
+  // Vista Móvil (Tarjetas) - Diseño adaptativo y encapsulado
+  if (isMobile) {
+    return (
+      <div id="generic-table-mobile-view" className="generic-table-wrapper">
+        {data.map((item) => (
+          <Card 
+            key={item.id} 
+            className="mb-3" // Clases base, el borde y padding se gestionan en CSS
+            bg={variant} 
+            text={variant === 'dark' ? 'white' : 'dark'}
+          >
+            {columns.map((column, idx) => (
+              <Row key={idx} className="mb-2 align-items-center">
+                {/* Columna para la etiqueta (auto-ajustable) con mejor contraste y negrita */}
+                <Col xs="auto" className="text-secondary fw-bold"> 
+                  {column.header}:
+                </Col>
+                {/* Columna para el valor (ocupa el resto del espacio) */}
+                <Col xs className="fw-bold text-wrap text-end">
+                  {column.render
+                    ? column.render(item)
+                    : (column.accessorKey
+                        ? (item[column.accessorKey] as React.ReactNode)
+                        : null
+                      )
+                  }
+                </Col>
+              </Row>
+            ))}
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // Vista de Escritorio (Tabla) - Sin scrollbar interno
   return (
-    <div style={{ maxHeight: maxHeight, overflowY: 'auto' }}>
+    <div>
       <Table responsive variant={variant}>
         <thead>
           <tr>
@@ -37,29 +82,21 @@ const GenericTable = <T extends { id: string }>({
           </tr>
         </thead>
         <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="text-center">
-                {noRecordsMessage}
-              </td>
+          {data.map((item) => (
+            <tr key={item.id}>
+              {columns.map((column, idx) => (
+                <td key={idx}>
+                  {column.render
+                    ? column.render(item)
+                    : (column.accessorKey
+                        ? (item[column.accessorKey] as React.ReactNode)
+                        : null
+                      )
+                  }
+                </td>
+              ))}
             </tr>
-          ) : (
-            data.map((item) => (
-              <tr key={item.id}> {/* Asume que cada item tiene una propiedad 'id' */}
-                {columns.map((column, idx) => (
-                  <td key={idx}>
-                    {column.render // Si hay un renderizador custom, usarlo
-                      ? column.render(item)
-                      : (column.accessorKey // Si no, y hay accessorKey, usarlo para mostrar el valor
-                          ? (item[column.accessorKey] as React.ReactNode)
-                          : null // Si no hay render ni accessorKey, no mostrar nada (o podrías lanzar un error)
-                        )
-                    }
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
+          ))}
         </tbody>
       </Table>
     </div>

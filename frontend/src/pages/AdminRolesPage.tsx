@@ -175,7 +175,6 @@ const AdminRolesPage: FC = () => {
                   data={filteredRoles}
                   columns={rolesTableColumns}
                   variant={isDarkMode ? 'dark' : ''}
-                  maxHeight="70vh"
                   noRecordsMessage={UI_TEXTS.NO_RECORDS_FOUND}
                 />
               )}

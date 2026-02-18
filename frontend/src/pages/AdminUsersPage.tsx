@@ -301,7 +301,6 @@ const AdminUsersPage: FC = () => {
                   data={filteredUsers}
                   columns={userTableColumns}
                   variant={isDarkMode ? 'dark' : ''}
-                  maxHeight="70vh"
                   noRecordsMessage={UI_TEXTS.NO_RECORDS_FOUND}
                 />
               )}

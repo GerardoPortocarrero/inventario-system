@@ -1,0 +1,19 @@
+/* GenericTable.css */
+
+/* Contenedor específico para la vista de tarjetas de GenericTable */
+#generic-table-mobile-view { /* Use the ID for highest specificity */
+  padding: 0.5rem; /* Pequeño padding para que las tarjetas no toquen los bordes de la pantalla */
+}
+
+/*
+  Regla con alta especificidad para anular el 'border: none !important;'
+  global que se encuentra en App.css.
+*/
+#generic-table-mobile-view .card { /* Use the ID for highest specificity */
+  border: 1px solid var(--theme-border-default) !important;
+  /*
+    Se añade padding aquí porque App.css elimina el padding de .card-body.
+    Esto recupera el espacio interno para que el contenido no toque los bordes de la tarjeta.
+  */
+  padding: 1rem !important;
+}
