@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react'; // Importar Fragment
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore'; // Importar onSnapshot, updateDoc y deleteDoc
 
 import { FaPencilAlt, FaTrash } from 'react-icons/fa';
 import useMediaQuery from '../hooks/useMediaQuery'; // Importar el hook useMediaQuery
@@ -22,6 +22,34 @@ interface Sede {
   // direccion?: string;
 }
 
+// Componente funcional para el formulario de creación/edición de sedes (MOVIDO FUERA DEL COMPONENTE PRINCIPAL)
+const SedeCreationForm: React.FC<{
+  onSubmit: (e: React.FormEvent) => Promise<void>;
+  nombreSede: string;
+  setNombreSede: (name: string) => void;
+  error: string | null;
+  isEditing: boolean; // Nuevo prop para indicar si se está editando
+}> = ({ onSubmit, nombreSede, setNombreSede, error, isEditing }) => (
+  <Form onSubmit={onSubmit}>
+    <Form.Group className="mb-3" controlId="formSedeName">
+      <Form.Label>{UI_TEXTS.SEDE_NAME}</Form.Label>
+      <Form.Control
+        type="text"
+        placeholder={UI_TEXTS.PLACEHOLDER_SEDE_NAME}
+        value={nombreSede}
+        onChange={(e) => setNombreSede(e.target.value)}
+        required
+      />
+    </Form.Group>
+    
+    {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
+
+    <Button variant="primary" type="submit" className="w-100 mt-3">
+      {isEditing ? UI_TEXTS.UPDATE_SEDE : UI_TEXTS.CREATE_SEDE} {/* Cambiar texto del botón */}
+    </Button>
+  </Form>
+);
+
 const AdminSedesPage: FC = () => {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -40,63 +68,52 @@ const AdminSedesPage: FC = () => {
 
   const isMobile = useMediaQuery('(max-width: 768px)'); // Hook para detectar vista móvil
 
-  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal
+  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal de creación/edición
   const handleShow = () => setShowModal(true);
-  const handleClose = () => setShowModal(false);
+  
+  const handleClose = () => {
+    setShowModal(false);
+    setEditingSede(null); // Resetear la sede en edición al cerrar el modal
+    setNombreSede(''); // Limpiar el formulario
+    setError(null); // Limpiar errores
+  };
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // Estado para controlar la visibilidad del modal de eliminación
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingSede(null); // Resetear la sede a eliminar al cerrar el modal
+  };
 
   const [nombreSede, setNombreSede] = useState(''); // Para el input del formulario
+  const [editingSede, setEditingSede] = useState<Sede | null>(null); // Estado para la sede en edición
+  const [deletingSede, setDeletingSede] = useState<Sede | null>(null); // Estado para la sede a eliminar
   const [sedes, setSedes] = useState<Sede[]>([]); // Lista de sedes
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Componente funcional para el formulario de creación de sedes
-  const SedeCreationForm: React.FC<{
-    onSubmit: (e: React.FormEvent) => Promise<void>;
-    nombreSede: string;
-    setNombreSede: (name: string) => void;
-    error: string | null;
-  }> = ({ onSubmit, nombreSede, setNombreSede, error }) => (
-    <Form onSubmit={onSubmit}>
-      <Form.Group className="mb-3" controlId="formSedeName">
-        <Form.Label>{UI_TEXTS.SEDE_NAME}</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder={UI_TEXTS.PLACEHOLDER_SEDE_NAME}
-          value={nombreSede}
-          onChange={(e) => setNombreSede(e.target.value)}
-          required
-        />
-      </Form.Group>
-      
-      {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
-
-      <Button variant="primary" type="submit" className="w-100 mt-3">
-        {UI_TEXTS.CREATE_SEDE}
-      </Button>
-    </Form>
-  );
-
-  // Función para cargar las sedes
-  const fetchSedes = async () => {
-    setLoading(true);
-    try {
-      const sedesCollection = collection(db, 'sedes');
-      const sedesSnapshot = await getDocs(sedesCollection);
-      const sedesList = sedesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sede));
-      setSedes(sedesList);
-    } catch (err) {
-      setError(UI_TEXTS.ERROR_GENERIC_LOAD);
-      console.error(err);
-    }
-    setLoading(false);
-  };
-
+  // Usar useEffect para suscribirse a cambios en tiempo real con onSnapshot
   useEffect(() => {
-    fetchSedes(); // Cargar sedes al montar el componente
-  }, []);
+    setLoading(true);
+    setError(null);
 
-  const handleCreateSede = async (e: React.FormEvent) => {
+    const sedesCollection = collection(db, 'sedes');
+    const unsubscribe = onSnapshot(sedesCollection, (snapshot) => {
+      const sedesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sede));
+      setSedes(sedesList);
+      setLoading(false);
+    }, (err) => {
+      setError(UI_TEXTS.ERROR_GENERIC_LOAD);
+      console.error("Error fetching sedes:", err);
+      setLoading(false);
+    });
+
+    // La función de limpieza se ejecuta al desmontar el componente o si cambian las dependencias
+    return () => unsubscribe();
+  }, []); // El array de dependencias vacío asegura que se ejecute solo una vez al montar
+
+  // Función para manejar tanto la creación como la edición
+  const handleSaveSede = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -106,15 +123,50 @@ const AdminSedesPage: FC = () => {
     }
 
     try {
-      const sedesCollection = collection(db, 'sedes');
-      await addDoc(sedesCollection, {
-        nombre: nombreSede,
-      });
-      setNombreSede(''); // Limpiar el formulario
-      await fetchSedes(); // Recargar la lista de sedes
+      if (editingSede) {
+        // Modo edición: actualizar sede existente
+        await updateDoc(doc(db, 'sedes', editingSede.id), {
+          nombre: nombreSede,
+        });
+        alert(`Sede "${nombreSede}" actualizada exitosamente.`);
+      } else {
+        // Modo creación: crear nueva sede
+        const sedesCollection = collection(db, 'sedes');
+        await addDoc(sedesCollection, {
+          nombre: nombreSede,
+        });
+        alert(`Sede "${nombreSede}" creada exitosamente.`);
+      }
+      handleClose(); // Cerrar modal y limpiar formulario
     } catch (err) {
       setError(UI_TEXTS.ERROR_GENERIC_CREATE);
-      console.error(err);
+      console.error("Error saving sede:", err);
+    }
+  };
+
+  // Función para iniciar la edición de una sede
+  const handleEdit = (sede: Sede) => {
+    setEditingSede(sede);
+    setNombreSede(sede.nombre);
+    handleShow(); // Abrir el modal
+  };
+
+  // Función para confirmar la eliminación de una sede
+  const handleConfirmDelete = (sede: Sede) => {
+    setDeletingSede(sede);
+    setShowDeleteModal(true);
+  };
+
+  // Función para eliminar una sede
+  const handleDeleteSede = async () => {
+    if (!deletingSede) return;
+    try {
+      await deleteDoc(doc(db, 'sedes', deletingSede.id));
+      alert(`Sede "${deletingSede.nombre}" eliminada exitosamente.`);
+      handleCloseDeleteModal(); // Cerrar modal de eliminación y limpiar
+    } catch (err) {
+      setError(UI_TEXTS.ERROR_GENERIC_CREATE); // Reutilizar para error de eliminación
+      console.error("Error deleting sede:", err);
     }
   };
 
@@ -130,12 +182,12 @@ const AdminSedesPage: FC = () => {
       { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
       {
         header: UI_TEXTS.TABLE_HEADER_ACTIONS,
-        render: (_sede: Sede) => (
+        render: (sede: Sede) => ( // Cambiar _sede a sede para acceder al objeto
           <>
-            <Button variant="link" size="sm" className="me-2">
+            <Button variant="link" size="sm" className="me-2" onClick={() => handleEdit(sede)}>
               <FaPencilAlt />
             </Button>
-            <Button variant="link" size="sm">
+            <Button variant="link" size="sm" onClick={() => handleConfirmDelete(sede)}>
               <FaTrash />
             </Button>
           </>
@@ -143,7 +195,7 @@ const AdminSedesPage: FC = () => {
         colClassName: 'text-end'
       },
     ];
-  }, []);
+  }, [handleEdit, handleConfirmDelete]); // Añadir handleEdit y handleConfirmDelete a las dependencias
 
   return (
     <Fragment>
@@ -154,10 +206,11 @@ const AdminSedesPage: FC = () => {
               <Card>
                 <Card.Body className="p-3">
                   <SedeCreationForm
-                    onSubmit={handleCreateSede}
+                    onSubmit={handleSaveSede} // Usar handleSaveSede
                     nombreSede={nombreSede}
                     setNombreSede={setNombreSede}
                     error={error}
+                    isEditing={!!editingSede} // Pasar isEditing al formulario
                   />
                 </Card.Body>
               </Card>
@@ -192,20 +245,42 @@ const AdminSedesPage: FC = () => {
 
       {isMobile && <FabButton onClick={handleShow} />} {/* FAB button for mobile */}
 
-      {isMobile && ( // Modal para la vista móvil
+      {isMobile && ( // Modal para la vista móvil de creación/edición
         <GenericCreationModal
           show={showModal}
           onHide={handleClose}
-          title={UI_TEXTS.CREATE_SEDE} // Usar una constante para "Crear Sede"
+          title={editingSede ? UI_TEXTS.EDIT_SEDE : UI_TEXTS.CREATE_SEDE} // Cambiar título del modal
         >
           <SedeCreationForm
-            onSubmit={handleCreateSede}
+            onSubmit={handleSaveSede} // Usar handleSaveSede
             nombreSede={nombreSede}
             setNombreSede={setNombreSede}
             error={error}
+            isEditing={!!editingSede} // Pasar isEditing al formulario
           />
         </GenericCreationModal>
       )}
+
+      {/* Modal de confirmación de eliminación */}
+      <GenericCreationModal
+        show={showDeleteModal}
+        onHide={handleCloseDeleteModal}
+        title={UI_TEXTS.CONFIRM_DELETE}
+      >
+        <p>
+          ¿Está seguro que desea eliminar la sede "
+          <strong>{deletingSede?.nombre}</strong>" con ID "
+          <strong>{deletingSede?.id}</strong>"? Esta acción no se puede deshacer.
+        </p>
+        <div className="d-flex justify-content-end gap-2">
+          <Button variant="secondary" onClick={handleCloseDeleteModal} className="rounded-0 shadow-none">
+            {UI_TEXTS.CLOSE}
+          </Button>
+          <Button variant="danger" onClick={handleDeleteSede} className="rounded-0 shadow-none">
+            {UI_TEXTS.DELETE}
+          </Button>
+        </div>
+      </GenericCreationModal>
     </Fragment>
   );
 };

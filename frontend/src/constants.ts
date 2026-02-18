@@ -29,7 +29,15 @@ export const UI_TEXTS = {
   CREATE_USER: 'Crear Usuario',
   CREATE_SEDE: 'Crear Sede',
   CREATE_ROLE: 'Crear Rol', // Nuevo
+  EDIT_ROLE: 'Editar Rol', // Nuevo
   CLOSE: 'Cerrar', // Nuevo
+  UPDATE_ROLE: 'Guardar Cambios', // Nuevo
+  EDIT_SEDE: 'Editar Sede', // Nuevo
+  UPDATE_SEDE: 'Guardar Cambios', // Nuevo
+  EDIT_USER: 'Editar Usuario', // Nuevo
+  UPDATE_USER: 'Guardar Cambios', // Nuevo
+  CONFIRM_DELETE: 'Confirmar Eliminación', // Nuevo
+  DELETE: 'Eliminar', // Nuevo
 
   // Alerts / Validation
   REQUIRED_FIELDS: 'Todos los campos son obligatorios.',

@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react'; // Importar Fragment
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
-import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
+import { collection, setDoc, doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore'; // Importar onSnapshot, updateDoc y deleteDoc
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../api/firebase';
 
@@ -39,6 +39,99 @@ interface UserProfile {
   sedeId: string; // Nuevo campo
 }
 
+// Componente funcional para el formulario de creación/edición de usuarios (MOVIDO FUERA DEL COMPONENTE PRINCIPAL)
+const UserCreationForm: React.FC<{
+  onSubmit: (e: React.FormEvent, isEditing: boolean) => Promise<void>; // Actualizar signature
+  nombre: string;
+  setNombre: (name: string) => void;
+  email: string;
+  setEmail: (email: string) => void;
+  password: string;
+  setPassword: (password: string) => void;
+  rolId: string;
+  setRolId: (rolId: string) => void;
+  selectedSedeId: string;
+  setSelectedSedeId: (sedeId: string) => void;
+  roles: Role[];
+  sedes: Sede[];
+  loading: boolean;
+  error: string | null;
+  isEditing: boolean; // Nuevo prop para indicar si se está editando
+}> = ({ onSubmit, nombre, setNombre, email, setEmail, password, setPassword, rolId, setRolId, selectedSedeId, setSelectedSedeId, roles, sedes, loading, error, isEditing }) => (
+  <Form onSubmit={(e) => onSubmit(e, isEditing)}> {/* Pasar isEditing al onSubmit */}
+    <Form.Group className="mb-3" controlId="formUserName">
+      <Form.Label>{UI_TEXTS.FULL_NAME}</Form.Label>
+      <Form.Control
+        type="text"
+        placeholder={UI_TEXTS.PLACEHOLDER_FULL_NAME}
+        value={nombre}
+        onChange={(e) => setNombre(e.target.value)}
+        required
+      />
+    </Form.Group>
+
+    <Form.Group className="mb-3" controlId="formUserEmail">
+      <Form.Label>{UI_TEXTS.EMAIL}</Form.Label>
+      <Form.Control
+        type="email"
+        placeholder={UI_TEXTS.PLACEHOLDER_EMAIL}
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        disabled={isEditing} // Email no editable en modo edición
+      />
+    </Form.Group>
+
+    <Form.Group className="mb-3" controlId="formUserPassword">
+      <Form.Label>{UI_TEXTS.PASSWORD}</Form.Label>
+      <Form.Control
+        type="password"
+        placeholder={UI_TEXTS.PLACEHOLDER_PASSWORD}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required={!isEditing} // Password es requerido solo en creación
+        minLength={6}
+      />
+    </Form.Group>
+
+    <Form.Group className="mb-3" controlId="formUserRole">
+      <Form.Label>{UI_TEXTS.ROLE}</Form.Label>
+      <Form.Select
+        value={rolId}
+        onChange={(e) => setRolId(e.target.value)}
+        required
+        disabled={loading}
+      >
+        {roles.map(role => (
+          <option key={role.id} value={role.id}>{role.nombre}</option>
+        ))}
+      </Form.Select>
+    </Form.Group>
+    
+    {/* Nuevo campo de selección de Sede */}
+    <Form.Group className="mb-3" controlId="formUserSede">
+      <Form.Label>{UI_TEXTS.SEDE}</Form.Label>
+      <Form.Select
+        value={selectedSedeId}
+        onChange={(e) => setSelectedSedeId(e.target.value)}
+        required
+        disabled={loading}
+      >
+        {sedes.map(sede => (
+          <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+        ))}
+      </Form.Select>
+    </Form.Group>
+
+    {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
+
+    <Button variant="primary" type="submit" className="w-100 mt-3">
+      {isEditing ? UI_TEXTS.UPDATE_USER : UI_TEXTS.CREATE_USER} {/* Cambiar texto del botón */}
+    </Button>
+  </Form>
+);
+
+
 const AdminUsersPage: FC = () => {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -57,15 +150,33 @@ const AdminUsersPage: FC = () => {
 
   const isMobile = useMediaQuery('(max-width: 768px)'); // Hook para detectar vista móvil
 
-  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal
+  const [showModal, setShowModal] = useState(false); // Estado para controlar la visibilidad del modal de creación/edición
   const handleShow = () => setShowModal(true);
-  const handleClose = () => setShowModal(false);
+  
+  const handleClose = () => {
+    setShowModal(false);
+    setEditingUser(null); // Resetear el usuario en edición al cerrar el modal
+    setNombre('');
+    setEmail('');
+    setPassword('');
+    setRolId('');
+    setSelectedSedeId('');
+    setError(null); // Limpiar errores
+  };
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // Estado para controlar la visibilidad del modal de eliminación
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingUser(null); // Resetear el usuario a eliminar al cerrar el modal
+  };
 
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rolId, setRolId] = useState('');
   const [selectedSedeId, setSelectedSedeId] = useState<string>('');
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null); // Estado para el usuario en edición
+  const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null); // Estado para el usuario a eliminar
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [sedes, setSedes] = useState<Sede[]>([]);
@@ -74,184 +185,107 @@ const AdminUsersPage: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Componente funcional para el formulario de creación de usuarios
-  const UserCreationForm: React.FC<{
-    onSubmit: (e: React.FormEvent) => Promise<void>;
-    nombre: string;
-    setNombre: (name: string) => void;
-    email: string;
-    setEmail: (email: string) => void;
-    password: string;
-    setPassword: (password: string) => void;
-    rolId: string;
-    setRolId: (rolId: string) => void;
-    selectedSedeId: string;
-    setSelectedSedeId: (sedeId: string) => void;
-    roles: Role[];
-    sedes: Sede[];
-    loading: boolean;
-    error: string | null;
-  }> = ({ onSubmit, nombre, setNombre, email, setEmail, password, setPassword, rolId, setRolId, selectedSedeId, setSelectedSedeId, roles, sedes, loading, error }) => (
-    <Form onSubmit={onSubmit}>
-      <Form.Group className="mb-3" controlId="formUserName">
-        <Form.Label>{UI_TEXTS.FULL_NAME}</Form.Label>
-        <Form.Control
-          type="text"
-          placeholder={UI_TEXTS.PLACEHOLDER_FULL_NAME}
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          required
-        />
-      </Form.Group>
-
-      <Form.Group className="mb-3" controlId="formUserEmail">
-        <Form.Label>{UI_TEXTS.EMAIL}</Form.Label>
-        <Form.Control
-          type="email"
-          placeholder={UI_TEXTS.PLACEHOLDER_EMAIL}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-      </Form.Group>
-
-      <Form.Group className="mb-3" controlId="formUserPassword">
-        <Form.Label>{UI_TEXTS.PASSWORD}</Form.Label>
-        <Form.Control
-          type="password"
-          placeholder={UI_TEXTS.PLACEHOLDER_PASSWORD}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-        />
-      </Form.Group>
-
-      <Form.Group className="mb-3" controlId="formUserRole">
-        <Form.Label>{UI_TEXTS.ROLE}</Form.Label>
-        <Form.Select
-          value={rolId}
-          onChange={(e) => setRolId(e.target.value)}
-          required
-          disabled={loading}
-        >
-          {roles.map(role => (
-            <option key={role.id} value={role.id}>{role.nombre}</option>
-          ))}
-        </Form.Select>
-      </Form.Group>
-      
-      {/* Nuevo campo de selección de Sede */}
-      <Form.Group className="mb-3" controlId="formUserSede">
-        <Form.Label>{UI_TEXTS.SEDE}</Form.Label>
-        <Form.Select
-          value={selectedSedeId}
-          onChange={(e) => setSelectedSedeId(e.target.value)}
-          required
-          disabled={loading}
-        >
-          {sedes.map(sede => (
-            <option key={sede.id} value={sede.id}>{sede.nombre}</option>
-          ))}
-        </Form.Select>
-      </Form.Group>
-
-      {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
-
-      <Button variant="primary" type="submit" className="w-100 mt-3">
-        {UI_TEXTS.CREATE_USER}
-      </Button>
-    </Form>
-  );
-
-  // Función para cargar todos los datos necesarios (roles, sedes, usuarios)
-  const fetchUsersAndSedesAndRoles = async () => {
+  // Usar useEffect para suscribirse a cambios en tiempo real con onSnapshot para roles, sedes y usuarios
+  useEffect(() => {
     setLoading(true);
-    try {
-      // Cargar Roles
-      const rolesCollection = collection(db, 'roles');
-      const rolesSnapshot = await getDocs(rolesCollection);
-      const rolesList = rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
-      setRoles(rolesList);
-      if (rolesList.length > 0 && !rolId) {
-        setRolId(rolesList[0].id);
-      }
+    setError(null);
 
-      // Cargar Sedes
-      const sedesCollection = collection(db, 'sedes');
-      const sedesSnapshot = await getDocs(sedesCollection);
-      const sedesList = sedesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sede));
+    const rolesCollection = collection(db, 'roles');
+    const unsubscribeRoles = onSnapshot(rolesCollection, (snapshot) => {
+      const rolesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
+      setRoles(rolesList);
+      // No set loading false here, wait for all
+    }, (err) => {
+      setError(UI_TEXTS.ERROR_GENERIC_LOAD);
+      console.error("Error fetching roles:", err);
+      setLoading(false);
+    });
+
+    const sedesCollection = collection(db, 'sedes');
+    const unsubscribeSedes = onSnapshot(sedesCollection, (snapshot) => {
+      const sedesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sede));
       setSedes(sedesList);
       if (sedesList.length > 0 && !selectedSedeId) {
         setSelectedSedeId(sedesList[0].id);
       }
-
-      // Cargar Usuarios
-      const usersCollection = collection(db, 'usuarios');
-      const usersSnapshot = await getDocs(usersCollection);
-      const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
-      setUsers(usersList);
-
-    } catch (err) {
+      // No set loading false here, wait for all
+    }, (err) => {
       setError(UI_TEXTS.ERROR_GENERIC_LOAD);
-      console.error(err);
-    }
-    setLoading(false);
-  };
+      console.error("Error fetching sedes:", err);
+      setLoading(false);
+    });
 
-  useEffect(() => {
-    fetchUsersAndSedesAndRoles();
-  }, []); // Se ejecuta una vez al montar el componente
+    const usersCollection = collection(db, 'usuarios');
+    const unsubscribeUsers = onSnapshot(usersCollection, (snapshot) => {
+      const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+      setUsers(usersList);
+      setLoading(false); // Set loading false after users (the last one) are loaded
+    }, (err) => {
+      setError(UI_TEXTS.ERROR_GENERIC_LOAD);
+      console.error("Error fetching users:", err);
+      setLoading(false);
+    });
 
-  const handleCreateUser = async (e: React.FormEvent) => {
+    // La función de limpieza se ejecuta al desmontar el componente
+    return () => {
+      unsubscribeRoles();
+      unsubscribeSedes();
+      unsubscribeUsers();
+    };
+  }, []); // El array de dependencias vacío asegura que se ejecute solo una vez al montar
+
+  // Función para manejar tanto la creación como la edición
+  const handleSaveUser = async (e: React.FormEvent, isCurrentlyEditing: boolean) => { // Actualizar signature
     e.preventDefault();
     setError(null);
-    setLoading(true); // Indicar que se está creando el usuario
 
-    if (!nombre.trim() || !email.trim() || !password.trim() || !rolId || !selectedSedeId) {
+    // Validación de campos obligatorios
+    if (!nombre.trim() || !email.trim() || !rolId || !selectedSedeId) {
       setError(UI_TEXTS.REQUIRED_FIELDS);
       setLoading(false);
       return;
     }
 
-    if (password.length < 6) {
-      setError(UI_TEXTS.PASSWORD_MIN_LENGTH);
-      setLoading(false);
-      return;
+    if (!isCurrentlyEditing) { // Usar isCurrentlyEditing
+      if (!password.trim()) {
+        setError(UI_TEXTS.REQUIRED_FIELDS); // Contraseña requerida para creación
+        setLoading(false);
+        return;
+      }
+      if (password.length < 6) {
+        setError(UI_TEXTS.PASSWORD_MIN_LENGTH);
+        setLoading(false);
+        return;
+      }
     }
 
     try {
-      // 1. Crear usuario en Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newUserUid = userCredential.user.uid;
+      if (editingUser) {
+        // Modo edición: actualizar usuario existente
+        // Solo actualizamos los campos modificables desde Firestore
+        await updateDoc(doc(db, 'usuarios', editingUser.id), {
+          nombre: nombre,
+          rolId: rolId,
+          sedeId: selectedSedeId,
+        });
+        alert(`Usuario "${nombre}" actualizado exitosamente.`);
+      } else {
+        // Modo creación: crear nuevo usuario
+        // 1. Crear usuario en Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const newUserUid = userCredential.user.uid;
 
-      // NOTA: Esta creación del lado del cliente automáticamente inicia sesión al usuario recién creado.
-      // Para un panel de administración, generalmente se prefiere una Cloud Function (Firebase Admin SDK)
-      // para crear usuarios sin iniciar sesión y asignar claims personalizados (roles/sedeId).
-      // Esta es una limitación conocida de la creación directa del lado del cliente para fines administrativos.
-      // El administrador actualmente conectado será desconectado y el nuevo usuario iniciará sesión.
-      // Una solución completa implicaría Firebase Admin SDK a través de Cloud Functions.
-
-      // 2. Crear documento de usuario en Firestore
-      await setDoc(doc(db, 'usuarios', newUserUid), {
-        nombre: nombre,
-        email: email,
-        rolId: rolId,
-        sedeId: selectedSedeId,
-        activo: true, // Asumiendo que los nuevos usuarios están activos por defecto
-      });
-
-      // Resetear campos del formulario
-      setNombre('');
-      setEmail('');
-      setPassword('');
-      setRolId(roles[0]?.id || ''); // Resetear al primer rol o vacío
-      setSelectedSedeId(sedes[0]?.id || ''); // Resetear a la primera sede o vacío
-
-      setError(null);
-      await fetchUsersAndSedesAndRoles(); // Recargar todos los datos, incluyendo los usuarios actualizados
-      alert(`${UI_TEXTS.USER_CREATED_SUCCESS} ${UI_TEXTS.TODO_USER_CREATION_NOTE}`);
-
+        // 2. Crear documento de usuario en Firestore
+        await setDoc(doc(db, 'usuarios', newUserUid), {
+          nombre: nombre,
+          email: email,
+          rolId: rolId,
+          sedeId: selectedSedeId,
+          activo: true, // Asumiendo que los nuevos usuarios están activos por defecto
+        });
+        alert(`${UI_TEXTS.USER_CREATED_SUCCESS} ${UI_TEXTS.TODO_USER_CREATION_NOTE}`);
+      }
+      handleClose(); // Cerrar modal y limpiar formulario
     } catch (err: any) {
       let errorMessage = UI_TEXTS.ERROR_GENERIC_CREATE;
       if (err.code === 'auth/email-already-in-use') {
@@ -260,9 +294,39 @@ const AdminUsersPage: FC = () => {
         errorMessage = err.message;
       }
       setError(errorMessage);
-      console.error("Error creating user:", err);
+      console.error("Error saving user:", err);
     }
-    setLoading(false);
+  };
+
+  // Función para iniciar la edición de un usuario
+  const handleEdit = (user: UserProfile) => {
+    setEditingUser(user);
+    setNombre(user.nombre);
+    setEmail(user.email);
+    setRolId(user.rolId);
+    setSelectedSedeId(user.sedeId);
+    // No pre-llenar la contraseña por seguridad
+    setPassword(''); 
+    handleShow(); // Abrir el modal
+  };
+
+  // Función para confirmar la eliminación de un usuario
+  const handleConfirmDelete = (user: UserProfile) => {
+    setDeletingUser(user);
+    setShowDeleteModal(true);
+  };
+
+  // Función para eliminar un usuario
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+    try {
+      await deleteDoc(doc(db, 'usuarios', deletingUser.id));
+      alert(`Usuario "${deletingUser.nombre ?? 'Desconocido'}" eliminado exitosamente.`);
+      handleCloseDeleteModal(); // Cerrar modal de eliminación y limpiar
+    } catch (err) {
+      setError(UI_TEXTS.ERROR_GENERIC_CREATE); // Reutilizar para error de eliminación
+      console.error("Error deleting user:", err);
+    }
   };
 
   const filteredUsers = useMemo(() => {
@@ -289,12 +353,12 @@ const AdminUsersPage: FC = () => {
       },
       {
         header: UI_TEXTS.TABLE_HEADER_ACTIONS,
-        render: (_user: UserProfile) => (
+        render: (user: UserProfile) => ( // Cambiar _user a user para acceder al objeto
           <>
-            <Button variant="link" size="sm" className="me-2">
+            <Button variant="link" size="sm" className="me-2" onClick={() => handleEdit(user)}>
               <FaPencilAlt />
             </Button>
-            <Button variant="link" size="sm">
+            <Button variant="link" size="sm" onClick={() => handleConfirmDelete(user)}>
               <FaTrash />
             </Button>
           </>
@@ -302,7 +366,7 @@ const AdminUsersPage: FC = () => {
         colClassName: 'text-end'
       },
     ];
-  }, [roles, sedes]);
+  }, [roles, sedes, handleEdit, handleConfirmDelete]); // Añadir handleEdit y handleConfirmDelete a las dependencias
 
   return (
     <Fragment>
@@ -313,7 +377,7 @@ const AdminUsersPage: FC = () => {
               <Card>
                 <Card.Body className="p-3">
                   <UserCreationForm
-                    onSubmit={handleCreateUser}
+                    onSubmit={(e, isEditingForm) => handleSaveUser(e, isEditingForm)} // Pasar isEditingForm
                     nombre={nombre}
                     setNombre={setNombre}
                     email={email}
@@ -328,6 +392,7 @@ const AdminUsersPage: FC = () => {
                     sedes={sedes}
                     loading={loading}
                     error={error}
+                    isEditing={!!editingUser} // Pasar isEditing al formulario
                   />
                 </Card.Body>
               </Card>
@@ -362,14 +427,14 @@ const AdminUsersPage: FC = () => {
       
       {isMobile && <FabButton onClick={handleShow} />} {/* FAB button for mobile */}
 
-      {isMobile && ( // Modal para la vista móvil
+      {isMobile && ( // Modal para la vista móvil de creación/edición
         <GenericCreationModal
           show={showModal}
           onHide={handleClose}
-          title={UI_TEXTS.CREATE_USER} // Usar una constante para "Crear Usuario"
+          title={editingUser ? UI_TEXTS.EDIT_USER : UI_TEXTS.CREATE_USER} // Cambiar título del modal
         >
           <UserCreationForm
-            onSubmit={handleCreateUser}
+            onSubmit={(e, isEditingForm) => handleSaveUser(e, isEditingForm)} // Pasar isEditingForm
             nombre={nombre}
             setNombre={setNombre}
             email={email}
@@ -384,9 +449,34 @@ const AdminUsersPage: FC = () => {
             sedes={sedes}
             loading={loading}
             error={error}
+            isEditing={!!editingUser} // Pasar isEditing al formulario
           />
         </GenericCreationModal>
       )}
+
+      {/* Modal de confirmación de eliminación */}
+      <GenericCreationModal
+        show={showDeleteModal}
+        onHide={handleCloseDeleteModal}
+        title={UI_TEXTS.CONFIRM_DELETE}
+      >
+        <p>
+          ¿Está seguro que desea eliminar el usuario "
+          <strong>{deletingUser?.nombre ?? 'Desconocido'}</strong>" con email "
+          <strong>{deletingUser?.email ?? 'Desconocido'}</strong>"? Esta acción eliminará el
+          documento del usuario de Firestore, pero **NO** eliminará la cuenta
+          de autenticación de Firebase. Para una eliminación completa,
+          se requiere una función de Cloud Functions.
+        </p>
+        <div className="d-flex justify-content-end gap-2">
+          <Button variant="secondary" onClick={handleCloseDeleteModal} className="rounded-0 shadow-none">
+            {UI_TEXTS.CLOSE}
+          </Button>
+          <Button variant="danger" onClick={handleDeleteUser} className="rounded-0 shadow-none">
+            {UI_TEXTS.DELETE}
+          </Button>
+        </div>
+      </GenericCreationModal>
     </Fragment>
   );
 };
