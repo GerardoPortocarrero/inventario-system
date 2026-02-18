@@ -376,12 +376,12 @@ const AdminUsersPage: FC = () => {
     <Fragment>
       <Container fluid>
         <Row>
-          {!isMobile && ( // Mostrar el formulario solo en vista de escritorio
+          {!isMobile && ( // Mostrar el formulario solo en vista de escritorio para CREACIÓN
             <Col md={4} className="mb-3">
               <Card>
                 <Card.Body className="p-3">
                   <UserCreationForm
-                    onSubmit={(e, isEditingForm) => handleSaveUser(e, isEditingForm)} // Pasar isEditingForm
+                    onSubmit={(e) => handleSaveUser(e, false)} // Siempre false para creación lateral
                     nombre={nombre}
                     setNombre={setNombre}
                     email={email}
@@ -396,7 +396,7 @@ const AdminUsersPage: FC = () => {
                     sedes={sedes}
                     loading={loading}
                     error={error}
-                    isEditing={!!editingUser} // Pasar isEditing al formulario
+                    isEditing={false} // Siempre false en el panel lateral
                   />
                 </Card.Body>
               </Card>
@@ -431,31 +431,30 @@ const AdminUsersPage: FC = () => {
       
       {isMobile && <FabButton onClick={handleShow} />} {/* FAB button for mobile */}
 
-      {isMobile && ( // Modal para la vista móvil de creación/edición
-        <GenericCreationModal
-          show={showModal}
-          onHide={handleClose}
-        >
-          <UserCreationForm
-            onSubmit={(e, isEditingForm) => handleSaveUser(e, isEditingForm)} // Pasar isEditingForm
-            nombre={nombre}
-            setNombre={setNombre}
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-            rolId={rolId}
-            setRolId={setRolId}
-            selectedSedeId={selectedSedeId}
-            setSelectedSedeId={setSelectedSedeId}
-            roles={roles}
-            sedes={sedes}
-            loading={loading}
-            error={error}
-            isEditing={!!editingUser} // Pasar isEditing al formulario
-          />
-        </GenericCreationModal>
-      )}
+      {/* Modal para CREACIÓN (en móvil) o EDICIÓN (en todos los dispositivos) */}
+      <GenericCreationModal
+        show={showModal}
+        onHide={handleClose}
+      >
+        <UserCreationForm
+          onSubmit={(e) => handleSaveUser(e, !!editingUser)} // Detecta si es edición por el estado
+          nombre={nombre}
+          setNombre={setNombre}
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
+          rolId={rolId}
+          setRolId={setRolId}
+          selectedSedeId={selectedSedeId}
+          setSelectedSedeId={setSelectedSedeId}
+          roles={roles}
+          sedes={sedes}
+          loading={loading}
+          error={error}
+          isEditing={!!editingUser}
+        />
+      </GenericCreationModal>
 
       {/* Modal de confirmación de eliminación */}
       <GenericCreationModal

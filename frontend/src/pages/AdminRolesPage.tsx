@@ -217,18 +217,18 @@ const AdminRolesPage: FC = () => {
     <Fragment>
       <Container fluid>
         <Row>
-          {!isMobile && ( // Mostrar el formulario solo en vista de escritorio
+          {!isMobile && ( // Mostrar el formulario solo en vista de escritorio para CREACIÓN
             <Col md={4} className="mb-3">
               <Card>
                 <Card.Body className="p-3">
                   <RoleCreationForm
-                    onSubmit={handleSaveRole} // Usar handleSaveRole
+                    onSubmit={handleSaveRole}
                     idRol={idRol}
                     setIdRol={setIdRol}
                     nombreRol={nombreRol}
                     setNombreRol={setNombreRol}
                     error={error}
-                    isEditing={!!editingRole} // Pasar isEditing al formulario
+                    isEditing={false} // Siempre false en el panel lateral
                   />
                 </Card.Body>
               </Card>
@@ -264,22 +264,21 @@ const AdminRolesPage: FC = () => {
       
       {isMobile && <FabButton onClick={handleShow} />} {/* FAB button for mobile */}
 
-      {isMobile && ( // Modal para la vista móvil de creación/edición
-        <GenericCreationModal
-          show={showModal}
-          onHide={handleClose}
-        >
-          <RoleCreationForm
-            onSubmit={handleSaveRole} // Usar handleSaveRole
-            idRol={idRol}
-            setIdRol={setIdRol}
-            nombreRol={nombreRol}
-            setNombreRol={setNombreRol}
-            error={error}
-            isEditing={!!editingRole} // Pasar isEditing al formulario
-          />
-        </GenericCreationModal>
-      )}
+      {/* Modal para CREACIÓN (en móvil) o EDICIÓN (en todos los dispositivos) */}
+      <GenericCreationModal
+        show={showModal}
+        onHide={handleClose}
+      >
+        <RoleCreationForm
+          onSubmit={handleSaveRole}
+          idRol={idRol}
+          setIdRol={setIdRol}
+          nombreRol={nombreRol}
+          setNombreRol={setNombreRol}
+          error={error}
+          isEditing={!!editingRole}
+        />
+      </GenericCreationModal>
 
       {/* Modal de confirmación de eliminación */}
       <GenericCreationModal
