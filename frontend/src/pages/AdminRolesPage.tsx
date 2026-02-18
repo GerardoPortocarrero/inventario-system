@@ -142,13 +142,13 @@ const AdminRolesPage: FC = () => {
         await updateDoc(doc(db, 'roles', editingRole.id), {
           nombre: nombreRol,
         });
-        alert(`Rol "${nombreRol}" actualizado exitosamente.`);
+        // alert(`Rol "${nombreRol}" actualizado exitosamente.`); // Eliminado alert
       } else {
         // Modo creación: crear nuevo rol
         await setDoc(doc(db, 'roles', idRol), {
           nombre: nombreRol,
         });
-        alert(`Rol "${nombreRol}" creado exitosamente.`);
+        // alert(`Rol "${nombreRol}" creado exitosamente.`); // Eliminado alert
       }
       handleClose(); // Cerrar modal y limpiar formulario
     } catch (err) {
@@ -176,7 +176,7 @@ const AdminRolesPage: FC = () => {
     if (!deletingRole) return;
     try {
       await deleteDoc(doc(db, 'roles', deletingRole.id));
-      alert(`Rol "${deletingRole.nombre}" eliminado exitosamente.`);
+      // alert(`Rol "${deletingRole.nombre}" eliminado exitosamente.`); // Eliminado alert
       handleCloseDeleteModal(); // Cerrar modal de eliminación y limpiar
     } catch (err) {
       setError(UI_TEXTS.ERROR_GENERIC_CREATE); // Reutilizar para error de eliminación
@@ -287,6 +287,7 @@ const AdminRolesPage: FC = () => {
         show={showDeleteModal}
         onHide={handleCloseDeleteModal}
         title={UI_TEXTS.CONFIRM_DELETE}
+        dialogClassName="delete-modal-dialog" // Añadir la clase para el estilo
       >
         <p>
           ¿Está seguro que desea eliminar el rol "

@@ -144,6 +144,12 @@ body {
   color: var(--theme-text-primary) !important;
 }
 
+/* Estilos específicos para el modal de eliminación */
+.delete-modal-dialog .modal-content {
+  border: 2px solid var(--color-red-primary) !important; /* Borde rojo más prominente */
+  background-color: var(--color-black) !important; /* Fondo ligeramente más oscuro */
+}
+
 /* Links */
 a {
   color: var(--color-red-primary) !important;

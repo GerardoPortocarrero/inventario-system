@@ -128,14 +128,14 @@ const AdminSedesPage: FC = () => {
         await updateDoc(doc(db, 'sedes', editingSede.id), {
           nombre: nombreSede,
         });
-        alert(`Sede "${nombreSede}" actualizada exitosamente.`);
+        // alert(`Sede "${nombreSede}" actualizada exitosamente.`); // Eliminado alert
       } else {
         // Modo creación: crear nueva sede
         const sedesCollection = collection(db, 'sedes');
         await addDoc(sedesCollection, {
           nombre: nombreSede,
         });
-        alert(`Sede "${nombreSede}" creada exitosamente.`);
+        // alert(`Sede "${nombreSede}" creada exitosamente.`); // Eliminado alert
       }
       handleClose(); // Cerrar modal y limpiar formulario
     } catch (err) {
@@ -162,7 +162,7 @@ const AdminSedesPage: FC = () => {
     if (!deletingSede) return;
     try {
       await deleteDoc(doc(db, 'sedes', deletingSede.id));
-      alert(`Sede "${deletingSede.nombre ?? 'Desconocido'}" eliminada exitosamente.`); // Añadir nullish coalescing
+      // alert(`Sede "${deletingSede.nombre ?? 'Desconocido'}" eliminada exitosamente.`); // Eliminado alert
       handleCloseDeleteModal(); // Cerrar modal de eliminación y limpiar
     } catch (err) {
       setError(UI_TEXTS.ERROR_GENERIC_CREATE); // Reutilizar para error de eliminación
@@ -266,6 +266,7 @@ const AdminSedesPage: FC = () => {
         show={showDeleteModal}
         onHide={handleCloseDeleteModal}
         title={UI_TEXTS.CONFIRM_DELETE}
+        dialogClassName="delete-modal-dialog" // Añadir la clase para el estilo
       >
         <p>
           ¿Está seguro que desea eliminar la sede "

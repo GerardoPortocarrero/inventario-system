@@ -268,7 +268,7 @@ const AdminUsersPage: FC = () => {
           rolId: rolId,
           sedeId: selectedSedeId,
         });
-        alert(`Usuario "${nombre}" actualizado exitosamente.`);
+        // alert(`Usuario "${nombre}" actualizado exitosamente.`); // Eliminado alert
       } else {
         // Modo creación: crear nuevo usuario
         // 1. Crear usuario en Firebase Authentication
@@ -283,7 +283,7 @@ const AdminUsersPage: FC = () => {
           sedeId: selectedSedeId,
           activo: true, // Asumiendo que los nuevos usuarios están activos por defecto
         });
-        alert(`${UI_TEXTS.USER_CREATED_SUCCESS} ${UI_TEXTS.TODO_USER_CREATION_NOTE}`);
+        // alert(`${UI_TEXTS.USER_CREATED_SUCCESS} ${UI_TEXTS.TODO_USER_CREATION_NOTE}`); // Eliminado alert
       }
       handleClose(); // Cerrar modal y limpiar formulario
     } catch (err: any) {
@@ -321,7 +321,7 @@ const AdminUsersPage: FC = () => {
     if (!deletingUser) return;
     try {
       await deleteDoc(doc(db, 'usuarios', deletingUser.id));
-      alert(`Usuario "${deletingUser.nombre ?? 'Desconocido'}" eliminado exitosamente.`);
+      // alert(`Usuario "${deletingUser.nombre ?? 'Desconocido'}" eliminado exitosamente.`); // Eliminado alert
       handleCloseDeleteModal(); // Cerrar modal de eliminación y limpiar
     } catch (err: any) { // Catch all errors, including auth errors if any.
       let errorMessage = UI_TEXTS.ERROR_GENERIC_CREATE;
@@ -463,6 +463,7 @@ const AdminUsersPage: FC = () => {
         show={showDeleteModal}
         onHide={handleCloseDeleteModal}
         title={UI_TEXTS.CONFIRM_DELETE}
+        dialogClassName="delete-modal-dialog" // Añadir la clase para el estilo
       >
         <p>
           ¿Está seguro que desea eliminar el usuario "
