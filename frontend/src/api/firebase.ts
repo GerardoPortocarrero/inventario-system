@@ -5,7 +5,7 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyAYa_xZXYok5YxD4qKamAidS0ohTgx1FPg",
   authDomain: "inventario-aya.firebaseapp.com",
   projectId: "inventario-aya",

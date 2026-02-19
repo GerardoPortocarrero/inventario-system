@@ -1,10 +1,10 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
-import { db } from '../api/firebase';
+import { db, firebaseConfig } from '../api/firebase';
 import { collection, setDoc, doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../api/firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecondary } from 'firebase/auth';
 
 import { FaPencilAlt, FaTrash } from 'react-icons/fa';
 import useMediaQuery from '../hooks/useMediaQuery';
@@ -46,9 +46,19 @@ const UserForm: React.FC<{
   const [nombre, setNombre] = useState(initialData?.nombre || '');
   const [email, setEmail] = useState(initialData?.email || '');
   const [password, setPassword] = useState('');
-  const [rolId, setRolId] = useState(initialData?.rolId || (roles[0]?.id || ''));
-  const [sedeId, setSedeId] = useState(initialData?.sedeId || (sedes[0]?.id || ''));
+  const [rolId, setRolId] = useState(initialData?.rolId || '');
+  const [sedeId, setSedeId] = useState(initialData?.sedeId || '');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialData) {
+      setRolId(initialData.rolId);
+      setSedeId(initialData.sedeId);
+    } else {
+      if (!rolId && roles.length > 0) setRolId(roles[0].id);
+      if (!sedeId && sedes.length > 0) setSedeId(sedes[0].id);
+    }
+  }, [roles, sedes, initialData]);
 
   const resetForm = () => {
     setNombre('');
@@ -98,7 +108,7 @@ const UserForm: React.FC<{
           required={!initialData}
           minLength={6}
           placeholder={initialData ? 'Dejar en blanco para no cambiar' : UI_TEXTS.PLACEHOLDER_PASSWORD}
-          disabled={!!initialData} // En este sistema el admin no cambia pass desde aquí por ahora
+          disabled={!!initialData}
         />
       </Form.Group>
       <Form.Group className="mb-3">
@@ -138,12 +148,34 @@ const AdminUsersPage: FC = () => {
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const unsubRoles = onSnapshot(collection(db, 'roles'), s => setRoles(s.docs.map(d => ({ id: d.id, ...d.data() } as Role))));
-    const unsubSedes = onSnapshot(collection(db, 'sedes'), s => setSedes(s.docs.map(d => ({ id: d.id, ...d.data() } as Sede))));
+    let rolesLoaded = false;
+    let sedesLoaded = false;
+    let usersLoaded = false;
+
+    const checkLoading = () => {
+      if (rolesLoaded && sedesLoaded && usersLoaded) {
+        setLoading(false);
+      }
+    };
+
+    const unsubRoles = onSnapshot(collection(db, 'roles'), s => {
+      setRoles(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as Role)));
+      rolesLoaded = true;
+      checkLoading();
+    });
+
+    const unsubSedes = onSnapshot(collection(db, 'sedes'), s => {
+      setSedes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as Sede)));
+      sedesLoaded = true;
+      checkLoading();
+    });
+
     const unsubUsers = onSnapshot(collection(db, 'usuarios'), s => {
       setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as UserProfile)));
-      setLoading(false);
+      usersLoaded = true;
+      checkLoading();
     });
+
     return () => { unsubRoles(); unsubSedes(); unsubUsers(); };
   }, []);
 
@@ -157,15 +189,26 @@ const AdminUsersPage: FC = () => {
       setShowModal(false);
       setEditingUser(null);
     } else {
-      const userCred = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      await setDoc(doc(db, 'usuarios', userCred.user.uid), {
-        nombre: data.nombre,
-        email: data.email,
-        rolId: data.rolId,
-        sedeId: data.sedeId,
-        activo: true
-      });
-      resetForm();
+      const secondaryAppName = `SecondaryApp_${Date.now()}`;
+      const secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+      const secondaryAuth = getAuth(secondaryApp);
+      
+      try {
+        const userCred = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
+        await setDoc(doc(db, 'usuarios', userCred.user.uid), {
+          nombre: data.nombre,
+          email: data.email,
+          rolId: data.rolId,
+          sedeId: data.sedeId,
+          activo: true
+        });
+        await signOutSecondary(secondaryAuth);
+        await deleteApp(secondaryApp);
+        resetForm();
+      } catch (error) {
+        await deleteApp(secondaryApp);
+        throw error;
+      }
     }
   };
 
@@ -185,15 +228,18 @@ const AdminUsersPage: FC = () => {
     },
     { 
       header: UI_TEXTS.TABLE_HEADER_SEDE, 
-      render: (u) => sedes.find(s => s.id === u.sedeId)?.nombre || u.sedeId 
+      render: (u) => {
+        const sede = sedes.find(s => s.id === u.sedeId);
+        return sede ? sede.nombre : u.sedeId;
+      }
     },
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (u) => (
-        <>
+        <div className="d-flex gap-2">
           <Button variant="link" size="sm" onClick={() => { setEditingUser(u); setShowModal(true); }}><FaPencilAlt /></Button>
-          <Button variant="link" size="sm" onClick={() => setDeletingUser(u)}><FaTrash /></Button>
-        </>
+          <Button variant="link" size="sm" className="text-danger" onClick={() => setDeletingUser(u)}><FaTrash /></Button>
+        </div>
       )
     }
   ], [roles, sedes]);
@@ -205,7 +251,14 @@ const AdminUsersPage: FC = () => {
           {!isMobile && (
             <Col md={4} className="mb-3">
               <Card className="p-3">
-                <UserForm roles={roles} sedes={sedes} onSubmit={handleSaveUser} loading={false} initialData={null} />
+                <UserForm 
+                  key={editingUser ? editingUser.id : 'new'}
+                  roles={roles} 
+                  sedes={sedes} 
+                  onSubmit={handleSaveUser} 
+                  loading={false} 
+                  initialData={editingUser} 
+                />
               </Card>
             </Col>
           )}
@@ -222,6 +275,7 @@ const AdminUsersPage: FC = () => {
       {isMobile && <FabButton onClick={() => setShowModal(true)} />}
       <GenericCreationModal show={showModal} onHide={() => { setShowModal(false); setEditingUser(null); }}>
         <UserForm 
+          key={editingUser ? editingUser.id : 'modal-new'}
           initialData={editingUser} 
           roles={roles} 
           sedes={sedes} 
