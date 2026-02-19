@@ -11,8 +11,8 @@ Esta es la interfaz principal de ventas, diseñada para ser rápida y eficiente.
 *   **Pantalla Principal (Dashboard de Venta):**
     *   **Lista de Productos (`ProductList`):**
         *   Muestra una lista clara con todos los productos de la colección `stock`.
-        *   Cada item muestra: `nombre`, `sku`, `precio` y la **cantidad disponible** (`cantidad`).
-        *   **Buscador (`SearchBar`):** Una barra de búsqueda prominente en la parte superior para filtrar la lista de productos en tiempo real por nombre o SKU.
+        *   Cada item muestra: `nombre`, `sap`, `precio` y la **cantidad disponible** (`cantidad`).
+        *   **Buscador (`SearchBar`):** Una barra de búsqueda prominente en la parte superior para filtrar la lista de productos en tiempo real por nombre o código SAP.
         *   **Funcionalidad:** Cada producto tendrá una opción para añadirlo al carrito (ej. un botón o un input de cantidad).
     *   **Carrito de Orden (`OrderCart`):**
         *   Un panel lateral o una sección fija en la pantalla que muestra los productos seleccionados para la orden.
@@ -73,7 +73,7 @@ Esta interfaz proporciona control total sobre el sistema, incluyendo la gestión
         *   Acciones: Crear nuevo usuario (con asignación de rol), editar rol de usuario, activar/desactivar usuario.
     *   **Gestión de Catálogo de Productos (`ProductManagement`):**
         *   Una tabla con todos los productos de la colección `productos`.
-        *   Columnas: `sku`, `nombre`, `descripcion`, `precio`.
+        *   Columnas: `sap`, `nombre`, `precio`, `mililitros`, `unidades`, `basis`, `comercial`, `contaaya`.
         *   Acciones: Crear nuevo producto, editar información de producto existente.
 
 ---

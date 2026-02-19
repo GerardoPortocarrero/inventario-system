@@ -22,9 +22,13 @@ interface Sede {
 interface Product {
   id: string;
   nombre: string;
-  sku: string;
+  sap: string;
+  basis: string;
+  comercial: string;
+  contaaya: string;
+  mililitros: number;
+  unidades: number;
   precio: number;
-  descripcion: string;
   sedeId: string;
   creadoEn?: any;
 }
@@ -37,18 +41,26 @@ const ProductForm: React.FC<{
   loading: boolean;
 }> = ({ initialData, sedes, onSubmit, onCancel, loading }) => {
   const [nombre, setNombre] = useState(initialData?.nombre || '');
-  const [sku, setSku] = useState(initialData?.sku || '');
+  const [sap, setSap] = useState(initialData?.sap || '');
+  const [basis, setBasis] = useState(initialData?.basis || '');
+  const [comercial, setComercial] = useState(initialData?.comercial || '');
+  const [contaaya, setContaaya] = useState(initialData?.contaaya || '');
+  const [mililitros, setMililitros] = useState(initialData?.mililitros?.toString() || '');
+  const [unidades, setUnidades] = useState(initialData?.unidades?.toString() || '');
   const [precio, setPrecio] = useState(initialData?.precio?.toString() || '');
-  const [descripcion, setDescripcion] = useState(initialData?.descripcion || '');
   const [sedeId, setSedeId] = useState(initialData?.sedeId || '');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
       setNombre(initialData.nombre);
-      setSku(initialData.sku);
+      setSap(initialData.sap);
+      setBasis(initialData.basis);
+      setComercial(initialData.comercial);
+      setContaaya(initialData.contaaya);
+      setMililitros(initialData.mililitros.toString());
+      setUnidades(initialData.unidades.toString());
       setPrecio(initialData.precio.toString());
-      setDescripcion(initialData.descripcion);
       setSedeId(initialData.sedeId);
     } else {
       if (!sedeId && sedes.length > 0) setSedeId(sedes[0].id);
@@ -57,9 +69,13 @@ const ProductForm: React.FC<{
 
   const resetForm = () => {
     setNombre('');
-    setSku('');
+    setSap('');
+    setBasis('');
+    setComercial('');
+    setContaaya('');
+    setMililitros('');
+    setUnidades('');
     setPrecio('');
-    setDescripcion('');
     setError(null);
   };
 
@@ -72,9 +88,13 @@ const ProductForm: React.FC<{
     try {
       await onSubmit({ 
         nombre, 
-        sku, 
+        sap, 
+        basis,
+        comercial,
+        contaaya,
+        mililitros: parseFloat(mililitros),
+        unidades: parseInt(unidades),
         precio: parseFloat(precio), 
-        descripcion, 
         sedeId 
       }, !!initialData, resetForm);
     } catch (err: any) {
@@ -90,18 +110,16 @@ const ProductForm: React.FC<{
           type="text"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
-          placeholder={UI_TEXTS.PLACEHOLDER_PRODUCT_NAME}
           required
           disabled={loading}
         />
       </Form.Group>
       <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.SKU}</Form.Label>
+        <Form.Label>{UI_TEXTS.SAP}</Form.Label>
         <Form.Control
           type="text"
-          value={sku}
-          onChange={(e) => setSku(e.target.value)}
-          placeholder={UI_TEXTS.PLACEHOLDER_SKU}
+          value={sap}
+          onChange={(e) => setSap(e.target.value)}
           required
           disabled={loading}
         />
@@ -118,20 +136,57 @@ const ProductForm: React.FC<{
         />
       </Form.Group>
       <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.MILILITROS}</Form.Label>
+        <Form.Control
+          type="number"
+          value={mililitros}
+          onChange={(e) => setMililitros(e.target.value)}
+          required
+          disabled={loading}
+        />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.UNIDADES}</Form.Label>
+        <Form.Control
+          type="number"
+          value={unidades}
+          onChange={(e) => setUnidades(e.target.value)}
+          required
+          disabled={loading}
+        />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.BASIS}</Form.Label>
+        <Form.Control
+          type="text"
+          value={basis}
+          onChange={(e) => setBasis(e.target.value)}
+          disabled={loading}
+        />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.COMERCIAL}</Form.Label>
+        <Form.Control
+          type="text"
+          value={comercial}
+          onChange={(e) => setComercial(e.target.value)}
+          disabled={loading}
+        />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.CONTAAYA}</Form.Label>
+        <Form.Control
+          type="text"
+          value={contaaya}
+          onChange={(e) => setContaaya(e.target.value)}
+          disabled={loading}
+        />
+      </Form.Group>
+      <Form.Group className="mb-3">
         <Form.Label>{UI_TEXTS.SEDE}</Form.Label>
         <Form.Select value={sedeId} onChange={(e) => setSedeId(e.target.value)} required disabled={loading}>
           {sedes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
         </Form.Select>
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.DESCRIPTION}</Form.Label>
-        <Form.Control
-          as="textarea"
-          rows={3}
-          value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
-          disabled={loading}
-        />
       </Form.Group>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="d-flex gap-2 mt-3">
@@ -214,13 +269,13 @@ const AdminProductsPage: FC = () => {
     return products.filter(p => {
       const sedeNombre = sedes.find(s => s.id === p.sedeId)?.nombre || '';
       return p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-             p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (p.sap && p.sap.toLowerCase().includes(searchTerm.toLowerCase())) ||
              sedeNombre.toLowerCase().includes(searchTerm.toLowerCase());
     });
   }, [products, sedes, searchTerm]);
 
-  const columns: Column<Product>[] = useMemo(() => [
-    { accessorKey: 'sku', header: UI_TEXTS.SKU },
+  const columns: Column<Product>[] = [
+    { accessorKey: 'sap', header: UI_TEXTS.SAP },
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
     { 
       header: UI_TEXTS.PRICE, 
@@ -239,7 +294,7 @@ const AdminProductsPage: FC = () => {
         </div>
       )
     }
-  ], [sedes]);
+  ];
 
   return (
     <Fragment>

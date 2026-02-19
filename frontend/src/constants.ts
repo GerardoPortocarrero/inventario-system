@@ -17,9 +17,13 @@ export const UI_TEXTS = {
   SEDE: 'Sede',
   SEDE_NAME: 'Nombre de la Sede',
   PRODUCT_NAME: 'Nombre del Producto',
-  SKU: 'SKU',
+  SAP: 'SAP',
+  BASIS: 'Basis',
+  COMERCIAL: 'Comercial',
+  CONTAAYA: 'Contaaya',
+  MILILITROS: 'Mililitros (ml)',
+  UNIDADES: 'Unidades',
   PRICE: 'Precio',
-  DESCRIPTION: 'Descripción',
 
   // Placeholders
   PLACEHOLDER_FULL_NAME: 'Ej. Juan Pérez',
@@ -29,8 +33,8 @@ export const UI_TEXTS = {
   PLACEHOLDER_SEARCH_SEDES: 'Buscar por nombre de sede...',
   PLACEHOLDER_SEDE_NAME: 'Ej. Sede Principal',
   PLACEHOLDER_PRODUCT_NAME: 'Ej. Coca Cola 3L',
-  PLACEHOLDER_SKU: 'Ej. CC-001',
-  PLACEHOLDER_SEARCH_PRODUCTS: 'Buscar por nombre, SKU o sede...',
+  PLACEHOLDER_SAP: 'Ej. 102030',
+  PLACEHOLDER_SEARCH_PRODUCTS: 'Buscar por nombre, SAP o sede...',
 
   // Buttons
   CREATE_USER: 'Crear Usuario',

@@ -19,9 +19,13 @@ La estructura se basará en las siguientes colecciones principales:
     ```json
     {
       "sedeId": "ID_de_la_sede_a_la_que_pertenece_el_producto",
-      "sku": "CC3L-001",
       "nombre": "Coca-Cola 3 Litros",
-      "descripcion": "Bebida gaseosa retornable.",
+      "sap": "102030",
+      "basis": "Base-01",
+      "comercial": "Com-01",
+      "contaaya": "Cont-01",
+      "mililitros": 3000,
+      "unidades": 6,
       "precio": 7.50,
       "creadoEn": "2024-02-06T10:00:00Z"
     }
