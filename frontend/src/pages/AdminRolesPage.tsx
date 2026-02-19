@@ -128,7 +128,7 @@ const AdminRolesPage: FC = () => {
 
   const filteredRoles = useMemo(() => roles.filter(r => r.nombre.toLowerCase().includes(searchTerm.toLowerCase())), [roles, searchTerm]);
 
-  const columns: Column<Role>[] = useMemo(() => [
+  const columns: Column<Role>[] = [
     { accessorKey: 'id', header: 'ID' },
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
     {
@@ -140,7 +140,7 @@ const AdminRolesPage: FC = () => {
         </div>
       )
     }
-  ], []);
+  ];
 
   return (
     <Fragment>

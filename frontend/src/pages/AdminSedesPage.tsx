@@ -116,7 +116,7 @@ const AdminSedesPage: FC = () => {
 
   const filteredSedes = useMemo(() => sedes.filter(s => s.nombre.toLowerCase().includes(searchTerm.toLowerCase())), [sedes, searchTerm]);
 
-  const columns: Column<Sede>[] = useMemo(() => [
+  const columns: Column<Sede>[] = [
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
@@ -127,7 +127,7 @@ const AdminSedesPage: FC = () => {
         </div>
       )
     }
-  ], []);
+  ];
 
   return (
     <Fragment>
