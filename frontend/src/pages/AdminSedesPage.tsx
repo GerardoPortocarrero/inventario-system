@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 
@@ -55,13 +55,21 @@ const SedeForm: React.FC<{
           value={nombreSede}
           onChange={(e) => setNombreSede(e.target.value)}
           required
+          disabled={loading}
         />
       </Form.Group>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="d-flex gap-2 mt-3">
-        {onCancel && <Button variant="secondary" onClick={onCancel} className="w-100">{UI_TEXTS.CLOSE}</Button>}
+        {onCancel && <Button variant="secondary" onClick={onCancel} className="w-100" disabled={loading}>{UI_TEXTS.CLOSE}</Button>}
         <Button variant="primary" type="submit" className="w-100" disabled={loading}>
-          {initialData ? UI_TEXTS.UPDATE_SEDE : UI_TEXTS.CREATE_SEDE}
+          {loading ? (
+            <>
+              <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+              {UI_TEXTS.LOADING}
+            </>
+          ) : (
+            initialData ? UI_TEXTS.UPDATE_SEDE : UI_TEXTS.CREATE_SEDE
+          )}
         </Button>
       </div>
     </Form>
@@ -74,6 +82,7 @@ const AdminSedesPage: FC = () => {
   
   const [sedes, setSedes] = useState<Sede[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingSede, setEditingSede] = useState<Sede | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -81,20 +90,27 @@ const AdminSedesPage: FC = () => {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'sedes'), s => {
-      setSedes(s.docs.map(d => ({ id: d.id, ...d.data() } as Sede)));
+      setSedes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as Sede)));
       setLoading(false);
     });
     return unsub;
   }, []);
 
   const handleSaveSede = async (data: any, isEditing: boolean, resetForm: () => void) => {
-    if (isEditing && editingSede) {
-      await updateDoc(doc(db, 'sedes', editingSede.id), data);
+    setIsSubmitting(true);
+    try {
+      if (isEditing && editingSede) {
+        await updateDoc(doc(db, 'sedes', editingSede.id), data);
+        setEditingSede(null);
+      } else {
+        await addDoc(collection(db, 'sedes'), data);
+        resetForm();
+      }
       setShowModal(false);
-      setEditingSede(null);
-    } else {
-      await addDoc(collection(db, 'sedes'), data);
-      resetForm();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -105,10 +121,10 @@ const AdminSedesPage: FC = () => {
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (s) => (
-        <>
-          <Button variant="link" size="sm" onClick={() => { setEditingSede(s); setShowModal(true); }}><FaPencilAlt /></Button>
-          <Button variant="link" size="sm" onClick={() => setDeletingSede(s)}><FaTrash /></Button>
-        </>
+        <div className="d-flex gap-2">
+          <Button variant="link" size="sm" className="p-0" onClick={() => { setEditingSede(s); setShowModal(true); }}><FaPencilAlt /></Button>
+          <Button variant="link" size="sm" className="p-0 text-danger" onClick={() => setDeletingSede(s)}><FaTrash /></Button>
+        </div>
       )
     }
   ], []);
@@ -120,7 +136,12 @@ const AdminSedesPage: FC = () => {
           {!isMobile && (
             <Col md={4} className="mb-3">
               <Card className="p-3">
-                <SedeForm onSubmit={handleSaveSede} loading={false} initialData={null} />
+                <SedeForm 
+                  key={editingSede ? editingSede.id : 'new'}
+                  onSubmit={handleSaveSede} 
+                  loading={isSubmitting} 
+                  initialData={editingSede} 
+                />
               </Card>
             </Col>
           )}
@@ -137,10 +158,11 @@ const AdminSedesPage: FC = () => {
       {isMobile && <FabButton onClick={() => setShowModal(true)} />}
       <GenericCreationModal show={showModal} onHide={() => { setShowModal(false); setEditingSede(null); }}>
         <SedeForm 
+          key={editingSede ? editingSede.id : 'modal-new'}
           initialData={editingSede} 
           onSubmit={handleSaveSede} 
           onCancel={() => { setShowModal(false); setEditingSede(null); }} 
-          loading={false} 
+          loading={isSubmitting} 
         />
       </GenericCreationModal>
       <GenericCreationModal show={!!deletingSede} onHide={() => setDeletingSede(null)}>

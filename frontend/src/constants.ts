@@ -16,6 +16,10 @@ export const UI_TEXTS = {
   ROLE: 'Rol',
   SEDE: 'Sede',
   SEDE_NAME: 'Nombre de la Sede',
+  PRODUCT_NAME: 'Nombre del Producto',
+  SKU: 'SKU',
+  PRICE: 'Precio',
+  DESCRIPTION: 'Descripción',
 
   // Placeholders
   PLACEHOLDER_FULL_NAME: 'Ej. Juan Pérez',
@@ -24,20 +28,25 @@ export const UI_TEXTS = {
   PLACEHOLDER_SEARCH_USERS: 'Buscar por nombre o email o sede...',
   PLACEHOLDER_SEARCH_SEDES: 'Buscar por nombre de sede...',
   PLACEHOLDER_SEDE_NAME: 'Ej. Sede Principal',
+  PLACEHOLDER_PRODUCT_NAME: 'Ej. Coca Cola 3L',
+  PLACEHOLDER_SKU: 'Ej. CC-001',
+  PLACEHOLDER_SEARCH_PRODUCTS: 'Buscar por nombre, SKU o sede...',
 
   // Buttons
   CREATE_USER: 'Crear Usuario',
   CREATE_SEDE: 'Crear Sede',
-  CREATE_ROLE: 'Crear Rol', // Nuevo
-  EDIT_ROLE: 'Editar Rol', // Nuevo
-  CLOSE: 'Cerrar', // Nuevo
-  UPDATE_ROLE: 'Guardar Cambios', // Nuevo
-  EDIT_SEDE: 'Editar Sede', // Nuevo
-  UPDATE_SEDE: 'Guardar Cambios', // Nuevo
-  EDIT_USER: 'Editar Usuario', // Nuevo
-  UPDATE_USER: 'Guardar Cambios', // Nuevo
-  CONFIRM_DELETE: 'Confirmar Eliminación', // Nuevo
-  DELETE: 'Eliminar', // Nuevo
+  CREATE_ROLE: 'Crear Rol',
+  CREATE_PRODUCT: 'Crear Producto',
+  EDIT_ROLE: 'Editar Rol',
+  CLOSE: 'Cerrar',
+  UPDATE_ROLE: 'Guardar Cambios',
+  EDIT_SEDE: 'Editar Sede',
+  UPDATE_SEDE: 'Guardar Cambios',
+  EDIT_USER: 'Editar Usuario',
+  UPDATE_USER: 'Guardar Cambios',
+  UPDATE_PRODUCT: 'Guardar Cambios',
+  CONFIRM_DELETE: 'Confirmar Eliminación',
+  DELETE: 'Eliminar',
 
   // Alerts / Validation
   REQUIRED_FIELDS: 'Todos los campos son obligatorios.',

@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, setDoc, doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 
@@ -57,7 +57,7 @@ const RoleForm: React.FC<{
           value={idRol}
           onChange={(e) => setIdRol(e.target.value)}
           required
-          disabled={!!initialData}
+          disabled={!!initialData || loading}
         />
       </Form.Group>
       <Form.Group className="mb-3">
@@ -67,13 +67,21 @@ const RoleForm: React.FC<{
           value={nombreRol}
           onChange={(e) => setNombreRol(e.target.value)}
           required
+          disabled={loading}
         />
       </Form.Group>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="d-flex gap-2 mt-3">
-        {onCancel && <Button variant="secondary" onClick={onCancel} className="w-100">{UI_TEXTS.CLOSE}</Button>}
+        {onCancel && <Button variant="secondary" onClick={onCancel} className="w-100" disabled={loading}>{UI_TEXTS.CLOSE}</Button>}
         <Button variant="primary" type="submit" className="w-100" disabled={loading}>
-          {initialData ? UI_TEXTS.UPDATE_ROLE : UI_TEXTS.CREATE_ROLE}
+          {loading ? (
+            <>
+              <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+              {UI_TEXTS.LOADING}
+            </>
+          ) : (
+            initialData ? UI_TEXTS.UPDATE_ROLE : UI_TEXTS.CREATE_ROLE
+          )}
         </Button>
       </div>
     </Form>
@@ -86,6 +94,7 @@ const AdminRolesPage: FC = () => {
   
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -93,20 +102,27 @@ const AdminRolesPage: FC = () => {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'roles'), s => {
-      setRoles(s.docs.map(d => ({ id: d.id, ...d.data() } as Role)));
+      setRoles(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as Role)));
       setLoading(false);
     });
     return unsub;
   }, []);
 
   const handleSaveRole = async (data: any, isEditing: boolean, resetForm: () => void) => {
-    if (isEditing && editingRole) {
-      await updateDoc(doc(db, 'roles', editingRole.id), { nombre: data.nombre });
+    setIsSubmitting(true);
+    try {
+      if (isEditing && editingRole) {
+        await updateDoc(doc(db, 'roles', editingRole.id), { nombre: data.nombre });
+        setEditingRole(null);
+      } else {
+        await setDoc(doc(db, 'roles', data.id), { nombre: data.nombre });
+        resetForm();
+      }
       setShowModal(false);
-      setEditingRole(null);
-    } else {
-      await setDoc(doc(db, 'roles', data.id), { nombre: data.nombre });
-      resetForm();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -118,10 +134,10 @@ const AdminRolesPage: FC = () => {
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (r) => (
-        <>
-          <Button variant="link" size="sm" onClick={() => { setEditingRole(r); setShowModal(true); }}><FaPencilAlt /></Button>
-          <Button variant="link" size="sm" onClick={() => setDeletingRole(r)}><FaTrash /></Button>
-        </>
+        <div className="d-flex gap-2">
+          <Button variant="link" size="sm" className="p-0" onClick={() => { setEditingRole(r); setShowModal(true); }}><FaPencilAlt /></Button>
+          <Button variant="link" size="sm" className="p-0 text-danger" onClick={() => setDeletingRole(r)}><FaTrash /></Button>
+        </div>
       )
     }
   ], []);
@@ -133,7 +149,12 @@ const AdminRolesPage: FC = () => {
           {!isMobile && (
             <Col md={4} className="mb-3">
               <Card className="p-3">
-                <RoleForm onSubmit={handleSaveRole} loading={false} initialData={null} />
+                <RoleForm 
+                  key={editingRole ? editingRole.id : 'new'}
+                  onSubmit={handleSaveRole} 
+                  loading={isSubmitting} 
+                  initialData={editingRole} 
+                />
               </Card>
             </Col>
           )}
@@ -150,10 +171,11 @@ const AdminRolesPage: FC = () => {
       {isMobile && <FabButton onClick={() => setShowModal(true)} />}
       <GenericCreationModal show={showModal} onHide={() => { setShowModal(false); setEditingRole(null); }}>
         <RoleForm 
+          key={editingRole ? editingRole.id : 'modal-new'}
           initialData={editingRole} 
           onSubmit={handleSaveRole} 
           onCancel={() => { setShowModal(false); setEditingRole(null); }} 
-          loading={false} 
+          loading={isSubmitting} 
         />
       </GenericCreationModal>
       <GenericCreationModal show={!!deletingRole} onHide={() => setDeletingRole(null)}>
