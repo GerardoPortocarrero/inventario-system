@@ -215,6 +215,9 @@ const AdminUsersPage: FC = () => {
           });
           await signOutSecondary(secondaryAuth);
           await deleteApp(secondaryApp);
+          
+          // Cerrar modal tras creación exitosa
+          setShowModal(false);
           resetForm();
         } catch (error) {
           await deleteApp(secondaryApp);
