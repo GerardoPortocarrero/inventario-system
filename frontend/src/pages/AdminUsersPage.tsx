@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { db, firebaseConfig } from '../api/firebase';
 import { collection, setDoc, doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
@@ -87,6 +87,7 @@ const UserForm: React.FC<{
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           required
+          disabled={loading}
         />
       </Form.Group>
       <Form.Group className="mb-3">
@@ -96,7 +97,7 @@ const UserForm: React.FC<{
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          disabled={!!initialData}
+          disabled={!!initialData || loading}
         />
       </Form.Group>
       <Form.Group className="mb-3">
@@ -108,26 +109,33 @@ const UserForm: React.FC<{
           required={!initialData}
           minLength={6}
           placeholder={initialData ? 'Dejar en blanco para no cambiar' : UI_TEXTS.PLACEHOLDER_PASSWORD}
-          disabled={!!initialData}
+          disabled={!!initialData || loading}
         />
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>{UI_TEXTS.ROLE}</Form.Label>
-        <Form.Select value={rolId} onChange={(e) => setRolId(e.target.value)} required>
+        <Form.Select value={rolId} onChange={(e) => setRolId(e.target.value)} required disabled={loading}>
           {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
         </Form.Select>
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>{UI_TEXTS.SEDE}</Form.Label>
-        <Form.Select value={sedeId} onChange={(e) => setSedeId(e.target.value)} required>
+        <Form.Select value={sedeId} onChange={(e) => setSedeId(e.target.value)} required disabled={loading}>
           {sedes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
         </Form.Select>
       </Form.Group>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="d-flex gap-2 mt-3">
-        {onCancel && <Button variant="secondary" onClick={onCancel} className="w-100">{UI_TEXTS.CLOSE}</Button>}
+        {onCancel && <Button variant="secondary" onClick={onCancel} className="w-100" disabled={loading}>{UI_TEXTS.CLOSE}</Button>}
         <Button variant="primary" type="submit" className="w-100" disabled={loading}>
-          {initialData ? UI_TEXTS.UPDATE_USER : UI_TEXTS.CREATE_USER}
+          {loading ? (
+            <>
+              <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+              {UI_TEXTS.LOADING}
+            </>
+          ) : (
+            initialData ? UI_TEXTS.UPDATE_USER : UI_TEXTS.CREATE_USER
+          )}
         </Button>
       </div>
     </Form>
@@ -142,6 +150,7 @@ const AdminUsersPage: FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [sedes, setSedes] = useState<Sede[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -180,35 +189,40 @@ const AdminUsersPage: FC = () => {
   }, []);
 
   const handleSaveUser = async (data: any, isEditing: boolean, resetForm: () => void) => {
-    if (isEditing && editingUser) {
-      await updateDoc(doc(db, 'usuarios', editingUser.id), {
-        nombre: data.nombre,
-        rolId: data.rolId,
-        sedeId: data.sedeId
-      });
-      setShowModal(false);
-      setEditingUser(null);
-    } else {
-      const secondaryAppName = `SecondaryApp_${Date.now()}`;
-      const secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
-      const secondaryAuth = getAuth(secondaryApp);
-      
-      try {
-        const userCred = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
-        await setDoc(doc(db, 'usuarios', userCred.user.uid), {
+    setIsSubmitting(true);
+    try {
+      if (isEditing && editingUser) {
+        await updateDoc(doc(db, 'usuarios', editingUser.id), {
           nombre: data.nombre,
-          email: data.email,
           rolId: data.rolId,
-          sedeId: data.sedeId,
-          activo: true
+          sedeId: data.sedeId
         });
-        await signOutSecondary(secondaryAuth);
-        await deleteApp(secondaryApp);
-        resetForm();
-      } catch (error) {
-        await deleteApp(secondaryApp);
-        throw error;
+        setShowModal(false);
+        setEditingUser(null);
+      } else {
+        const secondaryAppName = `SecondaryApp_${Date.now()}`;
+        const secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+        const secondaryAuth = getAuth(secondaryApp);
+        
+        try {
+          const userCred = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
+          await setDoc(doc(db, 'usuarios', userCred.user.uid), {
+            nombre: data.nombre,
+            email: data.email,
+            rolId: data.rolId,
+            sedeId: data.sedeId,
+            activo: true
+          });
+          await signOutSecondary(secondaryAuth);
+          await deleteApp(secondaryApp);
+          resetForm();
+        } catch (error) {
+          await deleteApp(secondaryApp);
+          throw error;
+        }
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -237,8 +251,8 @@ const AdminUsersPage: FC = () => {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (u) => (
         <div className="d-flex gap-2">
-          <Button variant="link" size="sm" onClick={() => { setEditingUser(u); setShowModal(true); }}><FaPencilAlt /></Button>
-          <Button variant="link" size="sm" className="text-danger" onClick={() => setDeletingUser(u)}><FaTrash /></Button>
+          <Button variant="link" size="sm" className="p-0" onClick={() => { setEditingUser(u); setShowModal(true); }}><FaPencilAlt /></Button>
+          <Button variant="link" size="sm" className="p-0 text-danger" onClick={() => setDeletingUser(u)}><FaTrash /></Button>
         </div>
       )
     }
@@ -256,7 +270,7 @@ const AdminUsersPage: FC = () => {
                   roles={roles} 
                   sedes={sedes} 
                   onSubmit={handleSaveUser} 
-                  loading={false} 
+                  loading={isSubmitting} 
                   initialData={editingUser} 
                 />
               </Card>
@@ -281,7 +295,7 @@ const AdminUsersPage: FC = () => {
           sedes={sedes} 
           onSubmit={handleSaveUser} 
           onCancel={() => { setShowModal(false); setEditingUser(null); }} 
-          loading={false} 
+          loading={isSubmitting} 
         />
       </GenericCreationModal>
       <GenericCreationModal show={!!deletingUser} onHide={() => setDeletingUser(null)}>
