@@ -14,11 +14,10 @@ La estructura se basará en las siguientes colecciones principales:
     ```
 
 ### Colección: `productos`
-*   **Propósito:** Mantiene el catálogo de productos disponible en cada sede. Un producto puede existir en diferentes sedes con diferentes propiedades (ej. precio).
-*   **Estructura del Documento:** Cada documento representa un producto específico de una sede, usando el `ID_Producto` como identificador del documento.
+*   **Propósito:** Mantiene el catálogo global de productos disponibles en la empresa.
+*   **Estructura del Documento:** Cada documento representa un producto, usando el `ID_Producto` como identificador del documento.
     ```json
     {
-      "sedeId": "ID_de_la_sede_a_la_que_pertenece_el_producto",
       "nombre": "Coca-Cola 3 Litros",
       "sap": "102030",
       "basis": "Base-01",

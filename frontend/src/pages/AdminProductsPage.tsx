@@ -29,7 +29,6 @@ interface Product {
   mililitros: number;
   unidades: number;
   precio: number;
-  sedeId: string;
   creadoEn?: any;
 }
 
@@ -48,7 +47,6 @@ const ProductForm: React.FC<{
   const [mililitros, setMililitros] = useState(initialData?.mililitros?.toString() || '');
   const [unidades, setUnidades] = useState(initialData?.unidades?.toString() || '');
   const [precio, setPrecio] = useState(initialData?.precio?.toString() || '');
-  const [sedeId, setSedeId] = useState(initialData?.sedeId || '');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,11 +59,8 @@ const ProductForm: React.FC<{
       setMililitros(initialData.mililitros.toString());
       setUnidades(initialData.unidades.toString());
       setPrecio(initialData.precio.toString());
-      setSedeId(initialData.sedeId);
-    } else {
-      if (!sedeId && sedes.length > 0) setSedeId(sedes[0].id);
     }
-  }, [sedes, initialData]);
+  }, [initialData]);
 
   const resetForm = () => {
     setNombre('');
@@ -81,10 +76,6 @@ const ProductForm: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sedeId) {
-      setError(UI_TEXTS.REQUIRED_FIELDS);
-      return;
-    }
     try {
       await onSubmit({ 
         nombre, 
@@ -94,8 +85,7 @@ const ProductForm: React.FC<{
         contaaya,
         mililitros: parseFloat(mililitros),
         unidades: parseInt(unidades),
-        precio: parseFloat(precio), 
-        sedeId 
+        precio: parseFloat(precio)
       }, !!initialData, resetForm);
     } catch (err: any) {
       setError(UI_TEXTS.ERROR_GENERIC_CREATE);
@@ -182,12 +172,6 @@ const ProductForm: React.FC<{
           disabled={loading}
         />
       </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.SEDE}</Form.Label>
-        <Form.Select value={sedeId} onChange={(e) => setSedeId(e.target.value)} required disabled={loading}>
-          {sedes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-        </Form.Select>
-      </Form.Group>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="d-flex gap-2 mt-3">
         {onCancel && <Button variant="secondary" onClick={onCancel} className="w-100" disabled={loading}>{UI_TEXTS.CLOSE}</Button>}
@@ -267,12 +251,10 @@ const AdminProductsPage: FC = () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const sedeNombre = sedes.find(s => s.id === p.sedeId)?.nombre || '';
       return p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-             (p.sap && p.sap.toLowerCase().includes(searchTerm.toLowerCase())) ||
-             sedeNombre.toLowerCase().includes(searchTerm.toLowerCase());
+             (p.sap && p.sap.toLowerCase().includes(searchTerm.toLowerCase()));
     });
-  }, [products, sedes, searchTerm]);
+  }, [products, searchTerm]);
 
   const columns: Column<Product>[] = [
     { accessorKey: 'sap', header: UI_TEXTS.SAP },
@@ -280,10 +262,6 @@ const AdminProductsPage: FC = () => {
     { 
       header: UI_TEXTS.PRICE, 
       render: (p) => `$${p.precio.toFixed(2)}` 
-    },
-    { 
-      header: UI_TEXTS.TABLE_HEADER_SEDE, 
-      render: (p) => sedes.find(s => s.id === p.sedeId)?.nombre || p.sedeId 
     },
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
