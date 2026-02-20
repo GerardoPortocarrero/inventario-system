@@ -14,11 +14,6 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 
-interface Sede {
-  id: string;
-  nombre: string;
-}
-
 interface Product {
   id: string;
   nombre: string;
@@ -34,11 +29,10 @@ interface Product {
 
 const ProductForm: React.FC<{
   initialData: Product | null;
-  sedes: Sede[];
   onSubmit: (data: any, isEditing: boolean, resetForm: () => void) => Promise<void>;
   onCancel?: () => void;
   loading: boolean;
-}> = ({ initialData, sedes, onSubmit, onCancel, loading }) => {
+}> = ({ initialData, onSubmit, onCancel, loading }) => {
   const [nombre, setNombre] = useState(initialData?.nombre || '');
   const [sap, setSap] = useState(initialData?.sap || '');
   const [basis, setBasis] = useState(initialData?.basis || '');
@@ -195,7 +189,6 @@ const AdminProductsPage: FC = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   
   const [products, setProducts] = useState<Product[]>([]);
-  const [sedes, setSedes] = useState<Sede[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -204,28 +197,12 @@ const AdminProductsPage: FC = () => {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    let sedesLoaded = false;
-    let productsLoaded = false;
-
-    const checkLoading = () => {
-      if (sedesLoaded && productsLoaded) {
-        setLoading(false);
-      }
-    };
-
-    const unsubSedes = onSnapshot(collection(db, 'sedes'), s => {
-      setSedes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as Sede)));
-      sedesLoaded = true;
-      checkLoading();
-    });
-
     const unsubProducts = onSnapshot(collection(db, 'productos'), s => {
       setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-      productsLoaded = true;
-      checkLoading();
+      setLoading(false);
     });
 
-    return () => { unsubSedes(); unsubProducts(); };
+    return () => { unsubProducts(); };
   }, []);
 
   const handleSaveProduct = async (data: any, isEditing: boolean, resetForm: () => void) => {
@@ -282,7 +259,6 @@ const AdminProductsPage: FC = () => {
             <div className="admin-section-form">
               <ProductForm 
                 key={editingProduct ? editingProduct.id : 'new'}
-                sedes={sedes}
                 onSubmit={handleSaveProduct} 
                 loading={isSubmitting} 
                 initialData={editingProduct} 
@@ -302,7 +278,6 @@ const AdminProductsPage: FC = () => {
         <ProductForm 
           key={editingProduct ? editingProduct.id : 'modal-new'}
           initialData={editingProduct} 
-          sedes={sedes}
           onSubmit={handleSaveProduct} 
           onCancel={() => { setShowModal(false); setEditingProduct(null); }} 
           loading={isSubmitting} 
