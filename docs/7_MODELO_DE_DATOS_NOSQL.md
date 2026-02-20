@@ -20,6 +20,7 @@ La estructura se basará en las siguientes colecciones principales:
     {
       "nombre": "Coca-Cola 3 Litros",
       "sap": "102030",
+      "tipoBebidaId": "ID_del_documento_en_la_coleccion_tiposBebida",
       "basis": "Base-01",
       "comercial": "Com-01",
       "contaaya": "Cont-01",
