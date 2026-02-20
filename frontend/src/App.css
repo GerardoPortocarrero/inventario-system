@@ -296,6 +296,30 @@ hr {
   overflow: hidden;
 }
 
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--theme-background-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-red-primary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-red-dark);
+}
+
+/* Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-red-primary) var(--theme-background-primary);
+}
+
 .admin-section-form {
   flex: 0 0 350px;
   border: 1px solid var(--theme-border-default) !important;
