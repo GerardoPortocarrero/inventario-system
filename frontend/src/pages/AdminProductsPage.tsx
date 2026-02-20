@@ -236,10 +236,9 @@ const AdminProductsPage: FC = () => {
   const columns: Column<Product>[] = [
     { accessorKey: 'sap', header: UI_TEXTS.SAP },
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
-    { 
-      header: UI_TEXTS.PRICE, 
-      render: (p) => `$${p.precio.toFixed(2)}` 
-    },
+    { accessorKey: 'basis', header: UI_TEXTS.BASIS },
+    { accessorKey: 'comercial', header: UI_TEXTS.COMERCIAL },
+    { accessorKey: 'contaaya', header: UI_TEXTS.CONTAAYA },
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (p) => (
