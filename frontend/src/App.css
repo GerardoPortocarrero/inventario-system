@@ -292,8 +292,9 @@ hr {
   display: flex;
   flex-direction: row;
   gap: 1rem;
-  height: calc(100vh - 100px); /* Adjust based on header height */
+  height: calc(100vh - 100px); /* Altura fija para evitar scroll de página */
   overflow: hidden;
+  padding: 0 1rem 1rem 1rem;
 }
 
 /* Custom Scrollbar */
@@ -332,21 +333,39 @@ hr {
   flex: 1;
   border: 1px solid var(--theme-border-default) !important;
   padding: 1.5rem;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* El contenedor de la tabla no scrollea, scrollea su contenido */
   background-color: var(--theme-background-primary);
+}
+
+/* El buscador se queda fijo arriba */
+.admin-section-table .mb-3 {
+  flex: 0 0 auto;
+}
+
+/* Solo los datos de la tabla scrollean */
+.admin-section-table > :not(.mb-3) {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 5px; /* Espacio para el scrollbar rojo */
 }
 
 /* Responsive adjustments */
 @media (max-width: 992px) {
   .admin-layout-container {
     flex-direction: column;
-    height: auto;
-    overflow: visible;
+    height: calc(100vh - 80px); /* Mantiene altura fija en móvil */
+    overflow: hidden;
+    padding: 0 0.5rem 0.5rem 0.5rem;
   }
   
-  .admin-section-form, .admin-section-table {
-    flex: none;
-    height: auto;
-    max-height: none;
+  .admin-section-form {
+    display: none; /* En móvil el formulario suele ir en modal (según tu lógica de FabButton) */
+  }
+
+  .admin-section-table {
+    flex: 1;
+    height: 100%;
   }
 }
