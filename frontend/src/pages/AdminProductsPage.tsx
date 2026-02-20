@@ -276,30 +276,26 @@ const AdminProductsPage: FC = () => {
 
   return (
     <Fragment>
-      <Container fluid>
-        <Row>
+      <Container fluid className="p-0">
+        <div className="admin-layout-container">
           {!isMobile && (
-            <Col md={4} className="mb-3">
-              <Card className="p-3">
-                <ProductForm 
-                  key={editingProduct ? editingProduct.id : 'new'}
-                  sedes={sedes}
-                  onSubmit={handleSaveProduct} 
-                  loading={isSubmitting} 
-                  initialData={editingProduct} 
-                />
-              </Card>
-            </Col>
+            <div className="admin-section-form">
+              <ProductForm 
+                key={editingProduct ? editingProduct.id : 'new'}
+                sedes={sedes}
+                onSubmit={handleSaveProduct} 
+                loading={isSubmitting} 
+                initialData={editingProduct} 
+              />
+            </div>
           )}
-          <Col md={isMobile ? 12 : 8}>
-            <Card className="p-3">
-              <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_PRODUCTS} className="mb-3" />
-              {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
-                <GenericTable data={filteredProducts} columns={columns} variant={isDarkMode ? 'dark' : ''} />
-              )}
-            </Card>
-          </Col>
-        </Row>
+          <div className="admin-section-table">
+            <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_PRODUCTS} className="mb-3" />
+            {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
+              <GenericTable data={filteredProducts} columns={columns} variant={isDarkMode ? 'dark' : ''} />
+            )}
+          </div>
+        </div>
       </Container>
       {isMobile && <FabButton onClick={() => setShowModal(true)} />}
       <GenericCreationModal show={showModal} onHide={() => { setShowModal(false); setEditingProduct(null); }}>

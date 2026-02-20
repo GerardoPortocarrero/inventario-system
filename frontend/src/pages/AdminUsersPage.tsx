@@ -263,31 +263,27 @@ const AdminUsersPage: FC = () => {
 
   return (
     <Fragment>
-      <Container fluid>
-        <Row>
+      <Container fluid className="p-0">
+        <div className="admin-layout-container">
           {!isMobile && (
-            <Col md={4} className="mb-3">
-              <Card className="p-3">
-                <UserForm 
-                  key={editingUser ? editingUser.id : 'new'}
-                  roles={roles} 
-                  sedes={sedes} 
-                  onSubmit={handleSaveUser} 
-                  loading={isSubmitting} 
-                  initialData={editingUser} 
-                />
-              </Card>
-            </Col>
+            <div className="admin-section-form">
+              <UserForm 
+                key={editingUser ? editingUser.id : 'new'}
+                roles={roles} 
+                sedes={sedes} 
+                onSubmit={handleSaveUser} 
+                loading={isSubmitting} 
+                initialData={editingUser} 
+              />
+            </div>
           )}
-          <Col md={isMobile ? 12 : 8}>
-            <Card className="p-3">
-              <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS} className="mb-3" />
-              {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
-                <GenericTable data={filteredUsers} columns={columns} variant={isDarkMode ? 'dark' : ''} />
-              )}
-            </Card>
-          </Col>
-        </Row>
+          <div className="admin-section-table">
+            <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS} className="mb-3" />
+            {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
+              <GenericTable data={filteredUsers} columns={columns} variant={isDarkMode ? 'dark' : ''} />
+            )}
+          </div>
+        </div>
       </Container>
       {isMobile && <FabButton onClick={() => setShowModal(true)} />}
       <GenericCreationModal show={showModal} onHide={() => { setShowModal(false); setEditingUser(null); }}>

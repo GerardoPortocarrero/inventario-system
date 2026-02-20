@@ -144,29 +144,25 @@ const AdminRolesPage: FC = () => {
 
   return (
     <Fragment>
-      <Container fluid>
-        <Row>
+      <Container fluid className="p-0">
+        <div className="admin-layout-container">
           {!isMobile && (
-            <Col md={4} className="mb-3">
-              <Card className="p-3">
-                <RoleForm 
-                  key={editingRole ? editingRole.id : 'new'}
-                  onSubmit={handleSaveRole} 
-                  loading={isSubmitting} 
-                  initialData={editingRole} 
-                />
-              </Card>
-            </Col>
+            <div className="admin-section-form">
+              <RoleForm 
+                key={editingRole ? editingRole.id : 'new'}
+                onSubmit={handleSaveRole} 
+                loading={isSubmitting} 
+                initialData={editingRole} 
+              />
+            </div>
           )}
-          <Col md={isMobile ? 12 : 8}>
-            <Card className="p-3">
-              <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Buscar rol..." className="mb-3" />
-              {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
-                <GenericTable data={filteredRoles} columns={columns} variant={isDarkMode ? 'dark' : ''} />
-              )}
-            </Card>
-          </Col>
-        </Row>
+          <div className="admin-section-table">
+            <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Buscar rol..." className="mb-3" />
+            {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
+              <GenericTable data={filteredRoles} columns={columns} variant={isDarkMode ? 'dark' : ''} />
+            )}
+          </div>
+        </div>
       </Container>
       {isMobile && <FabButton onClick={() => setShowModal(true)} />}
       <GenericCreationModal show={showModal} onHide={() => { setShowModal(false); setEditingRole(null); }}>
