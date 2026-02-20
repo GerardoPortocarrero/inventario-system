@@ -96,3 +96,12 @@ La estructura se basará en las siguientes colecciones principales:
       "nombre": "Preventista",
     }
     ```
+
+### Colección: `tiposBebida`
+*   **Propósito:** Define las categorías o tipos de bebida (ej. Gaseosas, Aguas, Cervezas).
+*   **Estructura del Documento:**
+    ```json
+    {
+      "nombre": "Gaseosas"
+    }
+    ```

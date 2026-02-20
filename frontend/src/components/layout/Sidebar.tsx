@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Nav } from 'react-bootstrap';
-import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag } from 'react-icons/fa'; // Importar FaUserTag
+import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt } from 'react-icons/fa'; // Importar FaUserTag y FaGlassMartiniAlt
 import './Sidebar.css';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -104,6 +104,12 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
                 <Nav.Link href="/admin/sedes" className={location.pathname === '/admin/sedes' ? 'active' : ''} onClick={toggleSidebar}>
                   <FaBuilding className="me-2" /> {/* Icono de edificio */}
                   Sedes
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link href="/admin/beverage-types" className={location.pathname === '/admin/beverage-types' ? 'active' : ''} onClick={toggleSidebar}>
+                  <FaGlassMartiniAlt className="me-2" />
+                  Tipo Bebida
                 </Nav.Link>
               </Nav.Item>
             </>
