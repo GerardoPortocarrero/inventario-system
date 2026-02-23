@@ -46,6 +46,12 @@ service cloud.firestore {
       allow read: if isAuthenticated();
     }
 
+    // Rules for 'tiposBebida' collection
+    match /tiposBebida/{tipoId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
     // Rules for 'usuarios' collection
     match /usuarios/{userId} {
       // A user can read/write their own document
