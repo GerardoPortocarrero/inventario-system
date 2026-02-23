@@ -13,7 +13,6 @@ import { UI_TEXTS, SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
-import GenericFilter from '../components/GenericFilter';
 
 interface Sede {
   id: string;
