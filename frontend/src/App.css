@@ -205,7 +205,12 @@ a:hover {
 /* Align content of the last column to the right for tables */
 .table th:last-child,
 .table td:last-child {
-  text-align: end;
+  text-align: end !important;
+}
+
+/* Ensure action containers inside cells are also pushed to the end */
+.table td:last-child > div {
+  justify-content: flex-end !important;
 }
 
 /* Fondo de tabla oscuro */
@@ -327,6 +332,11 @@ hr {
   padding: 1.5rem;
   overflow-y: auto;
   background-color: var(--theme-background-primary);
+  transition: border-color 0.2s ease-in-out;
+}
+
+.admin-section-form:hover {
+  border-color: var(--color-red-primary) !important;
 }
 
 .admin-section-table {
@@ -337,6 +347,11 @@ hr {
   flex-direction: column;
   overflow: hidden; /* El contenedor de la tabla no scrollea, scrollea su contenido */
   background-color: var(--theme-background-primary);
+  transition: border-color 0.2s ease-in-out;
+}
+
+.admin-section-table:hover {
+  border-color: var(--color-red-primary) !important;
 }
 
 /* El buscador se queda fijo arriba */
