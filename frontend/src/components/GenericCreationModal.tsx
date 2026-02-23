@@ -1,6 +1,5 @@
 import React from 'react';
-import { Modal, Button } from 'react-bootstrap';
-import { FaTimes } from 'react-icons/fa';
+import { Modal } from 'react-bootstrap';
 import './GenericCreationModal.css';
 
 interface GenericCreationModalProps {
@@ -14,7 +13,6 @@ interface GenericCreationModalProps {
 const GenericCreationModal: React.FC<GenericCreationModalProps> = ({ 
   show, 
   onHide, 
-  title, 
   children, 
   dialogClassName 
 }) => {

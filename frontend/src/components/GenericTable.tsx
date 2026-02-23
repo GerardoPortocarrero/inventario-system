@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Card, Row, Col, Button } from 'react-bootstrap';
+import { Table, Card, Row, Col } from 'react-bootstrap';
 import { UI_TEXTS } from '../constants';
 import useMediaQuery from '../hooks/useMediaQuery';
 import './GenericTable.css'; // Importar los estilos para la tarjeta
