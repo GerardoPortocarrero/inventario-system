@@ -94,17 +94,31 @@ const ProductForm: React.FC<{
         basis,
         comercial,
         contaaya,
-        mililitros: parseFloat(mililitros),
-        unidades: parseInt(unidades),
-        precio: parseFloat(precio)
+        mililitros: mililitros ? parseFloat(mililitros) : 0,
+        unidades: unidades ? parseInt(unidades) : 0,
+        precio: precio ? parseFloat(precio) : 0
       }, !!initialData, resetForm);
     } catch (err: any) {
       setError(UI_TEXTS.ERROR_GENERIC_CREATE);
     }
   };
 
+  const selectedTypeName = beverageTypes.find(t => t.id === tipoBebidaId)?.nombre?.toLowerCase() || '';
+  const isHiddenType = selectedTypeName === 'envase' || selectedTypeName === 'jaba';
+
   return (
     <Form onSubmit={handleSubmit}>
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.BEVERAGE_TYPE_NAME}</Form.Label>
+        <Form.Select 
+          value={tipoBebidaId} 
+          onChange={(e) => setTipoBebidaId(e.target.value)} 
+          required 
+          disabled={loading}
+        >
+          {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+        </Form.Select>
+      </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>{UI_TEXTS.PRODUCT_NAME}</Form.Label>
         <Form.Control
@@ -125,48 +139,41 @@ const ProductForm: React.FC<{
           disabled={loading}
         />
       </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.BEVERAGE_TYPE_NAME}</Form.Label>
-        <Form.Select 
-          value={tipoBebidaId} 
-          onChange={(e) => setTipoBebidaId(e.target.value)} 
-          required 
-          disabled={loading}
-        >
-          {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-        </Form.Select>
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.PRICE}</Form.Label>
-        <Form.Control
-          type="number"
-          step="0.01"
-          value={precio}
-          onChange={(e) => setPrecio(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.MILILITROS}</Form.Label>
-        <Form.Control
-          type="number"
-          value={mililitros}
-          onChange={(e) => setMililitros(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.UNIDADES}</Form.Label>
-        <Form.Control
-          type="number"
-          value={unidades}
-          onChange={(e) => setUnidades(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </Form.Group>
+      {!isHiddenType && (
+        <>
+          <Form.Group className="mb-3">
+            <Form.Label>{UI_TEXTS.PRICE}</Form.Label>
+            <Form.Control
+              type="number"
+              step="0.01"
+              value={precio}
+              onChange={(e) => setPrecio(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{UI_TEXTS.MILILITROS}</Form.Label>
+            <Form.Control
+              type="number"
+              value={mililitros}
+              onChange={(e) => setMililitros(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{UI_TEXTS.UNIDADES}</Form.Label>
+            <Form.Control
+              type="number"
+              value={unidades}
+              onChange={(e) => setUnidades(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </Form.Group>
+        </>
+      )}
       <Form.Group className="mb-3">
         <Form.Label>{UI_TEXTS.BASIS}</Form.Label>
         <Form.Control
@@ -282,12 +289,12 @@ const AdminProductsPage: FC = () => {
   }, [products, searchTerm, selectedType]);
 
   const columns: Column<Product>[] = [
-    { accessorKey: 'sap', header: UI_TEXTS.SAP },
-    { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
     { 
       header: 'Tipo', 
       render: (p) => beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || p.tipoBebidaId 
     },
+    { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
+    { accessorKey: 'sap', header: UI_TEXTS.SAP },
     { accessorKey: 'basis', header: UI_TEXTS.BASIS },
     { accessorKey: 'comercial', header: UI_TEXTS.COMERCIAL },
     { accessorKey: 'contaaya', header: UI_TEXTS.CONTAAYA },
