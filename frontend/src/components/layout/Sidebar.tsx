@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Nav } from 'react-bootstrap';
-import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt } from 'react-icons/fa'; // Importar FaUserTag y FaGlassMartiniAlt
+import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle } from 'react-icons/fa'; // Importar FaUserCircle
 import './Sidebar.css';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -45,6 +45,15 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
               Inventario A Y A
             </h4>
           </Nav.Item>
+
+          <Nav.Item>
+            <Nav.Link as={Link} to="/profile" className={location.pathname === '/profile' ? 'active' : ''} onClick={handleLinkClick}>
+              <FaUserCircle className="me-2" />
+              Mi Perfil
+            </Nav.Link>
+          </Nav.Item>
+
+          <hr />
 
           {/* Enlaces comunes para todos los roles */}
           <Nav.Item>

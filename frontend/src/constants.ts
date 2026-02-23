@@ -72,6 +72,16 @@ export const UI_TEXTS = {
   TABLE_HEADER_SEDE: 'Sede',
   TABLE_HEADER_ACTIONS: 'Acciones',
   TABLE_HEADER_CREATED_AT: 'Fecha de Creación', // Not used for sedes anymore, but kept for completeness
+
+  // Profile
+  MY_PROFILE: 'Mi Perfil',
+  PERSONAL_DATA: 'Datos Personales',
+  ACCOUNT_SETTINGS: 'Configuración de Cuenta',
+  CHANGE_PASSWORD: 'Cambiar Contraseña',
+  NEW_PASSWORD: 'Nueva Contraseña',
+  CONFIRM_PASSWORD: 'Confirmar Nueva Contraseña',
+  UPDATE_PASSWORD: 'Actualizar Contraseña',
+  PASSWORD_UPDATED_SUCCESS: 'Contraseña actualizada exitosamente.',
 };
 
 export const SPINNER_VARIANTS = {

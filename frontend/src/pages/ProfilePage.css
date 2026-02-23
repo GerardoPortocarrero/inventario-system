@@ -1,0 +1,35 @@
+/* src/pages/ProfilePage.css */
+
+.profile-page h2 {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.profile-card {
+  border-radius: 0 !important;
+  border-width: 1px;
+  box-shadow: none !important;
+  background-color: var(--theme-background-primary);
+  transition: border-color 0.2s ease-in-out;
+}
+
+.profile-card:hover {
+  border-color: var(--color-red-primary) !important;
+}
+
+.profile-card .card-header {
+  background-color: transparent;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.profile-card .form-control {
+  background-color: var(--theme-background-secondary) !important;
+}
+
+.profile-card .form-control:focus {
+  background-color: var(--theme-background-secondary) !important;
+}

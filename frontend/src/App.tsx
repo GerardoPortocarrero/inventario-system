@@ -13,6 +13,7 @@ import { SPINNER_VARIANTS } from './constants'; // Import SPINNER_VARIANTS
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+import ProfilePage from './pages/ProfilePage';
 import PreventistaPage from './pages/PreventistaPage';
 import AlmacenPage from './pages/AlmacenPage';
 import SupervisorPage from './pages/SupervisorPage';
@@ -71,6 +72,7 @@ const App: FC = () => {
             <Routes>
               {/* Ruta pública para usuarios autenticados */}
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<ProfilePage />} />
 
               {/* Rutas Protegidas */}
               <Route path="/preventista" element={<ProtectedRoute allowedRoles={['preventista']}><PreventistaPage /></ProtectedRoute>} />
