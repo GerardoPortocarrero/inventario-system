@@ -16,7 +16,7 @@ export const UI_TEXTS = {
   ROLE: 'Rol',
   SEDE: 'Sede',
   SEDE_NAME: 'Nombre de la Sede',
-  BEVERAGE_TYPE_NAME: 'Nombre del Tipo de Bebida',
+  BEVERAGE_TYPE_NAME: 'Tipo de Bebida',
   PRODUCT_NAME: 'Nombre del Producto',
   SAP: 'SAP',
   BASIS: 'Basis',

@@ -14,10 +14,16 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 
+interface BeverageType {
+  id: string;
+  nombre: string;
+}
+
 interface Product {
   id: string;
   nombre: string;
   sap: string;
+  tipoBebidaId: string;
   basis: string;
   comercial: string;
   contaaya: string;
@@ -29,12 +35,14 @@ interface Product {
 
 const ProductForm: React.FC<{
   initialData: Product | null;
+  beverageTypes: BeverageType[];
   onSubmit: (data: any, isEditing: boolean, resetForm: () => void) => Promise<void>;
   onCancel?: () => void;
   loading: boolean;
-}> = ({ initialData, onSubmit, onCancel, loading }) => {
+}> = ({ initialData, beverageTypes, onSubmit, onCancel, loading }) => {
   const [nombre, setNombre] = useState(initialData?.nombre || '');
   const [sap, setSap] = useState(initialData?.sap || '');
+  const [tipoBebidaId, setTipoBebidaId] = useState(initialData?.tipoBebidaId || '');
   const [basis, setBasis] = useState(initialData?.basis || '');
   const [comercial, setComercial] = useState(initialData?.comercial || '');
   const [contaaya, setContaaya] = useState(initialData?.contaaya || '');
@@ -45,20 +53,27 @@ const ProductForm: React.FC<{
 
   useEffect(() => {
     if (initialData) {
-      setNombre(initialData.nombre);
-      setSap(initialData.sap);
-      setBasis(initialData.basis);
-      setComercial(initialData.comercial);
-      setContaaya(initialData.contaaya);
-      setMililitros(initialData.mililitros.toString());
-      setUnidades(initialData.unidades.toString());
-      setPrecio(initialData.precio.toString());
+      setNombre(initialData.nombre || '');
+      setSap(initialData.sap || '');
+      // Fallback to first beverage type if the product document lacks it
+      setTipoBebidaId(initialData.tipoBebidaId || (beverageTypes.length > 0 ? beverageTypes[0].id : ''));
+      setBasis(initialData.basis || '');
+      setComercial(initialData.comercial || '');
+      setContaaya(initialData.contaaya || '');
+      setMililitros(initialData.mililitros?.toString() || '');
+      setUnidades(initialData.unidades?.toString() || '');
+      setPrecio(initialData.precio?.toString() || '');
+    } else {
+      if (!tipoBebidaId && beverageTypes.length > 0) {
+        setTipoBebidaId(beverageTypes[0].id);
+      }
     }
-  }, [initialData]);
+  }, [initialData, beverageTypes]);
 
   const resetForm = () => {
     setNombre('');
     setSap('');
+    setTipoBebidaId(beverageTypes.length > 0 ? beverageTypes[0].id : '');
     setBasis('');
     setComercial('');
     setContaaya('');
@@ -74,6 +89,7 @@ const ProductForm: React.FC<{
       await onSubmit({ 
         nombre, 
         sap, 
+        tipoBebidaId,
         basis,
         comercial,
         contaaya,
@@ -107,6 +123,17 @@ const ProductForm: React.FC<{
           required
           disabled={loading}
         />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.BEVERAGE_TYPE_NAME}</Form.Label>
+        <Form.Select 
+          value={tipoBebidaId} 
+          onChange={(e) => setTipoBebidaId(e.target.value)} 
+          required 
+          disabled={loading}
+        >
+          {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+        </Form.Select>
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>{UI_TEXTS.PRICE}</Form.Label>
@@ -189,6 +216,7 @@ const AdminProductsPage: FC = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   
   const [products, setProducts] = useState<Product[]>([]);
+  const [beverageTypes, setBeverageTypes] = useState<BeverageType[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -197,12 +225,28 @@ const AdminProductsPage: FC = () => {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
   useEffect(() => {
+    let productsLoaded = false;
+    let typesLoaded = false;
+
+    const checkLoading = () => {
+      if (productsLoaded && typesLoaded) {
+        setLoading(false);
+      }
+    };
+
     const unsubProducts = onSnapshot(collection(db, 'productos'), s => {
       setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-      setLoading(false);
+      productsLoaded = true;
+      checkLoading();
     });
 
-    return () => { unsubProducts(); };
+    const unsubTypes = onSnapshot(collection(db, 'tiposBebida'), s => {
+      setBeverageTypes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as BeverageType)));
+      typesLoaded = true;
+      checkLoading();
+    });
+
+    return () => { unsubProducts(); unsubTypes(); };
   }, []);
 
   const handleSaveProduct = async (data: any, isEditing: boolean, resetForm: () => void) => {
@@ -236,6 +280,10 @@ const AdminProductsPage: FC = () => {
   const columns: Column<Product>[] = [
     { accessorKey: 'sap', header: UI_TEXTS.SAP },
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
+    { 
+      header: 'Tipo', 
+      render: (p) => beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || p.tipoBebidaId 
+    },
     { accessorKey: 'basis', header: UI_TEXTS.BASIS },
     { accessorKey: 'comercial', header: UI_TEXTS.COMERCIAL },
     { accessorKey: 'contaaya', header: UI_TEXTS.CONTAAYA },
@@ -258,6 +306,7 @@ const AdminProductsPage: FC = () => {
             <div className="admin-section-form">
               <ProductForm 
                 key="new-product-form"
+                beverageTypes={beverageTypes}
                 onSubmit={handleSaveProduct} 
                 loading={isSubmitting} 
                 initialData={null} 
@@ -277,6 +326,7 @@ const AdminProductsPage: FC = () => {
         <ProductForm 
           key={editingProduct ? editingProduct.id : 'modal-new'}
           initialData={editingProduct} 
+          beverageTypes={beverageTypes}
           onSubmit={handleSaveProduct} 
           onCancel={() => { setShowModal(false); setEditingProduct(null); }} 
           loading={isSubmitting} 
