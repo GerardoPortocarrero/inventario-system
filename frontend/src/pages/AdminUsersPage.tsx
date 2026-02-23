@@ -15,6 +15,7 @@ import { UI_TEXTS, SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
+import GenericFilter from '../components/GenericFilter';
 
 interface Role {
   id: string;
@@ -152,6 +153,8 @@ const AdminUsersPage: FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedSede, setSelectedSede] = useState('');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
@@ -230,11 +233,14 @@ const AdminUsersPage: FC = () => {
   };
 
   const filteredUsers = useMemo(() => {
-    return users.filter(u => 
-      u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [users, searchTerm]);
+    return users.filter(u => {
+      const matchesSearch = u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           u.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = !selectedRole || u.rolId === selectedRole;
+      const matchesSede = !selectedSede || u.sedeId === selectedSede;
+      return matchesSearch && matchesRole && matchesSede;
+    });
+  }, [users, searchTerm, selectedRole, selectedSede]);
 
   const columns: Column<UserProfile>[] = useMemo(() => [
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
@@ -278,7 +284,28 @@ const AdminUsersPage: FC = () => {
             </div>
           )}
           <div className="admin-section-table">
-            <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS} className="mb-3" />
+            <div className="d-flex flex-column flex-md-row gap-3 mb-3">
+              <SearchInput 
+                searchTerm={searchTerm} 
+                onSearchChange={setSearchTerm} 
+                placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS} 
+                className="flex-grow-1 mb-0" 
+              />
+              <GenericFilter
+                prefix="Rol"
+                value={selectedRole}
+                onChange={setSelectedRole}
+                options={roles.map(r => ({ value: r.id, label: r.nombre }))}
+                className="flex-shrink-0"
+              />
+              <GenericFilter
+                prefix="Sede"
+                value={selectedSede}
+                onChange={setSelectedSede}
+                options={sedes.map(s => ({ value: s.id, label: s.nombre }))}
+                className="flex-shrink-0"
+              />
+            </div>
             {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
               <GenericTable data={filteredUsers} columns={columns} variant={isDarkMode ? 'dark' : ''} />
             )}

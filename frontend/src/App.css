@@ -354,6 +354,28 @@ hr {
   border-color: var(--color-red-primary) !important;
 }
 
+/* Generic Filter Unified Styling */
+.generic-filter-container {
+  border-bottom: 1px solid var(--theme-border-default);
+  transition: border-color 0.2s ease-in-out;
+}
+
+.generic-filter-container:hover,
+.generic-filter-container:focus-within {
+  border-color: var(--color-red-primary) !important;
+}
+
+.generic-filter-container .filter-prefix {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.generic-filter-container .filter-select {
+  font-size: 0.9rem;
+  color: var(--theme-text-primary) !important;
+  cursor: pointer;
+}
+
 /* El buscador se queda fijo arriba */
 .admin-section-table .mb-3 {
   flex: 0 0 auto;

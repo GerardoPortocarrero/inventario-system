@@ -13,6 +13,7 @@ import { UI_TEXTS, SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
+import GenericFilter from '../components/GenericFilter';
 
 interface BeverageType {
   id: string;
@@ -145,7 +146,14 @@ const AdminTipoBebidaPage: FC = () => {
             </div>
           )}
           <div className="admin-section-table">
-            <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_BEVERAGE_TYPES} className="mb-3" />
+            <div className="d-flex flex-column flex-md-row gap-3 mb-3">
+              <SearchInput 
+                searchTerm={searchTerm} 
+                onSearchChange={setSearchTerm} 
+                placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_BEVERAGE_TYPES} 
+                className="flex-grow-1 mb-0" 
+              />
+            </div>
             {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
               <GenericTable data={filteredTypes} columns={columns} variant={isDarkMode ? 'dark' : ''} />
             )}

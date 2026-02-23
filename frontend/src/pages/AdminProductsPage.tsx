@@ -13,6 +13,7 @@ import { UI_TEXTS, SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
+import GenericFilter from '../components/GenericFilter';
 
 interface BeverageType {
   id: string;
@@ -220,6 +221,7 @@ const AdminProductsPage: FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedType, setSelectedType] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
@@ -272,10 +274,12 @@ const AdminProductsPage: FC = () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      return p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-             (p.sap && p.sap.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           (p.sap && p.sap.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesType = !selectedType || p.tipoBebidaId === selectedType;
+      return matchesSearch && matchesType;
     });
-  }, [products, searchTerm]);
+  }, [products, searchTerm, selectedType]);
 
   const columns: Column<Product>[] = [
     { accessorKey: 'sap', header: UI_TEXTS.SAP },
@@ -314,7 +318,21 @@ const AdminProductsPage: FC = () => {
             </div>
           )}
           <div className="admin-section-table">
-            <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_PRODUCTS} className="mb-3" />
+            <div className="d-flex flex-column flex-md-row gap-3 mb-3">
+              <SearchInput 
+                searchTerm={searchTerm} 
+                onSearchChange={setSearchTerm} 
+                placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_PRODUCTS} 
+                className="flex-grow-1 mb-0" 
+              />
+              <GenericFilter
+                prefix="Tipo"
+                value={selectedType}
+                onChange={setSelectedType}
+                options={beverageTypes.map(t => ({ value: t.id, label: t.nombre }))}
+                className="flex-shrink-0"
+              />
+            </div>
             {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
               <GenericTable data={filteredProducts} columns={columns} variant={isDarkMode ? 'dark' : ''} />
             )}
