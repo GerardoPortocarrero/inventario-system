@@ -355,17 +355,26 @@ hr {
 }
 
 /* Generic Filter Unified Styling */
+.generic-filter-wrapper {
+  border-bottom: 1px solid var(--theme-border-default) !important;
+  transition: border-color 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.generic-filter-wrapper:hover,
+.generic-filter-wrapper:focus-within {
+  border-color: var(--color-red-primary) !important;
+}
+
 .unified-filter-select {
   background: transparent !important;
   border: none !important;
-  border-bottom: 1px solid var(--theme-border-default) !important;
   color: var(--theme-text-primary) !important;
   font-size: 0.9rem;
   font-weight: 500;
   padding: 4px 24px 4px 0; /* Un poco más de espacio para la flecha */
   outline: none !important;
   cursor: pointer;
-  transition: border-color 0.2s ease-in-out;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -375,11 +384,6 @@ hr {
   background-size: 12px !important;
   width: auto !important;
   min-width: max-content !important;
-}
-
-.unified-filter-select:hover,
-.unified-filter-select:focus {
-  border-color: var(--color-red-primary) !important;
 }
 
 .unified-filter-select option {
