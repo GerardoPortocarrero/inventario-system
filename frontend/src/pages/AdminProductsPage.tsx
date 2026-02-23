@@ -14,11 +14,7 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 import GenericFilter from '../components/GenericFilter';
-
-interface BeverageType {
-  id: string;
-  nombre: string;
-}
+import { useData } from '../context/DataContext';
 
 interface Product {
   id: string;
@@ -36,11 +32,11 @@ interface Product {
 
 const ProductForm: React.FC<{
   initialData: Product | null;
-  beverageTypes: BeverageType[];
   onSubmit: (data: any, isEditing: boolean, resetForm: () => void) => Promise<void>;
   onCancel?: () => void;
   loading: boolean;
-}> = ({ initialData, beverageTypes, onSubmit, onCancel, loading }) => {
+}> = ({ initialData, onSubmit, onCancel, loading }) => {
+  const { beverageTypes, loadingMasterData } = useData();
   const [nombre, setNombre] = useState(initialData?.nombre || '');
   const [sap, setSap] = useState(initialData?.sap || '');
   const [tipoBebidaId, setTipoBebidaId] = useState(initialData?.tipoBebidaId || '');
@@ -102,6 +98,8 @@ const ProductForm: React.FC<{
       setError(UI_TEXTS.ERROR_GENERIC_CREATE);
     }
   };
+
+  if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
 
   const selectedTypeName = beverageTypes.find(t => t.id === tipoBebidaId)?.nombre?.toLowerCase() || '';
   const isHiddenType = selectedTypeName === 'envase' || selectedTypeName === 'jaba';
@@ -222,9 +220,9 @@ const ProductForm: React.FC<{
 const AdminProductsPage: FC = () => {
   const isDarkMode = localStorage.getItem('theme') === 'dark' || localStorage.getItem('theme') === null;
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const { beverageTypes } = useData();
   
   const [products, setProducts] = useState<Product[]>([]);
-  const [beverageTypes, setBeverageTypes] = useState<BeverageType[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -234,28 +232,12 @@ const AdminProductsPage: FC = () => {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    let productsLoaded = false;
-    let typesLoaded = false;
-
-    const checkLoading = () => {
-      if (productsLoaded && typesLoaded) {
-        setLoading(false);
-      }
-    };
-
     const unsubProducts = onSnapshot(collection(db, 'productos'), s => {
       setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-      productsLoaded = true;
-      checkLoading();
+      setLoading(false);
     });
 
-    const unsubTypes = onSnapshot(collection(db, 'tiposBebida'), s => {
-      setBeverageTypes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as BeverageType)));
-      typesLoaded = true;
-      checkLoading();
-    });
-
-    return () => { unsubProducts(); unsubTypes(); };
+    return () => unsubProducts();
   }, []);
 
   const handleSaveProduct = async (data: any, isEditing: boolean, resetForm: () => void) => {
@@ -317,7 +299,6 @@ const AdminProductsPage: FC = () => {
             <div className="admin-section-form">
               <ProductForm 
                 key="new-product-form"
-                beverageTypes={beverageTypes}
                 onSubmit={handleSaveProduct} 
                 loading={isSubmitting} 
                 initialData={null} 
@@ -351,7 +332,6 @@ const AdminProductsPage: FC = () => {
         <ProductForm 
           key={editingProduct ? editingProduct.id : 'modal-new'}
           initialData={editingProduct} 
-          beverageTypes={beverageTypes}
           onSubmit={handleSaveProduct} 
           onCancel={() => { setShowModal(false); setEditingProduct(null); }} 
           loading={isSubmitting} 

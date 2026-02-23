@@ -16,16 +16,7 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 import GenericFilter from '../components/GenericFilter';
-
-interface Role {
-  id: string;
-  nombre: string;
-}
-
-interface Sede {
-  id: string;
-  nombre: string;
-}
+import { useData } from '../context/DataContext';
 
 interface UserProfile {
   id: string;
@@ -38,12 +29,11 @@ interface UserProfile {
 // Formulario con estado interno independiente
 const UserForm: React.FC<{
   initialData: UserProfile | null;
-  roles: Role[];
-  sedes: Sede[];
   onSubmit: (data: any, isEditing: boolean, resetForm: () => void) => Promise<void>;
   onCancel?: () => void;
   loading: boolean;
-}> = ({ initialData, roles, sedes, onSubmit, onCancel, loading }) => {
+}> = ({ initialData, onSubmit, onCancel, loading }) => {
+  const { roles, sedes, loadingMasterData } = useData();
   const [nombre, setNombre] = useState(initialData?.nombre || '');
   const [email, setEmail] = useState(initialData?.email || '');
   const [password, setPassword] = useState('');
@@ -78,6 +68,8 @@ const UserForm: React.FC<{
       setError(err.message || UI_TEXTS.ERROR_GENERIC_CREATE);
     }
   };
+
+  if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
 
   return (
     <Form onSubmit={handleSubmit}>
@@ -146,10 +138,9 @@ const UserForm: React.FC<{
 const AdminUsersPage: FC = () => {
   const isDarkMode = localStorage.getItem('theme') === 'dark' || localStorage.getItem('theme') === null;
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const { roles, sedes } = useData();
   
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [sedes, setSedes] = useState<Sede[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -160,35 +151,12 @@ const AdminUsersPage: FC = () => {
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    let rolesLoaded = false;
-    let sedesLoaded = false;
-    let usersLoaded = false;
-
-    const checkLoading = () => {
-      if (rolesLoaded && sedesLoaded && usersLoaded) {
-        setLoading(false);
-      }
-    };
-
-    const unsubRoles = onSnapshot(collection(db, 'roles'), s => {
-      setRoles(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as Role)));
-      rolesLoaded = true;
-      checkLoading();
-    });
-
-    const unsubSedes = onSnapshot(collection(db, 'sedes'), s => {
-      setSedes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as Sede)));
-      sedesLoaded = true;
-      checkLoading();
-    });
-
     const unsubUsers = onSnapshot(collection(db, 'usuarios'), s => {
       setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as UserProfile)));
-      usersLoaded = true;
-      checkLoading();
+      setLoading(false);
     });
 
-    return () => { unsubRoles(); unsubSedes(); unsubUsers(); };
+    return () => unsubUsers();
   }, []);
 
   const handleSaveUser = async (data: any, isEditing: boolean, resetForm: () => void) => {
@@ -275,8 +243,6 @@ const AdminUsersPage: FC = () => {
             <div className="admin-section-form">
               <UserForm 
                 key="new-user-form"
-                roles={roles} 
-                sedes={sedes} 
                 onSubmit={handleSaveUser} 
                 loading={isSubmitting} 
                 initialData={null} 
@@ -317,8 +283,6 @@ const AdminUsersPage: FC = () => {
         <UserForm 
           key={editingUser ? editingUser.id : 'modal-new'}
           initialData={editingUser} 
-          roles={roles} 
-          sedes={sedes} 
           onSubmit={handleSaveUser} 
           onCancel={() => { setShowModal(false); setEditingUser(null); }} 
           loading={isSubmitting} 
