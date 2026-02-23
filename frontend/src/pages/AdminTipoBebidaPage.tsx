@@ -137,10 +137,10 @@ const AdminTipoBebidaPage: FC = () => {
           {!isMobile && (
             <div className="admin-section-form">
               <BeverageTypeForm 
-                key={editingType ? editingType.id : 'new'}
+                key="new-beverage-type-form"
                 onSubmit={handleSaveType} 
                 loading={isSubmitting} 
-                initialData={editingType} 
+                initialData={null} 
               />
             </div>
           )}

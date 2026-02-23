@@ -257,10 +257,10 @@ const AdminProductsPage: FC = () => {
           {!isMobile && (
             <div className="admin-section-form">
               <ProductForm 
-                key={editingProduct ? editingProduct.id : 'new'}
+                key="new-product-form"
                 onSubmit={handleSaveProduct} 
                 loading={isSubmitting} 
-                initialData={editingProduct} 
+                initialData={null} 
               />
             </div>
           )}

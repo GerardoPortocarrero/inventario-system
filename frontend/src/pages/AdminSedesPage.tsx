@@ -136,10 +136,10 @@ const AdminSedesPage: FC = () => {
           {!isMobile && (
             <div className="admin-section-form">
               <SedeForm 
-                key={editingSede ? editingSede.id : 'new'}
+                key="new-sede-form"
                 onSubmit={handleSaveSede} 
                 loading={isSubmitting} 
-                initialData={editingSede} 
+                initialData={null} 
               />
             </div>
           )}

@@ -268,12 +268,12 @@ const AdminUsersPage: FC = () => {
           {!isMobile && (
             <div className="admin-section-form">
               <UserForm 
-                key={editingUser ? editingUser.id : 'new'}
+                key="new-user-form"
                 roles={roles} 
                 sedes={sedes} 
                 onSubmit={handleSaveUser} 
                 loading={isSubmitting} 
-                initialData={editingUser} 
+                initialData={null} 
               />
             </div>
           )}

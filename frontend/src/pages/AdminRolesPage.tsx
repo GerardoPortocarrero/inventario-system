@@ -149,10 +149,10 @@ const AdminRolesPage: FC = () => {
           {!isMobile && (
             <div className="admin-section-form">
               <RoleForm 
-                key={editingRole ? editingRole.id : 'new'}
+                key="new-role-form"
                 onSubmit={handleSaveRole} 
                 loading={isSubmitting} 
-                initialData={editingRole} 
+                initialData={null} 
               />
             </div>
           )}
