@@ -355,25 +355,37 @@ hr {
 }
 
 /* Generic Filter Unified Styling */
-.generic-filter-container {
-  border-bottom: 1px solid var(--theme-border-default);
+.unified-filter-select {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--theme-border-default) !important;
+  color: var(--theme-text-primary) !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 4px 24px 4px 0; /* Un poco más de espacio para la flecha */
+  outline: none !important;
+  cursor: pointer;
   transition: border-color 0.2s ease-in-out;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right center !important;
+  background-size: 12px !important;
+  width: auto !important;
+  min-width: max-content !important;
 }
 
-.generic-filter-container:hover,
-.generic-filter-container:focus-within {
+.unified-filter-select:hover,
+.unified-filter-select:focus {
   border-color: var(--color-red-primary) !important;
 }
 
-.generic-filter-container .filter-prefix {
-  white-space: nowrap;
-  font-weight: 500;
-}
-
-.generic-filter-container .filter-select {
-  font-size: 0.9rem;
+.unified-filter-select option {
+  background-color: var(--theme-background-secondary) !important;
   color: var(--theme-text-primary) !important;
-  cursor: pointer;
+  padding: 10px;
 }
 
 /* El buscador se queda fijo arriba */

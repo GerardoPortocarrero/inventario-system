@@ -24,20 +24,19 @@ const GenericFilter: FC<GenericFilterProps> = ({
   className 
 }) => {
   return (
-    <div className={`generic-filter-container d-flex align-items-center ${className}`}>
-      <span className="filter-prefix text-secondary small pe-1">
-        {prefix}:
-      </span>
-      <Form.Select 
+    <div className={`generic-filter-wrapper d-inline-block ${className}`}>
+      <select 
         value={value} 
         onChange={(e) => onChange(e.target.value)}
-        className="filter-select border-0 shadow-none bg-transparent py-1 ps-0 pe-4"
+        className="unified-filter-select"
       >
-        <option value="">{placeholder}</option>
+        <option value="">{prefix}: {placeholder}</option>
         {options.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
+          <option key={opt.value} value={opt.value}>
+            {prefix}: {opt.label}
+          </option>
         ))}
-      </Form.Select>
+      </select>
     </div>
   );
 };
