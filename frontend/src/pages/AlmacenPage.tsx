@@ -34,7 +34,6 @@ const AlmacenPage: FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Estados temporales para el modal de edición
   const [tempBoxes, setTempBoxes] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
   const [tempUnits, setTempUnits] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
 
@@ -104,27 +103,37 @@ const AlmacenPage: FC = () => {
     } catch (e) { console.error(e); } finally { setIsSaving(false); }
   };
 
+  const handleNumberInputChange = (field: string, subField: 'boxes' | 'units', value: string) => {
+    // Eliminamos ceros a la izquierda y convertimos a número
+    const numericValue = value === '' ? 0 : parseInt(value, 10);
+    if (subField === 'boxes') {
+      setTempBoxes(prev => ({ ...prev, [field]: numericValue }));
+    } else {
+      setTempUnits(prev => ({ ...prev, [field]: numericValue }));
+    }
+  };
+
   if (loading || loadingMasterData) return <GlobalSpinner variant="overlay" />;
 
   return (
-    <div className="admin-layout-container">
-      <div className="admin-section-table d-flex flex-column h-100">
+    <div className="admin-layout-container overflow-hidden">
+      <div className="admin-section-table d-flex flex-column h-100 overflow-hidden">
         
-        {/* CABECERA: RESTAURADO DISEÑO DE PILLS ORIGINALES */}
-        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          <div className="d-flex gap-2">
+        {/* CABECERA */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
+          <div className="d-flex flex-wrap gap-2">
             <div className="info-pill-new">
               <span className="pill-icon sede-icon"><FaMapMarkerAlt /></span>
               <div className="pill-content">
                 <span className="pill-label">SEDE ACTUAL</span>
-                <span className="pill-value">{currentSedeName}</span>
+                <span className="pill-value text-truncate" style={{ maxWidth: '120px' }}>{currentSedeName}</span>
               </div>
             </div>
             <div className="info-pill-new">
               <span className="pill-icon user-icon"><FaUserCircle /></span>
               <div className="pill-content">
                 <span className="pill-label">OPERADOR</span>
-                <span className="pill-value">{userName}</span>
+                <span className="pill-value text-truncate" style={{ maxWidth: '120px' }}>{userName}</span>
               </div>
             </div>
           </div>
@@ -133,8 +142,8 @@ const AlmacenPage: FC = () => {
           </Button>
         </div>
 
-        {/* BUSCADOR: RESTAURADO InputGroup (SIN ICONO) */}
-        <div className="mb-3">
+        {/* BUSCADOR */}
+        <div className="mb-3 px-1">
           <InputGroup size="sm" className="custom-search-group">
             <Form.Control
               placeholder="Escribe el nombre del producto o SAP..."
@@ -145,8 +154,8 @@ const AlmacenPage: FC = () => {
           </InputGroup>
         </div>
 
-        {/* AREA DE INVENTARIO: CORREGIDO TRUNCADO DE NOMBRE LARGO */}
-        <div className="flex-grow-1 overflow-auto pe-2 custom-scrollbar">
+        {/* AREA DE INVENTARIO */}
+        <div className="flex-grow-1 overflow-auto pe-1 custom-scrollbar overflow-x-hidden">
           <Row className="g-2 m-0">
             {filteredProducts.map(product => {
               const inv = draftInventory[product.id] || inventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
@@ -174,10 +183,10 @@ const AlmacenPage: FC = () => {
         </div>
       </div>
 
-      {/* MODAL: ALTA VISIBILIDAD PERO COMPACTO */}
+      {/* MODAL */}
       <Modal show={!!selectedProduct} onHide={() => setSelectedProduct(null)} centered className="inventory-modal-v3">
         {selectedProduct && (
-          <Modal.Body className="p-0">
+          <Modal.Body className="p-0 overflow-hidden">
             <div className="modal-header-v3">
               <h5 className="mb-1 fw-bold">{selectedProduct.nombre}</h5>
               <div className="d-flex gap-3 small opacity-75 fw-bold">
@@ -189,11 +198,11 @@ const AlmacenPage: FC = () => {
             <div className="p-3">
               {['almacen', 'consignacion', 'rechazo'].map((field) => (
                 <div key={field} className="field-group-v3 mb-3">
-                  <div className="group-title-v3 d-flex justify-content-between">
+                  <div className="group-title-v3 d-flex justify-content-between align-items-center">
                     <span className="text-uppercase small fw-bold">
                        {field === 'almacen' ? 'Conteo Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}
                     </span>
-                    <Badge bg="danger">{(tempBoxes[field] * selectedProduct.unidades) + tempUnits[field]} UDS TOTALES</Badge>
+                    <Badge bg="danger" className="border-radius-0">{(tempBoxes[field] * selectedProduct.unidades) + tempUnits[field]} UDS TOTALES</Badge>
                   </div>
                   <div className="p-3">
                     <Row className="g-2">
@@ -201,8 +210,9 @@ const AlmacenPage: FC = () => {
                         <Form.Label className="label-v3">CAJAS</Form.Label>
                         <Form.Control 
                           type="number" 
-                          value={tempBoxes[field]} 
-                          onChange={(e) => setTempBoxes({...tempBoxes, [field]: Math.max(0, parseInt(e.target.value) || 0)})} 
+                          value={tempBoxes[field] === 0 ? '0' : tempBoxes[field].toString().replace(/^0+/, '')} 
+                          onChange={(e) => handleNumberInputChange(field, 'boxes', e.target.value)} 
+                          onFocus={(e) => e.target.select()}
                           className="input-v3" 
                         />
                       </Col>
@@ -210,8 +220,9 @@ const AlmacenPage: FC = () => {
                         <Form.Label className="label-v3">UNIDADES</Form.Label>
                         <Form.Control 
                           type="number" 
-                          value={tempUnits[field]} 
-                          onChange={(e) => setTempUnits({...tempUnits, [field]: Math.max(0, parseInt(e.target.value) || 0)})} 
+                          value={tempUnits[field] === 0 ? '0' : tempUnits[field].toString().replace(/^0+/, '')} 
+                          onChange={(e) => handleNumberInputChange(field, 'units', e.target.value)} 
+                          onFocus={(e) => e.target.select()}
                           className="input-v3" 
                         />
                       </Col>
@@ -226,19 +237,22 @@ const AlmacenPage: FC = () => {
       </Modal>
 
       <style>{`
-        /* PILLS DE CABECERA (DISEÑO APROBADO) */
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; }
-        .pill-icon { padding: 8px 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+        .admin-layout-container { overflow-x: hidden !important; }
+        .admin-section-table { overflow-x: hidden !important; }
+        
+        /* PILLS DE CABECERA */
+        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; max-width: 100%; }
+        .pill-icon { padding: 6px 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
         .sede-icon { background-color: #007bff; color: white; }
         .user-icon { background-color: #6c757d; color: white; }
-        .pill-content { padding: 2px 10px; display: flex; flex-direction: column; line-height: 1.1; }
-        .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; }
-        .pill-value { font-size: 0.75rem; font-weight: 700; color: var(--theme-text-primary); }
+        .pill-content { padding: 2px 8px; display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+        .pill-label { font-size: 0.5rem; font-weight: 800; opacity: 0.6; white-space: nowrap; }
+        .pill-value { font-size: 0.7rem; font-weight: 700; color: var(--theme-text-primary); }
 
         /* BUSCADOR */
         .custom-search-group .form-control { border-left: 1px solid var(--theme-border-default) !important; padding-left: 10px !important; }
 
-        /* TARJETA DE PRODUCTO (CON ARREGLO DE TRUNCADO) */
+        /* TARJETA DE PRODUCTO */
         .product-card-refined { 
           border: 1px solid var(--theme-border-default); 
           background: var(--theme-background-primary); 
@@ -248,36 +262,39 @@ const AlmacenPage: FC = () => {
           justify-content: space-between; 
           align-items: center; 
           height: 100%;
+          overflow: hidden;
         }
         .product-card-refined:hover { border-color: var(--color-red-primary); }
         .product-card-refined.dirty { border-left: 3px solid #ffc107 !important; }
         
         .info-section { flex: 1; min-width: 0; padding-right: 8px; }
-        .sap-tag { font-size: 0.65rem; font-weight: bold; color: var(--color-red-primary); display: block; }
+        .sap-tag { font-size: 0.6rem; font-weight: bold; color: var(--color-red-primary); display: block; }
         .name-box { 
           font-weight: bold; 
-          font-size: 0.85rem; 
+          font-size: 0.8rem; 
           color: var(--theme-text-primary); 
           white-space: nowrap; 
           overflow: hidden; 
           text-overflow: ellipsis; 
           width: 100%;
         }
-        .pending-tag { font-size: 0.55rem; background: #ffc107; color: #000; padding: 0px 4px; font-weight: 900; }
+        .pending-tag { font-size: 0.5rem; background: #ffc107; color: #000; padding: 0px 4px; font-weight: 900; }
 
         .stats-section { flex-shrink: 0; display: flex; gap: 4px; }
-        .stat-box-v2 { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 2px 6px; text-align: center; min-width: 42px; }
-        .stat-box-v2 span { display: block; font-size: 0.55rem; opacity: 0.5; font-weight: bold; }
-        .stat-box-v2 strong { font-size: 0.75rem; font-weight: 800; color: var(--theme-text-primary); }
+        .stat-box-v2 { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 2px 6px; text-align: center; min-width: 38px; }
+        .stat-box-v2 span { display: block; font-size: 0.5rem; opacity: 0.5; font-weight: bold; }
+        .stat-box-v2 strong { font-size: 0.7rem; font-weight: 800; color: var(--theme-text-primary); }
 
         /* MODAL V3: ALTA VISIBILIDAD */
         .inventory-modal-v3 .modal-content { background-color: #1a1a1a !important; border: 1px solid #444 !important; color: white !important; }
-        .modal-header-v3 { background-color: var(--color-red-primary); padding: 12px 20px; color: white; }
+        .modal-header-v3 { background-color: var(--color-red-primary); padding: 10px 15px; color: white; }
         .field-group-v3 { border: 1px solid #333; background: #222; }
-        .group-title-v3 { background: #333; padding: 4px 12px; }
-        .label-v3 { font-size: 0.6rem; font-weight: 800; color: #777; margin-bottom: 2px; }
-        .input-v3 { background: #111 !important; border: none !important; border-bottom: 2px solid #444 !important; color: white !important; font-weight: 900 !important; font-size: 1.1rem !important; text-align: center; }
+        .group-title-v3 { background: #333; padding: 4px 10px; }
+        .label-v3 { font-size: 0.55rem; font-weight: 800; color: #777; margin-bottom: 2px; }
+        .input-v3 { background: #111 !important; border: none !important; border-bottom: 2px solid #444 !important; color: white !important; font-weight: 900 !important; font-size: 1rem !important; text-align: center; padding: 4px !important; }
         .input-v3:focus { border-color: var(--color-red-primary) !important; }
+        
+        .border-radius-0 { border-radius: 0 !important; }
       `}</style>
     </div>
   );
