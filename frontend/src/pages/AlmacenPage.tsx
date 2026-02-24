@@ -1,13 +1,13 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Button, Form, Modal, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Button, Form, Modal, InputGroup, Badge } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, onSnapshot, query, where, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { UI_TEXTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaPlus, FaMinus, FaCalculator, FaSearch, FaBoxOpen, FaTruckLoading, FaUserCircle, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaUserCircle, FaMapMarkerAlt, FaCalculator } from 'react-icons/fa';
 
 interface Product {
   id: string;
@@ -33,6 +33,9 @@ const AlmacenPage: FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [tempBoxes, setTempBoxes] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
+  const [tempUnits, setTempUnits] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
 
   const currentSedeName = useMemo(() => sedes.find(s => s.id === userSedeId)?.nombre || 'Sede...', [sedes, userSedeId]);
 
@@ -62,11 +65,31 @@ const AlmacenPage: FC = () => {
     return products.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.includes(searchTerm));
   }, [products, searchTerm]);
 
-  const handleUpdateDraft = (prodId: string, field: keyof InventoryEntry, value: number) => {
+  const handleOpenModal = (product: Product) => {
+    const inv = draftInventory[product.id] || inventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
+    const newTempBoxes: any = {};
+    const newTempUnits: any = {};
+    ['almacen', 'consignacion', 'rechazo'].forEach(field => {
+      const total = inv[field as keyof InventoryEntry];
+      newTempBoxes[field] = Math.floor(total / product.unidades);
+      newTempUnits[field] = total % product.unidades;
+    });
+    setTempBoxes(newTempBoxes);
+    setTempUnits(newTempUnits);
+    setSelectedProduct(product);
+  };
+
+  const handleConfirmEntry = () => {
+    if (!selectedProduct) return;
     setDraftInventory(prev => ({
       ...prev,
-      [prodId]: { ...(prev[prodId] || inventory[prodId] || { almacen: 0, consignacion: 0, rechazo: 0 }), [field]: Math.max(0, value) }
+      [selectedProduct.id]: {
+        almacen: (tempBoxes.almacen * selectedProduct.unidades) + tempUnits.almacen,
+        consignacion: (tempBoxes.consignacion * selectedProduct.unidades) + tempUnits.consignacion,
+        rechazo: (tempBoxes.rechazo * selectedProduct.unidades) + tempUnits.rechazo
+      }
     }));
+    setSelectedProduct(null);
   };
 
   const handleSave = async () => {
@@ -89,274 +112,150 @@ const AlmacenPage: FC = () => {
   return (
     <div className="admin-layout-container">
       <div className="admin-section-table d-flex flex-column h-100">
-        
-        {/* HEADER DE DATOS (ELEGANTE Y SIMPLE) */}
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
           <div className="d-flex gap-2">
-            <div className="info-pill sede-pill">
-              <FaMapMarkerAlt className="icon" />
-              <span className="label">SEDE</span>
-              <span className="value">{currentSedeName}</span>
+            <div className="info-pill-new">
+              <FaMapMarkerAlt className="mx-2 text-primary" />
+              <div className="pill-content">
+                <span className="pill-label">SEDE</span>
+                <span className="pill-value">{currentSedeName}</span>
+              </div>
             </div>
-            <div className="info-pill user-pill">
-              <FaUserCircle className="icon" />
-              <span className="label">CONTROLADOR</span>
-              <span className="value">{userName}</span>
+            <div className="info-pill-new">
+              <FaUserCircle className="mx-2 text-muted" />
+              <div className="pill-content">
+                <span className="pill-label">CONTROLADOR</span>
+                <span className="pill-value">{userName}</span>
+              </div>
             </div>
           </div>
-          <Button 
-            variant="primary" 
-            size="sm"
-            className="px-4 fw-bold text-uppercase"
-            onClick={handleSave}
-            disabled={isSaving || Object.keys(draftInventory).length === 0}
-          >
+          <Button variant="primary" size="sm" className="px-4 fw-bold" onClick={handleSave} disabled={isSaving || Object.keys(draftInventory).length === 0}>
             {isSaving ? UI_TEXTS.LOADING : `SINCRONIZAR (${Object.keys(draftInventory).length})`}
           </Button>
         </div>
 
-        {/* BUSCADOR FIJO */}
         <div className="mb-3">
-          <InputGroup size="sm" className="custom-search-group">
-            <InputGroup.Text><FaSearch /></InputGroup.Text>
-            <Form.Control
-              placeholder="Escribe el nombre del producto o SAP..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </InputGroup>
+          <Form.Control placeholder="Buscar producto por nombre o SAP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input-clean" />
         </div>
 
-        {/* AREA DE INVENTARIO CON SCROLL INTERNO */}
         <div className="flex-grow-1 overflow-auto pe-2 custom-scrollbar">
           <Row className="g-2 m-0">
             {filteredProducts.map(product => {
               const inv = draftInventory[product.id] || inventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
               const isDirty = !!draftInventory[product.id];
-
               return (
                 <Col key={product.id} xs={12} sm={6} lg={4} className="p-1">
-                  <div 
-                    className={`product-card ${isDirty ? 'dirty' : ''}`}
-                    onClick={() => setSelectedProduct(product)}
-                  >
-                    <div className="product-card-info">
-                      <span className="product-sap">{product.sap}</span>
-                      <div className="product-name">{product.nombre}</div>
-                      {isDirty && <span className="pending-indicator">PENDIENTE</span>}
+                  <div className={`product-card-simple ${isDirty ? 'is-dirty' : ''}`} onClick={() => handleOpenModal(product)}>
+                    <div className="product-info">
+                      <span className="sap-code">{product.sap}</span>
+                      <div className="name">{product.nombre}</div>
                     </div>
-                    <div className="product-card-stats">
-                      <div className="stat-box">
-                        <span className="stat-label">ALM</span>
-                        <span className="stat-value">{inv.almacen}</span>
-                      </div>
-                      <div className="stat-box">
-                        <span className="stat-label">CON</span>
-                        <span className="stat-value">{inv.consignacion}</span>
-                      </div>
+                    <div className="stats-row">
+                      <div className="stat-item"><span>ALM</span><strong>{inv.almacen}</strong></div>
+                      <div className="stat-item"><span>CON</span><strong>{inv.consignacion}</strong></div>
                     </div>
                   </div>
                 </Col>
               );
             })}
           </Row>
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-5 opacity-50 italic">No se encontraron productos...</div>
-          )}
         </div>
       </div>
 
-      {/* MODAL DE ASISTENTE */}
-      <Modal 
-        show={!!selectedProduct} 
-        onHide={() => setSelectedProduct(null)} 
-        centered
-        className="inventory-modal"
-      >
+      <Modal show={!!selectedProduct} onHide={() => setSelectedProduct(null)} centered className="inventory-modal-v2">
         {selectedProduct && (
-          <Modal.Body className="p-3">
-            <div className="modal-header-custom mb-3">
-              <h5 className="fw-bold mb-0 text-primary">{selectedProduct.nombre}</h5>
-              <small className="text-muted">SAP: {selectedProduct.sap} | Empaque: {selectedProduct.unidades} uds</small>
+          <Modal.Body className="p-0">
+            <div className="modal-header-v2">
+              <h5 className="mb-1 fw-bold">{selectedProduct.nombre}</h5>
+              <div className="d-flex gap-3 opacity-75 small fw-bold">
+                <span>SAP: {selectedProduct.sap}</span>
+                <span>EMPAQUE: {selectedProduct.unidades} UDS</span>
+              </div>
             </div>
 
-            <div className="d-flex flex-column gap-3">
-              {['almacen', 'consignacion', 'rechazo'].map((field) => {
-                const currentVal = (draftInventory[selectedProduct.id] || inventory[selectedProduct.id] || { almacen: 0, consignacion: 0, rechazo: 0 })[field as keyof InventoryEntry];
-                
-                return (
-                  <div key={field} className="modal-field-group">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="text-uppercase fw-bold small opacity-75">
-                        {field === 'almacen' ? 'Conteo Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}
-                      </span>
-                      <span className="h4 mb-0 fw-bold">{currentVal}</span>
-                    </div>
-
-                    <div className="modal-actions">
-                      <Button 
-                        variant="secondary" 
-                        size="sm"
-                        onClick={() => handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, currentVal + selectedProduct.unidades)}
-                      >
-                        +{selectedProduct.unidades} (PAQ)
-                      </Button>
-                      <Button 
-                        variant="secondary" 
-                        size="sm"
-                        onClick={() => handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, currentVal + 1)}
-                      >
-                        +1
-                      </Button>
-                      <Button 
-                        variant="secondary" 
-                        size="sm"
-                        onClick={() => handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, currentVal - 1)}
-                      >
-                        -1
-                      </Button>
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        onClick={() => {
-                          const nuevo = prompt(`Valor para ${field}:`, currentVal.toString());
-                          if (nuevo !== null) handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, parseInt(nuevo) || 0);
-                        }}
-                      >
-                        <FaCalculator />
-                      </Button>
-                    </div>
+            <div className="p-3">
+              {['almacen', 'consignacion', 'rechazo'].map((field) => (
+                <div key={field} className="field-group-v2 mb-3">
+                  <div className="group-title d-flex justify-content-between align-items-center">
+                    <span className="text-uppercase">{field === 'almacen' ? 'Conteo Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}</span>
+                    <Badge bg="danger" className="uds-badge">
+                      {(tempBoxes[field] * selectedProduct.unidades) + tempUnits[field]} UDS TOTALES
+                    </Badge>
                   </div>
-                );
-              })}
+                  <div className="group-content p-3">
+                    <Row className="g-3">
+                      <Col xs={6}>
+                        <Form.Label className="label-v2">CANTIDAD CAJAS</Form.Label>
+                        <Form.Control 
+                          type="number" 
+                          value={tempBoxes[field]} 
+                          onChange={(e) => setTempBoxes({...tempBoxes, [field]: Math.max(0, parseInt(e.target.value) || 0)})}
+                          className="input-v2"
+                        />
+                      </Col>
+                      <Col xs={6}>
+                        <Form.Label className="label-v2">UNIDADES SUELTAS</Form.Label>
+                        <Form.Control 
+                          type="number" 
+                          value={tempUnits[field]} 
+                          onChange={(e) => setTempUnits({...tempUnits, [field]: Math.max(0, parseInt(e.target.value) || 0)})}
+                          className="input-v2"
+                        />
+                      </Col>
+                    </Row>
+                  </div>
+                </div>
+              ))}
+              <Button variant="primary" className="w-100 py-2 fw-bold mt-2" onClick={handleConfirmEntry}>CONFIRMAR CONTEO</Button>
             </div>
-
-            <Button variant="primary" className="w-100 mt-4 py-2 fw-bold" onClick={() => setSelectedProduct(null)}>
-              CONFIRMAR CONTEO
-            </Button>
           </Modal.Body>
         )}
       </Modal>
 
       <style>{`
-        /* Pills de datos elegantes */
-        .info-pill {
-          display: flex;
-          align-items: center;
-          padding: 4px 12px;
-          gap: 8px;
-          border: 1px solid var(--theme-border-default);
-          background-color: var(--theme-background-secondary);
-        }
-        .info-pill .icon {
-          font-size: 0.9rem;
-          color: var(--color-red-primary);
-        }
-        .info-pill .label {
-          font-size: 0.65rem;
-          font-weight: 800;
-          opacity: 0.5;
-        }
-        .info-pill .value {
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: var(--theme-text-primary);
-        }
-        .sede-pill {
-          border-left: 3px solid var(--color-red-primary) !important;
-        }
+        .info-pill-new { display: flex; align-items: center; border: 1px solid var(--theme-border-default); background: var(--theme-background-secondary); padding: 2px 8px; }
+        .pill-content { display: flex; flex-direction: column; line-height: 1.1; }
+        .pill-label { font-size: 0.6rem; font-weight: 800; opacity: 0.5; }
+        .pill-value { font-size: 0.8rem; font-weight: 700; }
+        
+        .search-input-clean { border-radius: 0 !important; border: none !important; border-bottom: 1px solid var(--theme-border-default) !important; background: transparent !important; padding-left: 0 !important; font-weight: 500; }
+        .search-input-clean:focus { border-color: var(--color-red-primary) !important; }
 
-        /* Buscador */
-        .custom-search-group .input-group-text {
-          background-color: transparent !important;
-          border-right: none !important;
-          opacity: 0.5;
-        }
+        .product-card-simple { border: 1px solid var(--theme-border-default); background: var(--theme-background-primary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .product-card-simple:hover { border-color: var(--color-red-primary); background: var(--theme-background-secondary); }
+        .product-card-simple.is-dirty { border-left: 3px solid #ffc107; }
+        .sap-code { font-size: 0.65rem; font-weight: bold; color: var(--color-red-primary); display: block; }
+        .name { font-weight: bold; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stats-row { display: flex; gap: 4px; }
+        .stat-item { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 2px 6px; text-align: center; min-width: 45px; }
+        .stat-item span { display: block; font-size: 0.55rem; opacity: 0.5; font-weight: bold; }
+        .stat-item strong { font-size: 0.8rem; font-weight: 900; }
 
-        /* Scrollbar Personalizado */
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
+        /* MODAL V2 - ALTA VISIBILIDAD */
+        .inventory-modal-v2 .modal-content { 
+          background-color: #1a1a1a !important; 
+          border: 1px solid #444 !important;
+          color: white !important;
         }
-
-        /* Tarjetas de Producto */
-        .product-card {
-          border: 1px solid var(--theme-border-default) !important;
-          background-color: var(--theme-background-primary);
-          padding: 8px 12px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          height: 100%;
+        .modal-header-v2 { 
+          background-color: var(--color-red-primary); 
+          padding: 15px 20px; 
+          color: white; 
         }
-        .product-card:hover {
-          border-color: var(--color-red-primary) !important;
-          background-color: var(--theme-background-secondary);
-        }
-        .product-card.dirty {
-          border-left: 3px solid #ffc107 !important;
-        }
-        .product-card-info {
-          flex: 1;
-          min-width: 0;
-        }
-        .product-sap {
-          font-size: 0.65rem;
-          font-weight: bold;
-          color: var(--color-red-primary);
-        }
-        .product-name {
-          font-weight: bold;
-          font-size: 0.85rem;
-          color: var(--theme-text-primary);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .pending-indicator {
-          font-size: 0.55rem;
-          background: #ffc107;
-          color: #000;
-          padding: 0px 4px;
-          font-weight: 900;
-        }
-        .product-card-stats {
-          display: flex;
-          gap: 4px;
-        }
-        .stat-box {
-          background-color: var(--theme-background-secondary);
-          padding: 2px 6px;
+        .field-group-v2 { border: 1px solid #333; background: #222; }
+        .group-title { background: #333; padding: 4px 12px; font-size: 0.75rem; font-weight: 800; color: #aaa; }
+        .uds-badge { font-size: 0.7rem; letter-spacing: 0.5px; }
+        .label-v2 { font-size: 0.65rem; font-weight: 800; color: #888; margin-bottom: 4px; display: block; }
+        .input-v2 { 
+          background: #111 !important; 
+          border: none !important; 
+          border-bottom: 2px solid #444 !important; 
+          color: white !important; 
+          font-weight: 900 !important; 
+          font-size: 1.2rem !important;
           text-align: center;
-          min-width: 40px;
-          border: 1px solid var(--theme-border-default);
         }
-        .stat-label {
-          display: block;
-          font-size: 0.55rem;
-          font-weight: bold;
-          opacity: 0.5;
-        }
-        .stat-value {
-          font-weight: 800;
-          font-size: 0.75rem;
-        }
-
-        /* Modal */
-        .inventory-modal .modal-content {
-          background-color: var(--theme-background-primary) !important;
-          border: 1px solid var(--theme-border-default) !important;
-        }
-        .modal-field-group {
-          border-bottom: 1px solid var(--theme-border-default);
-          padding-bottom: 12px;
-        }
-        .modal-actions {
-          display: grid;
-          grid-template-columns: 2fr 1fr 1fr 1fr;
-          gap: 6px;
-        }
+        .input-v2:focus { border-color: var(--color-red-primary) !important; background: #000 !important; }
       `}</style>
     </div>
   );
