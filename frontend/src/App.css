@@ -342,7 +342,7 @@ hr {
 .admin-section-table {
   flex: 1;
   border: 1px solid var(--theme-border-default) !important;
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   overflow: hidden; /* El contenedor de la tabla no scrollea, scrollea su contenido */
