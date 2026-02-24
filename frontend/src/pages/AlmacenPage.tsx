@@ -1,13 +1,13 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Card, Button, Badge, Form, Modal, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Button, Form, Modal, InputGroup } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, onSnapshot, query, where, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { UI_TEXTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaPlus, FaMinus, FaCalculator, FaSave, FaHistory, FaSearch, FaBoxOpen, FaTruckLoading } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaCalculator, FaSearch, FaBoxOpen, FaTruckLoading, FaUserCircle, FaMapMarkerAlt } from 'react-icons/fa';
 
 interface Product {
   id: string;
@@ -87,74 +87,84 @@ const AlmacenPage: FC = () => {
   if (loading || loadingMasterData) return <GlobalSpinner variant="overlay" />;
 
   return (
-    <Container fluid className="px-3 py-2">
-      {/* HEADER COMPACTO */}
-      <div className="controlador-header d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <h5 className="fw-bold mb-0 text-uppercase">{UI_TEXTS.INVENTORY_CONTROL}</h5>
-          <small className="text-muted">{currentSedeName} | {userName}</small>
+    <div className="admin-layout-container">
+      <div className="admin-section-table d-flex flex-column h-100">
+        
+        {/* HEADER DE DATOS (ELEGANTE Y SIMPLE) */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div className="d-flex gap-2">
+            <div className="info-pill sede-pill">
+              <FaMapMarkerAlt className="icon" />
+              <span className="label">SEDE</span>
+              <span className="value">{currentSedeName}</span>
+            </div>
+            <div className="info-pill user-pill">
+              <FaUserCircle className="icon" />
+              <span className="label">CONTROLADOR</span>
+              <span className="value">{userName}</span>
+            </div>
+          </div>
+          <Button 
+            variant="primary" 
+            size="sm"
+            className="px-4 fw-bold text-uppercase"
+            onClick={handleSave}
+            disabled={isSaving || Object.keys(draftInventory).length === 0}
+          >
+            {isSaving ? UI_TEXTS.LOADING : `SINCRONIZAR (${Object.keys(draftInventory).length})`}
+          </Button>
         </div>
-        <Button 
-          variant="primary" 
-          size="sm"
-          className="px-3 fw-bold"
-          onClick={handleSave}
-          disabled={isSaving || Object.keys(draftInventory).length === 0}
-        >
-          {isSaving ? UI_TEXTS.LOADING : `SINCRONIZAR (${Object.keys(draftInventory).length})`}
-        </Button>
+
+        {/* BUSCADOR FIJO */}
+        <div className="mb-3">
+          <InputGroup size="sm" className="custom-search-group">
+            <InputGroup.Text><FaSearch /></InputGroup.Text>
+            <Form.Control
+              placeholder="Escribe el nombre del producto o SAP..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </InputGroup>
+        </div>
+
+        {/* AREA DE INVENTARIO CON SCROLL INTERNO */}
+        <div className="flex-grow-1 overflow-auto pe-2 custom-scrollbar">
+          <Row className="g-2 m-0">
+            {filteredProducts.map(product => {
+              const inv = draftInventory[product.id] || inventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
+              const isDirty = !!draftInventory[product.id];
+
+              return (
+                <Col key={product.id} xs={12} sm={6} lg={4} className="p-1">
+                  <div 
+                    className={`product-card ${isDirty ? 'dirty' : ''}`}
+                    onClick={() => setSelectedProduct(product)}
+                  >
+                    <div className="product-card-info">
+                      <span className="product-sap">{product.sap}</span>
+                      <div className="product-name">{product.nombre}</div>
+                      {isDirty && <span className="pending-indicator">PENDIENTE</span>}
+                    </div>
+                    <div className="product-card-stats">
+                      <div className="stat-box">
+                        <span className="stat-label">ALM</span>
+                        <span className="stat-value">{inv.almacen}</span>
+                      </div>
+                      <div className="stat-box">
+                        <span className="stat-label">CON</span>
+                        <span className="stat-value">{inv.consignacion}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Col>
+              );
+            })}
+          </Row>
+          {filteredProducts.length === 0 && (
+            <div className="text-center py-5 opacity-50 italic">No se encontraron productos...</div>
+          )}
+        </div>
       </div>
-
-      {/* BUSCADOR COMPACTO */}
-      <div className="mb-3">
-        <InputGroup size="sm">
-          <InputGroup.Text><FaSearch /></InputGroup.Text>
-          <Form.Control
-            placeholder="Buscar producto..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </InputGroup>
-      </div>
-
-      {/* REJILLA DE PRODUCTOS */}
-      <Row className="g-2">
-        {filteredProducts.map(product => {
-          const inv = draftInventory[product.id] || inventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-          const isDirty = !!draftInventory[product.id];
-
-          return (
-            <Col key={product.id} xs={12} sm={6} lg={4}>
-              <div 
-                className={`product-card ${isDirty ? 'dirty' : ''}`}
-                onClick={() => setSelectedProduct(product)}
-              >
-                <div className="product-card-info">
-                  <div className="d-flex justify-content-between">
-                    <span className="product-sap">{product.sap}</span>
-                    {isDirty && <span className="pending-badge">Pendiente</span>}
-                  </div>
-                  <div className="product-name">{product.nombre}</div>
-                </div>
-                <div className="product-card-stats">
-                  <div className="stat-box">
-                    <span className="stat-label">ALM</span>
-                    <span className="stat-value">{inv.almacen}</span>
-                  </div>
-                  <div className="stat-box">
-                    <span className="stat-label">CON</span>
-                    <span className="stat-value">{inv.consignacion}</span>
-                  </div>
-                  <div className="stat-box">
-                    <span className="stat-label">REC</span>
-                    <span className="stat-value">{inv.rechazo}</span>
-                  </div>
-                </div>
-              </div>
-            </Col>
-          );
-        })}
-      </Row>
 
       {/* MODAL DE ASISTENTE */}
       <Modal 
@@ -166,8 +176,8 @@ const AlmacenPage: FC = () => {
         {selectedProduct && (
           <Modal.Body className="p-3">
             <div className="modal-header-custom mb-3">
-              <h5 className="fw-bold mb-0">{selectedProduct.nombre}</h5>
-              <small className="text-muted">SAP: {selectedProduct.sap} | Empaque: {selectedProduct.unidades}</small>
+              <h5 className="fw-bold mb-0 text-primary">{selectedProduct.nombre}</h5>
+              <small className="text-muted">SAP: {selectedProduct.sap} | Empaque: {selectedProduct.unidades} uds</small>
             </div>
 
             <div className="d-flex flex-column gap-3">
@@ -177,8 +187,8 @@ const AlmacenPage: FC = () => {
                 return (
                   <div key={field} className="modal-field-group">
                     <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="text-uppercase fw-bold small">
-                        {field === 'almacen' ? 'Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}
+                      <span className="text-uppercase fw-bold small opacity-75">
+                        {field === 'almacen' ? 'Conteo Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}
                       </span>
                       <span className="h4 mb-0 fw-bold">{currentVal}</span>
                     </div>
@@ -189,7 +199,7 @@ const AlmacenPage: FC = () => {
                         size="sm"
                         onClick={() => handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, currentVal + selectedProduct.unidades)}
                       >
-                        +{selectedProduct.unidades} (Paq)
+                        +{selectedProduct.unidades} (PAQ)
                       </Button>
                       <Button 
                         variant="secondary" 
@@ -222,26 +232,67 @@ const AlmacenPage: FC = () => {
             </div>
 
             <Button variant="primary" className="w-100 mt-4 py-2 fw-bold" onClick={() => setSelectedProduct(null)}>
-              LISTO
+              CONFIRMAR CONTEO
             </Button>
           </Modal.Body>
         )}
       </Modal>
 
       <style>{`
-        /* Estilos alineados al sistema */
+        /* Pills de datos elegantes */
+        .info-pill {
+          display: flex;
+          align-items: center;
+          padding: 4px 12px;
+          gap: 8px;
+          border: 1px solid var(--theme-border-default);
+          background-color: var(--theme-background-secondary);
+        }
+        .info-pill .icon {
+          font-size: 0.9rem;
+          color: var(--color-red-primary);
+        }
+        .info-pill .label {
+          font-size: 0.65rem;
+          font-weight: 800;
+          opacity: 0.5;
+        }
+        .info-pill .value {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: var(--theme-text-primary);
+        }
+        .sede-pill {
+          border-left: 3px solid var(--color-red-primary) !important;
+        }
+
+        /* Buscador */
+        .custom-search-group .input-group-text {
+          background-color: transparent !important;
+          border-right: none !important;
+          opacity: 0.5;
+        }
+
+        /* Scrollbar Personalizado */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        /* Tarjetas de Producto */
         .product-card {
           border: 1px solid var(--theme-border-default) !important;
           background-color: var(--theme-background-primary);
-          padding: 10px;
+          padding: 8px 12px;
           cursor: pointer;
-          transition: border-color 0.2s;
+          transition: all 0.2s ease;
           display: flex;
           justify-content: space-between;
           align-items: center;
+          height: 100%;
         }
         .product-card:hover {
           border-color: var(--color-red-primary) !important;
+          background-color: var(--theme-background-secondary);
         }
         .product-card.dirty {
           border-left: 3px solid #ffc107 !important;
@@ -251,70 +302,63 @@ const AlmacenPage: FC = () => {
           min-width: 0;
         }
         .product-sap {
-          font-size: 0.7rem;
-          color: var(--theme-text-secondary);
-          display: block;
+          font-size: 0.65rem;
+          font-weight: bold;
+          color: var(--color-red-primary);
         }
         .product-name {
           font-weight: bold;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
+          color: var(--theme-text-primary);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          color: var(--theme-text-primary);
         }
-        .pending-badge {
-          background-color: #ffc107;
+        .pending-indicator {
+          font-size: 0.55rem;
+          background: #ffc107;
           color: #000;
-          font-size: 0.6rem;
-          padding: 1px 4px;
-          text-transform: uppercase;
-          font-weight: bold;
+          padding: 0px 4px;
+          font-weight: 900;
         }
         .product-card-stats {
           display: flex;
-          gap: 5px;
-          margin-left: 10px;
+          gap: 4px;
         }
         .stat-box {
           background-color: var(--theme-background-secondary);
-          padding: 4px 8px;
+          padding: 2px 6px;
           text-align: center;
-          min-width: 45px;
+          min-width: 40px;
+          border: 1px solid var(--theme-border-default);
         }
         .stat-label {
           display: block;
-          font-size: 0.6rem;
-          color: var(--theme-text-secondary);
+          font-size: 0.55rem;
+          font-weight: bold;
+          opacity: 0.5;
         }
         .stat-value {
-          font-weight: bold;
-          font-size: 0.8rem;
-          color: var(--theme-text-primary);
+          font-weight: 800;
+          font-size: 0.75rem;
         }
 
-        /* Modal custom para visibilidad total */
+        /* Modal */
         .inventory-modal .modal-content {
           background-color: var(--theme-background-primary) !important;
           border: 1px solid var(--theme-border-default) !important;
         }
         .modal-field-group {
           border-bottom: 1px solid var(--theme-border-default);
-          padding-bottom: 10px;
-        }
-        .modal-field-group:last-child {
-          border-bottom: none;
+          padding-bottom: 12px;
         }
         .modal-actions {
           display: grid;
           grid-template-columns: 2fr 1fr 1fr 1fr;
-          gap: 5px;
-        }
-        .modal-actions .btn {
-          border-radius: 0 !important;
+          gap: 6px;
         }
       `}</style>
-    </Container>
+    </div>
   );
 };
 
