@@ -1,58 +1,46 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Table, Form, Button, Alert, Row, Col, Badge, Card } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Form, Modal, InputGroup } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, onSnapshot, query, where, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { UI_TEXTS, SPINNER_VARIANTS } from '../constants';
+import { UI_TEXTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import SearchInput from '../components/SearchInput';
-import GenericFilter from '../components/GenericFilter';
-import useMediaQuery from '../hooks/useMediaQuery';
-import { FaSave, FaBox, FaTruckLoading, FaUndo, FaCheckCircle } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaCalculator, FaSave, FaHistory, FaSearch, FaBoxOpen, FaTruckLoading } from 'react-icons/fa';
 
 interface Product {
   id: string;
   nombre: string;
   sap: string;
   tipoBebidaId: string;
+  unidades: number;
 }
 
 interface InventoryEntry {
   almacen: number;
   consignacion: number;
   rechazo: number;
-  ultimaActualizacion?: any;
 }
 
 const AlmacenPage: FC = () => {
   const { userSedeId, userName } = useAuth();
   const { beverageTypes, sedes, loadingMasterData } = useData();
-  const isDarkMode = localStorage.getItem('theme') === 'dark' || localStorage.getItem('theme') === null;
-  const isMobile = useMediaQuery('(max-width: 768px)');
-
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<Record<string, InventoryEntry>>({});
   const [draftInventory, setDraftInventory] = useState<Record<string, InventoryEntry>>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [message, setMessage] = useState<{ type: 'success' | 'danger', text: string } | null>(null);
 
-  // Obtener el nombre de la sede actual
-  const currentSedeName = useMemo(() => {
-    return sedes.find(s => s.id === userSedeId)?.nombre || userSedeId;
-  }, [sedes, userSedeId]);
+  const currentSedeName = useMemo(() => sedes.find(s => s.id === userSedeId)?.nombre || 'Sede...', [sedes, userSedeId]);
 
   useEffect(() => {
     if (!userSedeId) return;
-
     const unsubProducts = onSnapshot(collection(db, 'productos'), (s) => {
       setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
     });
-
     const qInventory = query(collection(db, 'inventario'), where('sedeId', '==', userSedeId));
     const unsubInventory = onSnapshot(qInventory, (s) => {
       const invMap: Record<string, InventoryEntry> = {};
@@ -61,275 +49,271 @@ const AlmacenPage: FC = () => {
         invMap[data.productoId] = {
           almacen: data.almacen || 0,
           consignacion: data.consignacion || 0,
-          rechazo: data.rechazo || 0,
-          ultimaActualizacion: data.ultimaActualizacion
+          rechazo: data.rechazo || 0
         };
       });
       setInventory(invMap);
-      setDraftInventory(prev => {
-        const newDraft = { ...prev };
-        Object.keys(invMap).forEach(prodId => {
-          if (!newDraft[prodId]) {
-            newDraft[prodId] = { ...invMap[prodId] };
-          }
-        });
-        return newDraft;
-      });
       setLoading(false);
     });
-
-    return () => {
-      unsubProducts();
-      unsubInventory();
-    };
+    return () => { unsubProducts(); unsubInventory(); };
   }, [userSedeId]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           (p.sap && p.sap.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesType = !selectedType || p.tipoBebidaId === selectedType;
-      return matchesSearch && matchesType;
-    });
-  }, [products, searchTerm, selectedType]);
+    return products.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.includes(searchTerm));
+  }, [products, searchTerm]);
 
-  const handleInputChange = (productId: string, field: keyof InventoryEntry, value: string) => {
-    const numValue = value === '' ? 0 : Math.max(0, parseInt(value));
+  const handleUpdateDraft = (prodId: string, field: keyof InventoryEntry, value: number) => {
     setDraftInventory(prev => ({
       ...prev,
-      [productId]: {
-        ...(prev[productId] || { almacen: 0, consignacion: 0, rechazo: 0 }),
-        [field]: numValue
-      }
+      [prodId]: { ...(prev[prodId] || inventory[prodId] || { almacen: 0, consignacion: 0, rechazo: 0 }), [field]: Math.max(0, value) }
     }));
   };
 
   const handleSave = async () => {
-    if (!userSedeId) return;
+    if (Object.keys(draftInventory).length === 0) return;
     setIsSaving(true);
-    setMessage(null);
-
     try {
-      const promises = Object.entries(draftInventory).map(([productId, data]) => {
-        const docId = `${userSedeId}_${productId}`;
-        return setDoc(doc(db, 'inventario', docId), {
-          ...data,
-          productoId,
-          sedeId: userSedeId,
-          ultimaActualizacion: serverTimestamp(),
-          actualizadoPor: userName
+      const promises = Object.entries(draftInventory).map(([prodId, data]) => {
+        return setDoc(doc(db, 'inventario', `${userSedeId}_${prodId}`), {
+          ...data, productoId: prodId, sedeId: userSedeId, ultimaActualizacion: serverTimestamp(), actualizadoPor: userName
         }, { merge: true });
       });
-
       await Promise.all(promises);
-      setMessage({ type: 'success', text: UI_TEXTS.INVENTORY_UPDATED_SUCCESS });
-      setTimeout(() => setMessage(null), 3000);
-    } catch (error) {
-      console.error(error);
-      setMessage({ type: 'danger', text: UI_TEXTS.ERROR_INVENTORY_UPDATE });
-    } finally {
-      setIsSaving(false);
-    }
+      setDraftInventory({});
+      alert(UI_TEXTS.INVENTORY_UPDATED_SUCCESS);
+    } catch (e) { console.error(e); } finally { setIsSaving(false); }
   };
 
-  if (loading || loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
-
-  const getProductTypeLabel = (typeId: string) => beverageTypes.find(t => t.id === typeId)?.nombre || '';
+  if (loading || loadingMasterData) return <GlobalSpinner variant="overlay" />;
 
   return (
-    <Container fluid className="pb-5">
-      {/* Header Corregido */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <Container fluid className="px-3 py-2">
+      {/* HEADER COMPACTO */}
+      <div className="controlador-header d-flex justify-content-between align-items-center mb-3">
         <div>
-          <h2 className="mb-1 fw-bold">{UI_TEXTS.INVENTORY_CONTROL}</h2>
-          <div className="d-flex align-items-center gap-2">
-            <Badge bg="primary" className="px-3 py-2">
-              <span className="opacity-75 me-1">Sede:</span> {currentSedeName}
-            </Badge>
-            <Badge bg="dark" className="px-3 py-2">
-              <span className="opacity-75 me-1">Usuario:</span> {userName}
-            </Badge>
-          </div>
+          <h5 className="fw-bold mb-0 text-uppercase">{UI_TEXTS.INVENTORY_CONTROL}</h5>
+          <small className="text-muted">{currentSedeName} | {userName}</small>
         </div>
         <Button 
-          variant="success" 
-          size="lg"
-          onClick={handleSave} 
-          disabled={isSaving}
-          className="shadow-sm d-flex align-items-center gap-2 px-4"
+          variant="primary" 
+          size="sm"
+          className="px-3 fw-bold"
+          onClick={handleSave}
+          disabled={isSaving || Object.keys(draftInventory).length === 0}
         >
-          {isSaving ? UI_TEXTS.LOADING : <><FaSave /> {UI_TEXTS.SAVE_INVENTORY}</>}
+          {isSaving ? UI_TEXTS.LOADING : `SINCRONIZAR (${Object.keys(draftInventory).length})`}
         </Button>
       </div>
 
-      {message && (
-        <Alert variant={message.type} className="shadow-sm border-0 mb-4 animate__animated animate__fadeIn">
-          {message.type === 'success' ? <FaCheckCircle className="me-2" /> : null}
-          {message.text}
-        </Alert>
-      )}
+      {/* BUSCADOR COMPACTO */}
+      <div className="mb-3">
+        <InputGroup size="sm">
+          <InputGroup.Text><FaSearch /></InputGroup.Text>
+          <Form.Control
+            placeholder="Buscar producto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </InputGroup>
+      </div>
 
-      {/* Buscador y Filtros */}
-      <Card className="border-0 shadow-sm mb-4">
-        <Card.Body className="p-3">
-          <Row className="g-3">
-            <Col md={8}>
-              <SearchInput 
-                searchTerm={searchTerm} 
-                onSearchChange={setSearchTerm} 
-                placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_PRODUCTS} 
-                className="mb-0"
-              />
+      {/* REJILLA DE PRODUCTOS */}
+      <Row className="g-2">
+        {filteredProducts.map(product => {
+          const inv = draftInventory[product.id] || inventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
+          const isDirty = !!draftInventory[product.id];
+
+          return (
+            <Col key={product.id} xs={12} sm={6} lg={4}>
+              <div 
+                className={`product-card ${isDirty ? 'dirty' : ''}`}
+                onClick={() => setSelectedProduct(product)}
+              >
+                <div className="product-card-info">
+                  <div className="d-flex justify-content-between">
+                    <span className="product-sap">{product.sap}</span>
+                    {isDirty && <span className="pending-badge">Pendiente</span>}
+                  </div>
+                  <div className="product-name">{product.nombre}</div>
+                </div>
+                <div className="product-card-stats">
+                  <div className="stat-box">
+                    <span className="stat-label">ALM</span>
+                    <span className="stat-value">{inv.almacen}</span>
+                  </div>
+                  <div className="stat-box">
+                    <span className="stat-label">CON</span>
+                    <span className="stat-value">{inv.consignacion}</span>
+                  </div>
+                  <div className="stat-box">
+                    <span className="stat-label">REC</span>
+                    <span className="stat-value">{inv.rechazo}</span>
+                  </div>
+                </div>
+              </div>
             </Col>
-            <Col md={4}>
-              <GenericFilter
-                prefix="Categoría"
-                value={selectedType}
-                onChange={setSelectedType}
-                options={beverageTypes.map(t => ({ value: t.id, label: t.nombre }))}
-                className="mb-0"
-              />
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
+          );
+        })}
+      </Row>
 
-      {/* Vista de Escritorio (Tabla) */}
-      {!isMobile && (
-        <Card className="border-0 shadow-sm overflow-hidden">
-          <Table hover responsive variant={isDarkMode ? 'dark' : 'light'} className="mb-0">
-            <thead className="bg-primary text-white border-0">
-              <tr>
-                <th className="py-3 ps-4">{UI_TEXTS.TABLE_HEADER_NAME}</th>
-                <th className="py-3 text-center">{UI_TEXTS.TABLE_HEADER_ALMACEN}</th>
-                <th className="py-3 text-center">{UI_TEXTS.TABLE_HEADER_CONSIGNACION}</th>
-                <th className="py-3 text-center">{UI_TEXTS.TABLE_HEADER_RECHAZO}</th>
-                <th className="py-3 text-center pe-4">{UI_TEXTS.LAST_UPDATE}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map(product => {
-                const item = draftInventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-                const originalItem = inventory[product.id];
-                const hasChanged = originalItem && (
-                  item.almacen !== originalItem.almacen || 
-                  item.consignacion !== originalItem.consignacion || 
-                  item.rechazo !== originalItem.rechazo
-                );
+      {/* MODAL DE ASISTENTE */}
+      <Modal 
+        show={!!selectedProduct} 
+        onHide={() => setSelectedProduct(null)} 
+        centered
+        className="inventory-modal"
+      >
+        {selectedProduct && (
+          <Modal.Body className="p-3">
+            <div className="modal-header-custom mb-3">
+              <h5 className="fw-bold mb-0">{selectedProduct.nombre}</h5>
+              <small className="text-muted">SAP: {selectedProduct.sap} | Empaque: {selectedProduct.unidades}</small>
+            </div>
 
+            <div className="d-flex flex-column gap-3">
+              {['almacen', 'consignacion', 'rechazo'].map((field) => {
+                const currentVal = (draftInventory[selectedProduct.id] || inventory[selectedProduct.id] || { almacen: 0, consignacion: 0, rechazo: 0 })[field as keyof InventoryEntry];
+                
                 return (
-                  <tr key={product.id} className={hasChanged ? 'table-warning-light' : ''}>
-                    <td className="ps-4 py-3">
-                      <div className="fw-bold text-primary">{product.nombre}</div>
-                      <div className="d-flex gap-2 align-items-center">
-                        <small className="text-muted">SAP: {product.sap}</small>
-                        <Badge bg="secondary" pill style={{ fontSize: '0.65rem' }}>{getProductTypeLabel(product.tipoBebidaId)}</Badge>
-                      </div>
-                    </td>
-                    <td className="py-3">
-                      <Form.Control 
-                        type="number" 
-                        className="mx-auto text-center fw-bold border-2"
-                        style={{ width: '100px' }}
-                        value={item.almacen}
-                        onChange={(e) => handleInputChange(product.id, 'almacen', e.target.value)}
-                      />
-                    </td>
-                    <td className="py-3">
-                      <Form.Control 
-                        type="number" 
-                        className="mx-auto text-center fw-bold border-2"
-                        style={{ width: '100px' }}
-                        value={item.consignacion}
-                        onChange={(e) => handleInputChange(product.id, 'consignacion', e.target.value)}
-                      />
-                    </td>
-                    <td className="py-3">
-                      <Form.Control 
-                        type="number" 
-                        className="mx-auto text-center fw-bold border-2"
-                        style={{ width: '100px' }}
-                        value={item.rechazo}
-                        onChange={(e) => handleInputChange(product.id, 'rechazo', e.target.value)}
-                      />
-                    </td>
-                    <td className="text-center py-3 pe-4 text-muted">
-                      <small>
-                        {originalItem?.ultimaActualizacion 
-                          ? new Date(originalItem.ultimaActualizacion.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-                          : '-'}
-                      </small>
-                    </td>
-                  </tr>
+                  <div key={field} className="modal-field-group">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="text-uppercase fw-bold small">
+                        {field === 'almacen' ? 'Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}
+                      </span>
+                      <span className="h4 mb-0 fw-bold">{currentVal}</span>
+                    </div>
+
+                    <div className="modal-actions">
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, currentVal + selectedProduct.unidades)}
+                      >
+                        +{selectedProduct.unidades} (Paq)
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, currentVal + 1)}
+                      >
+                        +1
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, currentVal - 1)}
+                      >
+                        -1
+                      </Button>
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        onClick={() => {
+                          const nuevo = prompt(`Valor para ${field}:`, currentVal.toString());
+                          if (nuevo !== null) handleUpdateDraft(selectedProduct.id, field as keyof InventoryEntry, parseInt(nuevo) || 0);
+                        }}
+                      >
+                        <FaCalculator />
+                      </Button>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </Table>
-        </Card>
-      )}
+            </div>
 
-      {/* Vista Móvil (Cards) */}
-      {isMobile && (
-        <div className="d-flex flex-column gap-3">
-          {filteredProducts.map(product => {
-            const item = draftInventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-            return (
-              <Card key={product.id} className="border-0 shadow-sm overflow-hidden">
-                <div className="bg-primary-subtle p-2 px-3 border-bottom d-flex justify-content-between align-items-center">
-                  <span className="fw-bold text-primary">{product.nombre}</span>
-                  <Badge bg="secondary">{product.sap}</Badge>
-                </div>
-                <Card.Body className="p-3">
-                  <Row className="g-2">
-                    <Col xs={4}>
-                      <div className="text-center">
-                        <small className="text-muted d-block mb-1"><FaBox className="me-1" /> Almacén</small>
-                        <Form.Control 
-                          type="number" 
-                          size="sm"
-                          className="text-center fw-bold"
-                          value={item.almacen}
-                          onChange={(e) => handleInputChange(product.id, 'almacen', e.target.value)}
-                        />
-                      </div>
-                    </Col>
-                    <Col xs={4}>
-                      <div className="text-center">
-                        <small className="text-muted d-block mb-1"><FaTruckLoading className="me-1" /> Consig.</small>
-                        <Form.Control 
-                          type="number" 
-                          size="sm"
-                          className="text-center fw-bold"
-                          value={item.consignacion}
-                          onChange={(e) => handleInputChange(product.id, 'consignacion', e.target.value)}
-                        />
-                      </div>
-                    </Col>
-                    <Col xs={4}>
-                      <div className="text-center">
-                        <small className="text-muted d-block mb-1"><FaUndo className="me-1" /> Rechazo</small>
-                        <Form.Control 
-                          type="number" 
-                          size="sm"
-                          className="text-center fw-bold"
-                          value={item.rechazo}
-                          onChange={(e) => handleInputChange(product.id, 'rechazo', e.target.value)}
-                        />
-                      </div>
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+            <Button variant="primary" className="w-100 mt-4 py-2 fw-bold" onClick={() => setSelectedProduct(null)}>
+              LISTO
+            </Button>
+          </Modal.Body>
+        )}
+      </Modal>
 
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-5">
-          <p className="text-muted">{UI_TEXTS.NO_RECORDS_FOUND}</p>
-        </div>
-      )}
+      <style>{`
+        /* Estilos alineados al sistema */
+        .product-card {
+          border: 1px solid var(--theme-border-default) !important;
+          background-color: var(--theme-background-primary);
+          padding: 10px;
+          cursor: pointer;
+          transition: border-color 0.2s;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .product-card:hover {
+          border-color: var(--color-red-primary) !important;
+        }
+        .product-card.dirty {
+          border-left: 3px solid #ffc107 !important;
+        }
+        .product-card-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .product-sap {
+          font-size: 0.7rem;
+          color: var(--theme-text-secondary);
+          display: block;
+        }
+        .product-name {
+          font-weight: bold;
+          font-size: 0.9rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          color: var(--theme-text-primary);
+        }
+        .pending-badge {
+          background-color: #ffc107;
+          color: #000;
+          font-size: 0.6rem;
+          padding: 1px 4px;
+          text-transform: uppercase;
+          font-weight: bold;
+        }
+        .product-card-stats {
+          display: flex;
+          gap: 5px;
+          margin-left: 10px;
+        }
+        .stat-box {
+          background-color: var(--theme-background-secondary);
+          padding: 4px 8px;
+          text-align: center;
+          min-width: 45px;
+        }
+        .stat-label {
+          display: block;
+          font-size: 0.6rem;
+          color: var(--theme-text-secondary);
+        }
+        .stat-value {
+          font-weight: bold;
+          font-size: 0.8rem;
+          color: var(--theme-text-primary);
+        }
+
+        /* Modal custom para visibilidad total */
+        .inventory-modal .modal-content {
+          background-color: var(--theme-background-primary) !important;
+          border: 1px solid var(--theme-border-default) !important;
+        }
+        .modal-field-group {
+          border-bottom: 1px solid var(--theme-border-default);
+          padding-bottom: 10px;
+        }
+        .modal-field-group:last-child {
+          border-bottom: none;
+        }
+        .modal-actions {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr 1fr;
+          gap: 5px;
+        }
+        .modal-actions .btn {
+          border-radius: 0 !important;
+        }
+      `}</style>
     </Container>
   );
 };
