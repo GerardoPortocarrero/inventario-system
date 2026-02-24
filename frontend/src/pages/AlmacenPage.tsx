@@ -177,7 +177,7 @@ const AlmacenPage: FC = () => {
     <div className="admin-layout-container overflow-hidden">
       <div className="admin-section-table d-flex flex-column h-100 overflow-hidden">
         
-        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
           <div className="d-flex flex-wrap gap-2">
             <div className="info-pill-new">
               <span className="pill-icon sede-icon"><FaMapMarkerAlt /></span>
@@ -211,7 +211,7 @@ const AlmacenPage: FC = () => {
           </Button>
         </div>
 
-        <div className="mb-3 px-1">
+        <div className="mb-3">
           <InputGroup size="sm" className="custom-search-group">
             <Form.Control placeholder="Escribe el nombre del producto o SAP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="border-start" />
           </InputGroup>
