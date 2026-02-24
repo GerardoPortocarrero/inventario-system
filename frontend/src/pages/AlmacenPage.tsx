@@ -1,13 +1,12 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Button, Form, Modal, InputGroup, Badge, Spinner } from 'react-bootstrap';
+import { Row, Col, Button, Form, Modal, InputGroup, Badge, Spinner } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, onSnapshot, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { UI_TEXTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaUserCircle, FaMapMarkerAlt, FaCalendarAlt, FaSync, FaCheck } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaCalendarAlt, FaSync, FaCheck } from 'react-icons/fa';
 
 interface Product {
   id: string;
