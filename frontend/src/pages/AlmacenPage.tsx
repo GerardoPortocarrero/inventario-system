@@ -1,13 +1,13 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Button, Form, Modal, InputGroup, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Button, Form, Modal, InputGroup, Badge, Spinner } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, onSnapshot, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { UI_TEXTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaUserCircle, FaMapMarkerAlt, FaCalendarAlt, FaSync } from 'react-icons/fa';
+import { FaUserCircle, FaMapMarkerAlt, FaCalendarAlt, FaSync, FaCheck } from 'react-icons/fa';
 
 interface Product {
   id: string;
@@ -35,6 +35,7 @@ const AlmacenPage: FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false); // Estado para el check de éxito
 
   const [tempBoxes, setTempBoxes] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
   const [tempUnits, setTempUnits] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
@@ -111,6 +112,7 @@ const AlmacenPage: FC = () => {
   const handleSave = async () => {
     if (!userSedeId || Object.keys(draftInventory).length === 0) return;
     setIsSaving(true);
+    setSaveSuccess(false);
     try {
       const docId = `${userSedeId}_${selectedDate}`;
       const finalData = { ...dailyInventory, ...draftInventory };
@@ -142,8 +144,14 @@ const AlmacenPage: FC = () => {
         }
       }
       setDraftInventory({});
-      alert(UI_TEXTS.INVENTORY_UPDATED_SUCCESS);
-    } catch (e) { console.error(e); } finally { setIsSaving(false); }
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 1500);
+    } catch (e) { 
+      console.error(e); 
+      alert("Error al guardar el inventario.");
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   const handleNumberInputChange = (field: string, subField: 'boxes' | 'units', value: string) => {
@@ -184,9 +192,23 @@ const AlmacenPage: FC = () => {
               </div>
             </div>
           </div>
-          <Button variant="primary" size="sm" className="px-3 d-flex align-items-center gap-2" onClick={handleSave} disabled={isSaving || Object.keys(draftInventory).length === 0}>
-            <FaSync className={isSaving ? 'fa-spin' : ''} />
-            {Object.keys(draftInventory).length > 0 && <span className="fw-bold">({Object.keys(draftInventory).length})</span>}
+          <Button 
+            variant={saveSuccess ? "success" : "primary"} 
+            size="sm" 
+            className="px-3 d-flex align-items-center gap-2" 
+            onClick={handleSave} 
+            disabled={isSaving || (Object.keys(draftInventory).length === 0 && !saveSuccess)}
+          >
+            {isSaving ? (
+              <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+            ) : saveSuccess ? (
+              <FaCheck />
+            ) : (
+              <FaSync />
+            )}
+            {Object.keys(draftInventory).length > 0 && !saveSuccess && !isSaving && (
+              <span className="fw-bold">({Object.keys(draftInventory).length})</span>
+            )}
           </Button>
         </div>
 
@@ -246,7 +268,7 @@ const AlmacenPage: FC = () => {
                     <span className="text-uppercase small fw-bold">{field === 'almacen' ? 'Conteo Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}</span>
                     <Badge bg="danger" className="border-radius-0 fs-6 px-3">{tempBoxes[field]} C / {tempUnits[field]} U</Badge>
                   </div>
-                  <div className="p-0"> {/* PADDING ELIMINADO AQUÍ */}
+                  <div className="p-0">
                     <Row className="g-2">
                       <Col xs={6}><Form.Label className="label-v3">CAJAS</Form.Label><Form.Control type="number" value={tempBoxes[field] === 0 ? '' : tempBoxes[field]} placeholder="0" onChange={(e) => handleNumberInputChange(field, 'boxes', e.target.value)} onFocus={(e) => e.target.select()} className="input-v3" /></Col>
                       <Col xs={6}><Form.Label className="label-v3">UNIDADES</Form.Label><Form.Control type="number" value={tempUnits[field] === 0 ? '' : tempUnits[field]} placeholder="0" onChange={(e) => handleNumberInputChange(field, 'units', e.target.value)} onFocus={(e) => e.target.select()} className="input-v3" /></Col>
@@ -288,8 +310,6 @@ const AlmacenPage: FC = () => {
         .input-v3 { background: #111 !important; border: none !important; border-bottom: 2px solid #444 !important; color: white !important; font-weight: 900 !important; font-size: 1.1rem !important; text-align: center; }
         .input-v3:focus { border-color: var(--color-red-primary) !important; }
         .border-radius-0 { border-radius: 0 !important; }
-        @keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .fa-spin { animation: fa-spin 2s infinite linear; }
       `}</style>
     </div>
   );
