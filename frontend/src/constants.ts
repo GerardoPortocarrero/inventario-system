@@ -72,6 +72,17 @@ export const UI_TEXTS = {
   TABLE_HEADER_SEDE: 'Sede',
   TABLE_HEADER_ACTIONS: 'Acciones',
   TABLE_HEADER_CREATED_AT: 'Fecha de Creación', // Not used for sedes anymore, but kept for completeness
+  TABLE_HEADER_ALMACEN: 'Almacén',
+  TABLE_HEADER_CONSIGNACION: 'Consignación',
+  TABLE_HEADER_RECHAZO: 'Rechazo',
+  TABLE_HEADER_STOCK: 'Stock Disponible',
+
+  // Inventory
+  INVENTORY_CONTROL: 'Control de Inventario',
+  SAVE_INVENTORY: 'Sincronizar Inventario',
+  INVENTORY_UPDATED_SUCCESS: 'Inventario actualizado correctamente.',
+  ERROR_INVENTORY_UPDATE: 'Error al actualizar el inventario.',
+  LAST_UPDATE: 'Última actualización',
 
   // Profile
   MY_PROFILE: 'Mi Perfil',
