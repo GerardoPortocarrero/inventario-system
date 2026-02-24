@@ -85,6 +85,19 @@ service cloud.firestore {
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
     }
 
+    // Inventario Diario (Hojas históricas por día y sede)
+    match /inventario_diario/{docId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.sedeId == getSedeId());
+      allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
+    }
+
+    // Tránsito (Reportes detallados de salida diaria)
+    match /transito/{docId} {
+      allow read: if isAdmin() || 
+                  ((isSupervisor() || isAlmacenero()) && resource.data.sedeId == getSedeId());
+      allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
+    }
+
     // Órdenes de Pedido
     match /ordenes/{orderId} {
       // Lectura: 
