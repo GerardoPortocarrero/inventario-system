@@ -57,9 +57,25 @@ const AlmacenPage: FC = () => {
     return () => { unsubProducts(); unsubInventory(); };
   }, [userSedeId]);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.includes(searchTerm));
-  }, [products, searchTerm]);
+  // ORDENAR: Productos con cambios arriba, luego por nombre (REFORZADO)
+  const sortedProducts = useMemo(() => {
+    const list = products.filter(p => 
+      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.sap.includes(searchTerm)
+    );
+
+    // Creamos una copia nueva para evitar mutaciones in-place y asegurar reactividad
+    return [...list].sort((a, b) => {
+      const aDirty = draftInventory.hasOwnProperty(a.id);
+      const bDirty = draftInventory.hasOwnProperty(b.id);
+
+      if (aDirty && !bDirty) return -1;
+      if (!aDirty && bDirty) return 1;
+      
+      // Si ambos tienen o no tienen cambios, ordenamos por nombre
+      return a.nombre.localeCompare(b.nombre);
+    });
+  }, [products, searchTerm, draftInventory]);
 
   const handleOpenModal = (product: Product) => {
     const inv = draftInventory[product.id] || inventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
@@ -77,12 +93,18 @@ const AlmacenPage: FC = () => {
 
   const handleConfirmEntry = () => {
     if (!selectedProduct) return;
+    
+    // Solo marcamos como "dirty" si los valores finales son realmente diferentes a los originales de 'inventory'
+    const finalAlmacen = (tempBoxes.almacen * selectedProduct.unidades) + tempUnits.almacen;
+    const finalConsignacion = (tempBoxes.consignacion * selectedProduct.unidades) + tempUnits.consignacion;
+    const finalRechazo = (tempBoxes.rechazo * selectedProduct.unidades) + tempUnits.rechazo;
+
     setDraftInventory(prev => ({
       ...prev,
       [selectedProduct.id]: {
-        almacen: (tempBoxes.almacen * selectedProduct.unidades) + tempUnits.almacen,
-        consignacion: (tempBoxes.consignacion * selectedProduct.unidades) + tempUnits.consignacion,
-        rechazo: (tempBoxes.rechazo * selectedProduct.unidades) + tempUnits.rechazo
+        almacen: finalAlmacen,
+        consignacion: finalConsignacion,
+        rechazo: finalRechazo
       }
     }));
     setSelectedProduct(null);
@@ -104,11 +126,21 @@ const AlmacenPage: FC = () => {
   };
 
   const handleNumberInputChange = (field: string, subField: 'boxes' | 'units', value: string) => {
+    if (!selectedProduct) return;
     const numericValue = value === '' ? 0 : parseInt(value, 10);
+    const empaque = selectedProduct.unidades;
+
     if (subField === 'boxes') {
       setTempBoxes(prev => ({ ...prev, [field]: numericValue }));
     } else {
-      setTempUnits(prev => ({ ...prev, [field]: numericValue }));
+      if (numericValue >= empaque) {
+        const extraBoxes = Math.floor(numericValue / empaque);
+        const remainingUnits = numericValue % empaque;
+        setTempBoxes(prev => ({ ...prev, [field]: (prev[field as keyof typeof tempBoxes] || 0) + extraBoxes }));
+        setTempUnits(prev => ({ ...prev, [field]: remainingUnits }));
+      } else {
+        setTempUnits(prev => ({ ...prev, [field]: numericValue }));
+      }
     }
   };
 
@@ -118,7 +150,6 @@ const AlmacenPage: FC = () => {
     <div className="admin-layout-container overflow-hidden">
       <div className="admin-section-table d-flex flex-column h-100 overflow-hidden">
         
-        {/* CABECERA PILLS: DISEÑO ORIGINAL */}
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
           <div className="d-flex gap-2">
             <div className="info-pill-new">
@@ -141,7 +172,6 @@ const AlmacenPage: FC = () => {
           </Button>
         </div>
 
-        {/* BUSCADOR: DISEÑO ORIGINAL SIN LUPA */}
         <div className="mb-3 px-1">
           <InputGroup size="sm" className="custom-search-group">
             <Form.Control
@@ -153,12 +183,11 @@ const AlmacenPage: FC = () => {
           </InputGroup>
         </div>
 
-        {/* AREA DE INVENTARIO: TARJETAS COMPACTAS ORIGINALES */}
         <div className="flex-grow-1 overflow-auto pe-1 custom-scrollbar overflow-x-hidden">
           <Row className="g-2 m-0">
-            {filteredProducts.map(product => {
+            {sortedProducts.map(product => {
               const inv = draftInventory[product.id] || inventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-              const isDirty = !!draftInventory[product.id];
+              const isDirty = draftInventory.hasOwnProperty(product.id);
               return (
                 <Col key={product.id} xs={12} sm={6} lg={4} className="p-1">
                   <div className={`product-card ${isDirty ? 'dirty' : ''}`} onClick={() => handleOpenModal(product)}>
@@ -182,10 +211,12 @@ const AlmacenPage: FC = () => {
               );
             })}
           </Row>
+          {sortedProducts.length === 0 && (
+            <div className="text-center py-5 opacity-50 italic">No se encontraron productos...</div>
+          )}
         </div>
       </div>
 
-      {/* MODAL: CORRECCIONES DE CONTRASTE Y LÓGICA DE CEROS */}
       <Modal show={!!selectedProduct} onHide={() => setSelectedProduct(null)} centered className="inventory-modal-v3">
         {selectedProduct && (
           <Modal.Body className="p-0 overflow-hidden">
@@ -249,10 +280,7 @@ const AlmacenPage: FC = () => {
       </Modal>
 
       <style>{`
-        /* PROTECCIÓN RESPONSIVE */
         .admin-layout-container, .admin-section-table { overflow-x: hidden !important; max-width: 100vw; }
-
-        /* PILLS DE CABECERA (DISEÑO ORIGINAL) */
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; }
         .pill-icon { padding: 8px 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
         .sede-icon { background-color: #007bff; color: white; }
@@ -260,40 +288,18 @@ const AlmacenPage: FC = () => {
         .pill-content { padding: 2px 10px; display: flex; flex-direction: column; line-height: 1.1; }
         .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; }
         .pill-value { font-size: 0.75rem; font-weight: 700; color: var(--theme-text-primary); }
-
-        /* BUSCADOR */
         .custom-search-group .form-control { border-left: 1px solid var(--theme-border-default) !important; padding-left: 10px !important; }
-
-        /* TARJETA DE PRODUCTO (RESTAURADA A TAMAÑO COMPACTO) */
-        .product-card {
-          border: 1px solid var(--theme-border-default) !important;
-          background-color: var(--theme-background-primary);
-          padding: 8px 12px;
-          cursor: pointer;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          height: 100%;
-        }
+        .product-card { border: 1px solid var(--theme-border-default) !important; background-color: var(--theme-background-primary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 100%; transition: none !important; }
         .product-card:hover { border-color: var(--color-red-primary) !important; }
-        .product-card.dirty { border-left: 3px solid #ffc107 !important; }
+        .product-card.dirty { border-left: 3px solid #ffc107 !important; background: rgba(255, 193, 7, 0.05); }
         .product-card-info { flex: 1; min-width: 0; }
         .product-sap { font-size: 0.65rem; font-weight: bold; color: var(--color-red-primary); }
         .product-name { font-weight: bold; font-size: 0.85rem; color: var(--theme-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .pending-indicator { font-size: 0.55rem; background: #ffc107; color: #000; padding: 0px 4px; font-weight: 900; }
-        
         .product-card-stats { display: flex; gap: 4px; }
-        .stat-box {
-          background-color: var(--theme-background-secondary);
-          padding: 2px 6px;
-          text-align: center;
-          min-width: 40px;
-          border: 1px solid var(--theme-border-default);
-        }
+        .stat-box { background-color: var(--theme-background-secondary); padding: 2px 6px; text-align: center; min-width: 40px; border: 1px solid var(--theme-border-default); }
         .stat-label { display: block; font-size: 0.55rem; font-weight: bold; opacity: 0.5; }
         .stat-value { font-weight: 800; font-size: 0.75rem; }
-
-        /* MODAL V3 REFINADO */
         .inventory-modal-v3 .modal-content { background-color: #1a1a1a !important; border: 1px solid #444 !important; color: white !important; }
         .modal-header-v3 { background-color: var(--color-red-primary); padding: 12px 20px; color: white; border-bottom: 2px solid rgba(0,0,0,0.1); }
         .fw-black { font-weight: 900 !important; }
