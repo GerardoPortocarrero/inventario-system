@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { UI_TEXTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaUserCircle, FaMapMarkerAlt, FaCalendarAlt } from 'react-icons/fa';
+import { FaUserCircle, FaMapMarkerAlt, FaCalendarAlt, FaSync } from 'react-icons/fa';
 
 interface Product {
   id: string;
@@ -26,25 +26,21 @@ const AlmacenPage: FC = () => {
   const { userSedeId, userName } = useAuth();
   const { sedes, loadingMasterData } = useData();
   
-  // Estados de Datos
   const [products, setProducts] = useState<Product[]>([]);
   const [dailyInventory, setDailyInventory] = useState<Record<string, InventoryEntry>>({});
   const [draftInventory, setDraftInventory] = useState<Record<string, InventoryEntry>>({});
   
-  // Estados de Control
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Estados Temporales para Modal (Cajas / Unidades)
   const [tempBoxes, setTempBoxes] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
   const [tempUnits, setTempUnits] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
 
   const currentSedeName = useMemo(() => sedes.find(s => s.id === userSedeId)?.nombre || 'Sede...', [sedes, userSedeId]);
 
-  // 1. Cargar Catálogo de Productos (Siempre)
   useEffect(() => {
     const unsubProducts = onSnapshot(collection(db, 'productos'), (s) => {
       setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
@@ -52,22 +48,19 @@ const AlmacenPage: FC = () => {
     return () => unsubProducts();
   }, []);
 
-  // 2. Cargar Hoja de Inventario según la Fecha Seleccionada
   useEffect(() => {
     if (!userSedeId || !selectedDate) return;
     setLoading(true);
-    
     const docId = `${userSedeId}_${selectedDate}`;
     const unsubDaily = onSnapshot(doc(db, 'inventario_diario', docId), (s) => {
       if (s.exists()) {
         setDailyInventory(s.data().productos || {});
       } else {
-        setDailyInventory({}); // Día nuevo, hoja vacía
+        setDailyInventory({});
       }
-      setDraftInventory({}); // Limpiar cambios pendientes al cambiar de día
+      setDraftInventory({});
       setLoading(false);
     });
-
     return () => unsubDaily();
   }, [userSedeId, selectedDate]);
 
@@ -81,6 +74,12 @@ const AlmacenPage: FC = () => {
       return a.nombre.localeCompare(b.nombre);
     });
   }, [products, searchTerm, draftInventory]);
+
+  const formatQty = (totalUnits: number, unitsPerBox: number) => {
+    const boxes = Math.floor(totalUnits / unitsPerBox);
+    const units = totalUnits % unitsPerBox;
+    return `${boxes}-${units}`;
+  };
 
   const handleOpenModal = (product: Product) => {
     const inv = draftInventory[product.id] || dailyInventory[product.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
@@ -112,72 +111,45 @@ const AlmacenPage: FC = () => {
   const handleSave = async () => {
     if (!userSedeId || Object.keys(draftInventory).length === 0) return;
     setIsSaving(true);
-    
     try {
       const docId = `${userSedeId}_${selectedDate}`;
       const finalData = { ...dailyInventory, ...draftInventory };
-
-      // 1. Guardar Hoja Diaria
       await setDoc(doc(db, 'inventario_diario', docId), {
-        sedeId: userSedeId,
-        fecha: selectedDate,
-        productos: finalData,
-        actualizadoPor: userName,
-        timestamp: serverTimestamp()
+        sedeId: userSedeId, fecha: selectedDate, productos: finalData, actualizadoPor: userName, timestamp: serverTimestamp()
       }, { merge: true });
 
-      // 2. Lógica de Tránsito (Solo si es la fecha de hoy para no alterar históricos pasados por error)
       const todayStr = new Date().toISOString().split('T')[0];
       if (selectedDate === todayStr) {
-        // Obtener fecha de ayer
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
-        
         const yesterdayDoc = await getDoc(doc(db, 'inventario_diario', `${userSedeId}_${yesterdayStr}`));
-        
         if (yesterdayDoc.exists()) {
           const ayerData = yesterdayDoc.data().productos || {};
           const transitoMap: Record<string, number> = {};
           let hasTransit = false;
-
           Object.keys(draftInventory).forEach(pid => {
             const totalAyer = (ayerData[pid]?.almacen || 0) + (ayerData[pid]?.consignacion || 0) + (ayerData[pid]?.rechazo || 0);
             const almacenHoy = draftInventory[pid].almacen;
             const diff = totalAyer - almacenHoy;
-
-            if (diff > 0) {
-              transitoMap[pid] = diff;
-              hasTransit = true;
-            }
+            if (diff > 0) { transitoMap[pid] = diff; hasTransit = true; }
           });
-
           if (hasTransit) {
             await setDoc(doc(db, 'transito', `${userSedeId}_${selectedDate}`), {
-              sedeId: userSedeId,
-              fecha: selectedDate,
-              productos: transitoMap,
-              timestamp: serverTimestamp()
+              sedeId: userSedeId, fecha: selectedDate, productos: transitoMap, timestamp: serverTimestamp()
             });
           }
         }
       }
-
       setDraftInventory({});
       alert(UI_TEXTS.INVENTORY_UPDATED_SUCCESS);
-    } catch (e) {
-      console.error(e);
-      alert("Error al guardar el inventario diario.");
-    } finally {
-      setIsSaving(false);
-    }
+    } catch (e) { console.error(e); } finally { setIsSaving(false); }
   };
 
   const handleNumberInputChange = (field: string, subField: 'boxes' | 'units', value: string) => {
     if (!selectedProduct) return;
     const numericValue = value === '' ? 0 : parseInt(value, 10);
     const empaque = selectedProduct.unidades;
-
     if (subField === 'boxes') {
       setTempBoxes(prev => ({ ...prev, [field]: numericValue }));
     } else {
@@ -198,42 +170,29 @@ const AlmacenPage: FC = () => {
     <div className="admin-layout-container overflow-hidden">
       <div className="admin-section-table d-flex flex-column h-100 overflow-hidden">
         
-        {/* CABECERA CON SELECTOR DE FECHA */}
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 px-1">
           <div className="d-flex flex-wrap gap-2">
             <div className="info-pill-new">
               <span className="pill-icon sede-icon"><FaMapMarkerAlt /></span>
-              <div className="pill-content">
-                <span className="pill-label">SEDE ACTUAL</span>
-                <span className="pill-value">{currentSedeName}</span>
-              </div>
+              <div className="pill-content"><span className="pill-label">SEDE ACTUAL</span><span className="pill-value">{currentSedeName}</span></div>
             </div>
             <div className="info-pill-new">
               <span className="pill-icon date-icon"><FaCalendarAlt /></span>
               <div className="pill-content">
                 <span className="pill-label">FECHA DE INVENTARIO</span>
-                <Form.Control 
-                  type="date" 
-                  value={selectedDate} 
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="pill-date-input"
-                />
+                <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input" />
               </div>
             </div>
           </div>
-          <Button variant="primary" size="sm" className="px-4 fw-bold text-uppercase" onClick={handleSave} disabled={isSaving || Object.keys(draftInventory).length === 0}>
-            {isSaving ? UI_TEXTS.LOADING : `SINCRONIZAR (${Object.keys(draftInventory).length})`}
+          <Button variant="primary" size="sm" className="px-3 d-flex align-items-center gap-2" onClick={handleSave} disabled={isSaving || Object.keys(draftInventory).length === 0}>
+            <FaSync className={isSaving ? 'fa-spin' : ''} />
+            {Object.keys(draftInventory).length > 0 && <span className="fw-bold">({Object.keys(draftInventory).length})</span>}
           </Button>
         </div>
 
         <div className="mb-3 px-1">
           <InputGroup size="sm" className="custom-search-group">
-            <Form.Control
-              placeholder="Escribe el nombre del producto o SAP..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-start"
-            />
+            <Form.Control placeholder="Escribe el nombre del producto o SAP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="border-start" />
           </InputGroup>
         </div>
 
@@ -254,11 +213,11 @@ const AlmacenPage: FC = () => {
                       <div className="product-card-stats">
                         <div className="stat-box">
                           <span className="stat-label">ALM</span>
-                          <span className="stat-value">{inv.almacen}</span>
+                          <span className="stat-value">{formatQty(inv.almacen, product.unidades)}</span>
                         </div>
                         <div className="stat-box">
                           <span className="stat-label">CON</span>
-                          <span className="stat-value">{inv.consignacion}</span>
+                          <span className="stat-value">{formatQty(inv.consignacion, product.unidades)}</span>
                         </div>
                       </div>
                     </div>
@@ -270,7 +229,6 @@ const AlmacenPage: FC = () => {
         </div>
       </div>
 
-      {/* MODAL (DISEÑO Y LÓGICA INTACTOS) */}
       <Modal show={!!selectedProduct} onHide={() => setSelectedProduct(null)} centered className="inventory-modal-v3">
         {selectedProduct && (
           <Modal.Body className="p-0 overflow-hidden">
@@ -288,30 +246,10 @@ const AlmacenPage: FC = () => {
                     <span className="text-uppercase small fw-bold">{field === 'almacen' ? 'Conteo Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}</span>
                     <Badge bg="danger" className="border-radius-0 fs-6 px-3">{tempBoxes[field]} C / {tempUnits[field]} U</Badge>
                   </div>
-                  <div className="p-3">
+                  <div className="p-0"> {/* PADDING ELIMINADO AQUÍ */}
                     <Row className="g-2">
-                      <Col xs={6}>
-                        <Form.Label className="label-v3">CAJAS</Form.Label>
-                        <Form.Control 
-                          type="number" 
-                          value={tempBoxes[field] === 0 ? '' : tempBoxes[field]} 
-                          placeholder="0"
-                          onChange={(e) => handleNumberInputChange(field, 'boxes', e.target.value)} 
-                          onFocus={(e) => e.target.select()}
-                          className="input-v3" 
-                        />
-                      </Col>
-                      <Col xs={6}>
-                        <Form.Label className="label-v3">UNIDADES</Form.Label>
-                        <Form.Control 
-                          type="number" 
-                          value={tempUnits[field] === 0 ? '' : tempUnits[field]} 
-                          placeholder="0"
-                          onChange={(e) => handleNumberInputChange(field, 'units', e.target.value)} 
-                          onFocus={(e) => e.target.select()}
-                          className="input-v3" 
-                        />
-                      </Col>
+                      <Col xs={6}><Form.Label className="label-v3">CAJAS</Form.Label><Form.Control type="number" value={tempBoxes[field] === 0 ? '' : tempBoxes[field]} placeholder="0" onChange={(e) => handleNumberInputChange(field, 'boxes', e.target.value)} onFocus={(e) => e.target.select()} className="input-v3" /></Col>
+                      <Col xs={6}><Form.Label className="label-v3">UNIDADES</Form.Label><Form.Control type="number" value={tempUnits[field] === 0 ? '' : tempUnits[field]} placeholder="0" onChange={(e) => handleNumberInputChange(field, 'units', e.target.value)} onFocus={(e) => e.target.select()} className="input-v3" /></Col>
                     </Row>
                   </div>
                 </div>
@@ -331,18 +269,7 @@ const AlmacenPage: FC = () => {
         .pill-content { padding: 2px 10px; display: flex; flex-direction: column; line-height: 1.1; }
         .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; }
         .pill-value { font-size: 0.75rem; font-weight: 700; color: var(--theme-text-primary); }
-        
-        .pill-date-input {
-          background: transparent !important;
-          border: none !important;
-          color: var(--theme-text-primary) !important;
-          font-weight: 700 !important;
-          font-size: 0.75rem !important;
-          padding: 0 !important;
-          height: auto !important;
-          cursor: pointer;
-        }
-
+        .pill-date-input { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700 !important; font-size: 0.75rem !important; padding: 0 !important; height: auto !important; cursor: pointer; }
         .custom-search-group .form-control { border-left: 1px solid var(--theme-border-default) !important; padding-left: 10px !important; }
         .product-card { border: 1px solid var(--theme-border-default) !important; background-color: var(--theme-background-primary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 100%; transition: none !important; }
         .product-card:hover { border-color: var(--color-red-primary) !important; }
@@ -355,13 +282,14 @@ const AlmacenPage: FC = () => {
         .stat-box { background-color: var(--theme-background-secondary); padding: 2px 6px; text-align: center; min-width: 40px; border: 1px solid var(--theme-border-default); }
         .stat-label { display: block; font-size: 0.55rem; font-weight: bold; opacity: 0.5; }
         .stat-value { font-weight: 800; font-size: 0.75rem; }
-
         .inventory-modal-v3 .modal-content { background-color: #1a1a1a !important; border: 1px solid #444 !important; color: white !important; }
         .modal-header-v3 { background-color: var(--color-red-primary); padding: 12px 20px; color: white; border-bottom: 2px solid rgba(0,0,0,0.1); }
         .label-v3 { font-size: 0.6rem; font-weight: 800; color: #777; margin-bottom: 2px; text-transform: uppercase; }
         .input-v3 { background: #111 !important; border: none !important; border-bottom: 2px solid #444 !important; color: white !important; font-weight: 900 !important; font-size: 1.1rem !important; text-align: center; }
         .input-v3:focus { border-color: var(--color-red-primary) !important; }
         .border-radius-0 { border-radius: 0 !important; }
+        @keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fa-spin { animation: fa-spin 2s infinite linear; }
       `}</style>
     </div>
   );
