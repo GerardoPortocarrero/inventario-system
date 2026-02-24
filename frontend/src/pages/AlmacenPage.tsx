@@ -34,7 +34,7 @@ const AlmacenPage: FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false); // Estado para el check de éxito
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const [tempBoxes, setTempBoxes] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
   const [tempUnits, setTempUnits] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
@@ -145,12 +145,7 @@ const AlmacenPage: FC = () => {
       setDraftInventory({});
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1500);
-    } catch (e) { 
-      console.error(e); 
-      alert("Error al guardar el inventario.");
-    } finally { 
-      setIsSaving(false); 
-    }
+    } catch (e) { console.error(e); } finally { setIsSaving(false); }
   };
 
   const handleNumberInputChange = (field: string, subField: 'boxes' | 'units', value: string) => {
@@ -184,30 +179,16 @@ const AlmacenPage: FC = () => {
               <div className="pill-content"><span className="pill-label">SEDE ACTUAL</span><span className="pill-value">{currentSedeName}</span></div>
             </div>
             <div className="info-pill-new">
-              <span className="pill-icon date-icon"><FaCalendarAlt /></span>
+              <span className="pill-icon date-icon"><FaCalendarAlt className="calendar-icon-highlight" /></span>
               <div className="pill-content">
                 <span className="pill-label">FECHA DE INVENTARIO</span>
                 <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input" />
               </div>
             </div>
           </div>
-          <Button 
-            variant={saveSuccess ? "success" : "primary"} 
-            size="sm" 
-            className="px-3 d-flex align-items-center gap-2" 
-            onClick={handleSave} 
-            disabled={isSaving || (Object.keys(draftInventory).length === 0 && !saveSuccess)}
-          >
-            {isSaving ? (
-              <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-            ) : saveSuccess ? (
-              <FaCheck />
-            ) : (
-              <FaSync />
-            )}
-            {Object.keys(draftInventory).length > 0 && !saveSuccess && !isSaving && (
-              <span className="fw-bold">({Object.keys(draftInventory).length})</span>
-            )}
+          <Button variant={saveSuccess ? "success" : "primary"} size="sm" className="px-3 d-flex align-items-center gap-2" onClick={handleSave} disabled={isSaving || (Object.keys(draftInventory).length === 0 && !saveSuccess)}>
+            {isSaving ? <Spinner as="span" animation="border" size="sm" /> : saveSuccess ? <FaCheck /> : <FaSync />}
+            {Object.keys(draftInventory).length > 0 && !saveSuccess && !isSaving && <span className="fw-bold">({Object.keys(draftInventory).length})</span>}
           </Button>
         </div>
 
@@ -232,11 +213,11 @@ const AlmacenPage: FC = () => {
                         {isDirty && <span className="pending-indicator">PENDIENTE</span>}
                       </div>
                       <div className="product-card-stats">
-                        <div className="stat-box">
+                        <div className={`stat-box ${inv.almacen > 0 ? 'has-data' : ''}`}>
                           <span className="stat-label">ALM</span>
                           <span className="stat-value">{formatQty(inv.almacen, product.unidades)}</span>
                         </div>
-                        <div className="stat-box">
+                        <div className={`stat-box ${inv.consignacion > 0 ? 'has-data' : ''}`}>
                           <span className="stat-label">CON</span>
                           <span className="stat-value">{formatQty(inv.consignacion, product.unidades)}</span>
                         </div>
@@ -286,12 +267,20 @@ const AlmacenPage: FC = () => {
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; }
         .pill-icon { padding: 8px 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
         .sede-icon { background-color: #007bff; color: white; }
-        .date-icon { background-color: #6c757d; color: white; }
+        .date-icon { background-color: var(--theme-background-secondary); border-right: 1px solid var(--theme-border-default); }
+        .calendar-icon-highlight { font-size: 1.2rem; color: var(--color-red-primary); }
         .pill-content { padding: 2px 10px; display: flex; flex-direction: column; line-height: 1.1; }
         .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; }
         .pill-value { font-size: 0.75rem; font-weight: 700; color: var(--theme-text-primary); }
         .pill-date-input { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700 !important; font-size: 0.75rem !important; padding: 0 !important; height: auto !important; cursor: pointer; }
+        .pill-date-input::-webkit-calendar-picker-indicator {
+          filter: invert(1) brightness(100%);
+          cursor: pointer;
+          margin-left: 5px;
+          transform: scale(1.2);
+        }
         .custom-search-group .form-control { border-left: 1px solid var(--theme-border-default) !important; padding-left: 10px !important; }
+        
         .product-card { border: 1px solid var(--theme-border-default) !important; background-color: var(--theme-background-primary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 100%; transition: none !important; }
         .product-card:hover { border-color: var(--color-red-primary) !important; }
         .product-card.dirty { border-left: 3px solid #ffc107 !important; background: rgba(255, 193, 7, 0.05); }
@@ -299,10 +288,13 @@ const AlmacenPage: FC = () => {
         .product-sap { font-size: 0.65rem; font-weight: bold; color: var(--color-red-primary); }
         .product-name { font-weight: bold; font-size: 0.85rem; color: var(--theme-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .pending-indicator { font-size: 0.55rem; background: #ffc107; color: #000; padding: 0px 4px; font-weight: 900; }
+        
         .product-card-stats { display: flex; gap: 4px; }
-        .stat-box { background-color: var(--theme-background-secondary); padding: 2px 6px; text-align: center; min-width: 40px; border: 1px solid var(--theme-border-default); }
+        .stat-box { background-color: var(--theme-background-secondary); padding: 2px 6px; text-align: center; min-width: 40px; border: 1px solid var(--theme-border-default); transition: all 0.2s ease; }
+        .stat-box.has-data { background-color: rgba(0, 123, 255, 0.1); border-color: #007bff50; color: #007bff; }
         .stat-label { display: block; font-size: 0.55rem; font-weight: bold; opacity: 0.5; }
         .stat-value { font-weight: 800; font-size: 0.75rem; }
+
         .inventory-modal-v3 .modal-content { background-color: #1a1a1a !important; border: 1px solid #444 !important; color: white !important; }
         .modal-header-v3 { background-color: var(--color-red-primary); padding: 12px 20px; color: white; border-bottom: 2px solid rgba(0,0,0,0.1); }
         .label-v3 { font-size: 0.6rem; font-weight: 800; color: #777; margin-bottom: 2px; text-transform: uppercase; }
