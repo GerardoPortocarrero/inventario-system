@@ -13,10 +13,11 @@ Se definen los siguientes roles:
     *   Tiene acceso a todas las vistas y reportes.
 
 ### Supervisor
-*   **Descripción:** Rol de solo lectura para monitorear la actividad de ventas.
+*   **Descripción:** Rol de monitoreo y toma de decisiones. Supervisa la carga diaria y el rendimiento de ventas.
 *   **Permisos:**
+    *   **Visualizar el Dashboard**: Monitorear en tiempo real el `Tránsito`, el `Stock` disponible y el estado del conteo diario.
     *   **Leer** todas las `Órdenes de Pedido` de todos los `Preventistas`.
-    *   Acceder a dashboards y vistas que muestren el rendimiento de ventas (general, por preventista, por producto).
+    *   Acceder a dashboards y vistas que muestren el rendimiento de ventas.
     *   **No puede** crear, modificar o eliminar ninguna entidad (productos, usuarios, órdenes, etc.).
 
 ### Preventista
@@ -25,14 +26,12 @@ Se definen los siguientes roles:
     *   **Crear** nuevas `Órdenes de Pedido` para sus clientes.
     *   **Leer y Actualizar** únicamente sus propias `Órdenes de Pedido` (mientras el estado lo permita).
     *   **Leer** el catálogo de `Productos`.
-    *   **Leer** el `STOCK` disponible para la venta.
+    *   **Leer** el `STOCK` disponible (calculado tras el conteo del almacenero).
     *   **No puede** ver o modificar las órdenes de otros preventistas.
 
 ### Almacenero
-*   **Descripción:** Rol de operaciones físicas en el almacén. Es responsable de mantener la integridad del inventario físico.
+*   **Descripción:** Rol de operaciones físicas en el almacén. Su responsabilidad principal es alimentar el sistema con los datos reales del inventario físico mediante el "Controlador".
 *   **Permisos:**
-    *   **Modificar** el `ALMACEN` físico.
-    *   Registrar la recepción de `CONSIGNACION` y moverla al `ALMACEN`.
-    *   Registrar la recepción de `RECHAZO`.
-    *   Ejecutar el proceso de reconciliación para el cálculo de `TRANSITO`.
-    *   **No puede** crear o ver órdenes de pedido.
+    *   **Acceso al "Controlador"**: Registro diario de `Conteo Almacén`, `Consignación` y `Rechazo`.
+    *   **Gestión de Inventario**: Modificar las cantidades físicas para habilitar el cálculo automático de Tránsito y Stock.
+    *   **No puede** crear o ver órdenes de pedido de los preventistas.
