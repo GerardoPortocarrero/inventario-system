@@ -115,16 +115,16 @@ const Dashboard: FC = () => {
   const columns: Column<any>[] = [
     { header: 'PRODUCTO', render: (d) => (
       <div className="ps-2">
-        <div className="fw-bold text-primary" style={{ fontSize: '0.85rem' }}>{d.nombre}</div>
+        <div className="fw-bold text-white" style={{ fontSize: '0.85rem' }}>{d.nombre}</div>
         <div className="text-secondary mono-font" style={{ fontSize: '0.7rem' }}>{d.sap}</div>
       </div>
     )},
     { header: 'A / C / R', render: (d) => (
-      <div className="text-muted small">
+      <div className="text-light small opacity-75">
         {d.hasTodayCount ? `${d.almacen}/${d.consignacion}/${d.rechazo}` : '---'}
       </div>
     )},
-    { header: 'PREVENTA', render: (d) => <span className="fw-bold text-info">{d.preventa}</span> },
+    { header: 'PREVENTA', render: (d) => <span className="fw-bold text-white">{d.preventa}</span> },
     { header: 'TRÁNSITO', render: (d) => (
       d.hasTodayCount ? (
         <Badge bg={d.transito > 0 ? "warning" : "light"} className={`border ${d.transito > 0 ? 'text-dark' : 'text-muted'}`}>
@@ -149,7 +149,7 @@ const Dashboard: FC = () => {
         <Row className="g-2 mb-3 px-1">
           <Col xs={6} md={3}>
             <div className="info-pill-new w-100 h-100">
-              <span className="pill-icon bg-warning text-dark"><FaTruck /></span>
+              <span className="pill-icon pill-icon-sober"><FaTruck /></span>
               <div className="pill-content">
                 <span className="pill-label">TRÁNSITO TOTAL</span>
                 <span className="pill-value h6 mb-0">{totals.productsCounted === 0 ? '---' : totals.tTransito}</span>
@@ -158,7 +158,7 @@ const Dashboard: FC = () => {
           </Col>
           <Col xs={6} md={3}>
             <div className="info-pill-new w-100 h-100">
-              <span className="pill-icon bg-success text-white"><FaBox /></span>
+              <span className="pill-icon pill-icon-sober highlight-system"><FaBox /></span>
               <div className="pill-content">
                 <span className="pill-label">STOCK DISPONIBLE</span>
                 <span className="pill-value h6 mb-0">{totals.productsCounted === 0 ? '---' : totals.tStock}</span>
@@ -167,7 +167,7 @@ const Dashboard: FC = () => {
           </Col>
           <Col xs={6} md={3}>
             <div className="info-pill-new w-100 h-100">
-              <span className="pill-icon bg-info text-white"><FaShoppingCart /></span>
+              <span className="pill-icon pill-icon-sober"><FaShoppingCart /></span>
               <div className="pill-content">
                 <span className="pill-label">PREVENTA HOY</span>
                 <span className="pill-value h6 mb-0">{totals.tPreventa}</span>
@@ -175,8 +175,8 @@ const Dashboard: FC = () => {
             </div>
           </Col>
           <Col xs={6} md={3}>
-            <div className="info-pill-new w-100 h-100 border-primary">
-              <span className="pill-icon bg-dark text-white"><FaCalendarAlt /></span>
+            <div className="info-pill-new w-100 h-100">
+              <span className="pill-icon pill-icon-sober"><FaCalendarAlt /></span>
               <div className="pill-content">
                 <span className="pill-label">FECHA ACTUAL</span>
                 <span className="pill-value h6 mb-0">{todayStr}</span>
@@ -210,9 +210,13 @@ const Dashboard: FC = () => {
         /* Estilo de pills heredado de AlmacenPage para consistencia */
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; border-radius: 4px; }
         .pill-icon { padding: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); border-right: 1px solid var(--theme-border-default); }
+        .pill-icon-sober.highlight-system { color: var(--color-red-primary); }
+        
         .pill-content { padding: 4px 12px; display: flex; flex-direction: column; justify-content: center; }
         .pill-label { font-size: 0.6rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; }
         .pill-value { color: var(--theme-text-primary); font-family: 'Inter', sans-serif; }
+
 
         /* Mejora visual de la tabla */
         .table thead th { 
@@ -220,7 +224,7 @@ const Dashboard: FC = () => {
           font-size: 0.65rem; 
           letter-spacing: 0.05rem; 
           border-bottom: 2px solid var(--theme-border-default);
-          color: var(--theme-text-secondary);
+          color: var(--theme-text-primary);
           padding: 10px 15px;
         }
         .table tbody td { 
@@ -229,6 +233,7 @@ const Dashboard: FC = () => {
           border-bottom: 1px solid var(--theme-border-default);
         }
       `}</style>
+
     </div>
   );
 };
