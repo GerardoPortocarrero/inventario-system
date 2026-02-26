@@ -6,7 +6,7 @@ import { collection, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/f
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle } from 'react-icons/fa';
+import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle, FaWarehouse } from 'react-icons/fa';
 import GenericTable, { type Column } from '../components/GenericTable';
 import SearchInput from '../components/SearchInput';
 
@@ -92,8 +92,11 @@ const AlmacenPage: FC = () => {
     });
   }, [products, dailyInventory, draftInventory, yesterdayInventory]);
 
-  const totalTransito = useMemo(() => {
-    return processedData.reduce((acc, curr) => acc + curr.transito, 0);
+  const totals = useMemo(() => {
+    return processedData.reduce((acc, curr) => ({
+      transito: acc.transito + curr.transito,
+      inventario: acc.inventario + curr.inventarioTotal
+    }), { transito: 0, inventario: 0 });
   }, [processedData]);
 
   const sortedProducts = useMemo(() => {
@@ -183,19 +186,20 @@ const AlmacenPage: FC = () => {
         <div className="text-secondary" style={{ fontSize: '0.65rem' }}>{p.sap} / {p.basis}</div>
       </div>
     )},
-    { header: 'BASIS', accessorKey: 'basis' },
     { header: 'A / C / R', render: (p) => (
       <div className="text-light opacity-75 small">
         {formatQty(p.almacen, p.unidades)} / {formatQty(p.consignacion, p.unidades)} / {formatQty(p.rechazo, p.unidades)}
       </div>
     )},
     { header: 'TRÁNSITO', render: (p) => (
-      <Badge bg={p.transito > 0 ? "warning" : "dark"} className={`border ${p.transito > 0 ? 'text-dark' : ''}`}>
+      <Badge bg={p.transito > 0 ? "warning" : "dark"} className={`border ${p.transito > 0 ? 'text-dark' : 'text-muted'}`}>
         {formatQty(p.transito, p.unidades)}
       </Badge>
     )},
     { header: 'INVENTARIO', render: (p) => (
-      <span className="fw-bold text-white">{formatQty(p.inventarioTotal, p.unidades)}</span>
+      <Badge bg="dark" className="border text-white">
+        {formatQty(p.inventarioTotal, p.unidades)}
+      </Badge>
     )}
   ];
 
@@ -205,34 +209,47 @@ const AlmacenPage: FC = () => {
     <div className="admin-layout-container overflow-hidden">
       <div className="admin-section-table d-flex flex-column h-100 overflow-hidden">
         
-        {/* KPIs Operativos */}
-        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-          <div className="d-flex flex-wrap gap-2">
-            <div className="info-pill-new">
+        {/* KPIs Operativos - Responsive Row */}
+        <Row className="g-2 mb-3 px-1">
+          <Col xs={6} md={3}>
+            <div className="info-pill-new w-100">
               <span className="pill-icon pill-icon-sober highlight-system"><FaSync /></span>
               <div className="pill-content">
                 <span className="pill-label">TRÁNSITO TOTAL</span>
-                <span className="pill-value h6 mb-0">{loading ? '...' : totalTransito}</span>
+                <span className="pill-value h6 mb-0">{loading ? '...' : totals.transito}</span>
               </div>
             </div>
-            <div className="info-pill-new">
+          </Col>
+          <Col xs={6} md={3}>
+            <div className="info-pill-new w-100">
+              <span className="pill-icon pill-icon-sober text-info"><FaWarehouse /></span>
+              <div className="pill-content">
+                <span className="pill-label">INVENTARIO TOTAL</span>
+                <span className="pill-value h6 mb-0">{loading ? '...' : totals.inventario}</span>
+              </div>
+            </div>
+          </Col>
+          <Col xs={6} md={3}>
+            <div className="info-pill-new w-100">
               <span className="pill-icon pill-icon-sober"><FaCalendarAlt /></span>
               <div className="pill-content">
                 <span className="pill-label">FECHA INVENTARIO</span>
                 <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2" />
               </div>
             </div>
-          </div>
-          <div className="d-flex gap-2">
-            <Button variant="outline-light" size="sm" className="px-3 d-flex align-items-center gap-2" onClick={() => setViewMode(viewMode === 'edit' ? 'summary' : 'edit')}>
-              {viewMode === 'edit' ? <><FaListAlt /> RESUMEN</> : <><FaEdit /> EDICIÓN</>}
-            </Button>
-            <Button variant={saveSuccess ? "success" : "primary"} size="sm" className="px-3 d-flex align-items-center gap-2" onClick={handleSave} disabled={isSaving || (Object.keys(draftInventory).length === 0 && !saveSuccess)}>
-              {isSaving ? <Spinner as="span" animation="border" size="sm" /> : saveSuccess ? <FaCheck /> : <FaSync />}
-              {Object.keys(draftInventory).length > 0 && !saveSuccess && <span className="fw-bold">({Object.keys(draftInventory).length})</span>}
-            </Button>
-          </div>
-        </div>
+          </Col>
+          <Col xs={6} md={3}>
+            <div className="d-flex flex-column gap-1 h-100">
+              <Button variant="outline-light" size="sm" className="w-100 h-50 d-flex align-items-center justify-content-center gap-2 py-1" onClick={() => setViewMode(viewMode === 'edit' ? 'summary' : 'edit')}>
+                {viewMode === 'edit' ? <><FaListAlt /> RESUMEN</> : <><FaEdit /> EDICIÓN</>}
+              </Button>
+              <Button variant={saveSuccess ? "success" : "primary"} size="sm" className="w-100 h-50 d-flex align-items-center justify-content-center gap-2 py-1" onClick={handleSave} disabled={isSaving || (Object.keys(draftInventory).length === 0 && !saveSuccess)}>
+                {isSaving ? <Spinner as="span" animation="border" size="sm" /> : saveSuccess ? <FaCheck /> : <FaSync />}
+                {Object.keys(draftInventory).length > 0 && !saveSuccess && <span className="fw-bold">({Object.keys(draftInventory).length})</span>}
+              </Button>
+            </div>
+          </Col>
+        </Row>
 
         {!loading && Object.keys(dailyInventory).length === 0 && (
           <Alert variant="warning" className="py-2 px-3 border-0 shadow-sm mb-3 mx-1 d-flex align-items-center">
@@ -241,7 +258,7 @@ const AlmacenPage: FC = () => {
           </Alert>
         )}
 
-        <div className="mb-3">
+        <div className="mb-3 px-1">
           <SearchInput 
             searchTerm={searchTerm} 
             onSearchChange={setSearchTerm} 
@@ -279,7 +296,7 @@ const AlmacenPage: FC = () => {
                 })}
               </Row>
             ) : (
-              <div className="sticky-table-container">
+              <div className="sticky-table-container px-1">
                 <GenericTable 
                   data={summaryData} 
                   columns={summaryColumns} 
@@ -338,12 +355,12 @@ const AlmacenPage: FC = () => {
 
       <style>{`
         .admin-layout-container { max-height: calc(100vh - 70px); }
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; border-radius: 4px; }
+        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; border-radius: 4px; height: 100%; }
         .pill-icon { padding: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
         .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); border-right: 1px solid var(--theme-border-default); }
         .pill-icon-sober.highlight-system { color: var(--color-red-primary); }
         .pill-content { padding: 4px 12px; display: flex; flex-direction: column; justify-content: center; }
-        .pill-label { font-size: 0.6rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; }
+        .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; }
         .pill-value { color: var(--theme-text-primary); font-family: 'Inter', sans-serif; font-weight: bold; }
         
         .pill-date-input-v2 { 
@@ -395,10 +412,14 @@ const AlmacenPage: FC = () => {
         .input-v3:focus { border-color: var(--color-red-primary) !important; }
         .label-v3 { font-size: 0.6rem; font-weight: 800; color: #666; text-transform: uppercase; margin-bottom: 2px; }
         .border-radius-0 { border-radius: 0 !important; }
+
+        @media (max-width: 768px) {
+          .admin-section-table { padding: 0.5rem; }
+          .info-pill-new { margin-bottom: 0.25rem; }
+        }
       `}</style>
     </div>
   );
 };
 
 export default AlmacenPage;
-
