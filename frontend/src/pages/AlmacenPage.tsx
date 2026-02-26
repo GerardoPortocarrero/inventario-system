@@ -9,7 +9,6 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle, FaWarehouse, FaGlassMartiniAlt } from 'react-icons/fa';
 import GenericTable, { type Column } from '../components/GenericTable';
 import SearchInput from '../components/SearchInput';
-import GenericFilter from '../components/GenericFilter';
 
 interface Product {
   id: string;
