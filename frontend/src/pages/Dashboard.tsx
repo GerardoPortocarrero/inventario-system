@@ -1,42 +1,23 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Badge, Alert, Form, Spinner } from 'react-bootstrap';
+import { Row, Col, Badge, Alert, Form } from 'react-bootstrap';
 import { db } from '../api/firebase';
-import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend 
+  PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
 import { 
   FaTruck, FaBox, FaShoppingCart, FaExclamationTriangle, 
-  FaCalendarAlt, FaWarehouse, FaHandHoldingUsd, FaUndoAlt, FaFilter, FaTrophy 
+  FaCalendarAlt, FaWarehouse, FaHandHoldingUsd, FaUndoAlt, FaFilter, FaTrophy, FaChartArea 
 } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
 
-interface Product {
-  id: string;
-  nombre: string;
-  sap: string;
-  tipoBebidaId: string;
-  unidades: number;
-}
-
-interface InventoryEntry {
-  almacen: number;
-  consignacion: number;
-  rechazo: number;
-}
-
-interface Order {
-  id: string;
-  estadoOrden: 'PENDIENTE' | 'DESPACHADA' | 'COMPLETADA';
-  detalles: {
-    productoId: string;
-    cantidad: number;
-  }[];
-}
+interface Product { id: string; nombre: string; sap: string; tipoBebidaId: string; unidades: number; }
+interface InventoryEntry { almacen: number; consignacion: number; rechazo: number; }
+interface Order { id: string; estadoOrden: 'PENDIENTE' | 'DESPACHADA' | 'COMPLETADA'; detalles: { productoId: string; cantidad: number; }[]; }
 
 const Dashboard: FC = () => {
   const { userSedeId } = useAuth();
@@ -46,6 +27,7 @@ const Dashboard: FC = () => {
   const [todayInventory, setTodayInventory] = useState<Record<string, InventoryEntry>>({});
   const [yesterdayInventory, setYesterdayInventory] = useState<Record<string, InventoryEntry>>({});
   const [orders, setOrders] = useState<Order[]>([]);
+  const [historyData, setHistoryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedType, setSelectedType] = useState<string>('');
@@ -75,15 +57,31 @@ const Dashboard: FC = () => {
     const qOrders = query(collection(db, 'ordenes'), where('sedeId', '==', userSedeId), where('fechaCreacion', '>=', selectedDate));
     const unsubOrders = onSnapshot(qOrders, (s) => {
       setOrders(s.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
-      setLoading(false);
+      setLoading(false); 
     });
 
+    const loadHistory = async () => {
+      try {
+        const q = query(collection(db, 'inventario_diario'), where('sedeId', '==', userSedeId), orderBy('fecha', 'desc'), limit(7));
+        const snap = await getDocs(q);
+        const hist = snap.docs.map(d => {
+          const data = d.data();
+          let stockTotal = 0;
+          Object.values(data.productos || {}).forEach((p: any) => stockTotal += (p.almacen + p.consignacion + p.rechazo));
+          return { fecha: data.fecha.substring(5), stock: stockTotal };
+        }).reverse();
+        setHistoryData(hist);
+      } catch (e) { console.warn("Histórico pendiente de índice."); }
+    };
+
+    loadHistory();
     return () => { unsubProducts(); unsubToday(); unsubYesterday(); unsubOrders(); };
   }, [userSedeId, selectedDate, yesterdayStr]);
 
   const stats = useMemo(() => {
     let tStock = 0, tInventario = 0, tTransito = 0, tPreventa = 0, tVentas = 0, tRechazo = 0;
-    const chartData: any[] = [];
+    const chartMain: any[] = [];
+    const chartOps: any[] = [];
     const typeDistribution: Record<string, number> = {};
     const productMetrics: any[] = [];
 
@@ -109,11 +107,12 @@ const Dashboard: FC = () => {
       tStock += pStock; tInventario += pInventario; tTransito += pTransito;
       tPreventa += pPreventa; tVentas += pVentas; tRechazo += hoy.rechazo;
 
-      const metric = { id: p.id, name: p.nombre, sap: p.sap, stock: pStock, transito: pTransito, ventas: pVentas, inventario: pInventario };
+      const metric = { id: p.id, name: p.nombre, sap: p.sap, stock: pStock, transito: pTransito, ventas: pVentas, inventario: pInventario, preventa: pPreventa, rechazo: hoy.rechazo };
       productMetrics.push(metric);
 
       if (pInventario > 0 || pTransito > 0 || pVentas > 0) {
-        chartData.push({ name: p.nombre.substring(0, 10), Stock: pStock, Tránsito: pTransito, Ventas: pVentas });
+        chartMain.push({ name: p.nombre.substring(0, 8), Stock: pStock, Ventas: pVentas, Preventa: pPreventa });
+        chartOps.push({ name: p.nombre.substring(0, 8), ALM: hoy.almacen, CON: hoy.consignacion, RECH: hoy.rechazo });
         const typeName = beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros';
         typeDistribution[typeName] = (typeDistribution[typeName] || 0) + pInventario;
       }
@@ -121,7 +120,7 @@ const Dashboard: FC = () => {
 
     return { 
       tStock, tInventario, tTransito, tPreventa, tVentas, tRechazo, 
-      chartData, 
+      chartMain, chartOps,
       pieData: Object.keys(typeDistribution).map(name => ({ name, value: typeDistribution[name] })),
       tops: {
         ventas: [...productMetrics].sort((a, b) => b.ventas - a.ventas).slice(0, 5),
@@ -136,163 +135,186 @@ const Dashboard: FC = () => {
   const COLORS = ['#F40009', '#007bff', '#ffc107', '#28a745', '#17a2b8', '#6c757d'];
 
   return (
-    <div className="admin-layout-container overflow-hidden">
-      <div className="admin-section-table d-flex flex-column h-100 overflow-auto custom-scrollbar p-3">
-        
-        {/* 1. FILTROS (Mismo diseño que AlmacenPage) */}
-        <Row className="g-2 mb-4">
-          <Col xs={12} md={4}>
-            <div className="info-pill-new w-100">
-              <span className="pill-icon pill-icon-sober"><FaCalendarAlt /></span>
-              <div className="pill-content w-100">
-                <span className="pill-label">FECHA ANÁLISIS</span>
-                <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2" />
+    <div className="dashboard-container custom-scrollbar">
+      
+      {/* FILTROS */}
+      <Row className="g-2 mb-4">
+        <Col xs={6} md={4}>
+          <div className="info-pill-new w-100">
+            <span className="pill-icon-sober"><FaCalendarAlt /></span>
+            <div className="pill-content">
+              <span className="pill-label">FECHA</span>
+              <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2" />
+            </div>
+          </div>
+        </Col>
+        <Col xs={6} md={4}>
+          <div className="info-pill-new w-100">
+            <span className="pill-icon-sober"><FaFilter /></span>
+            <div className="pill-content">
+              <span className="pill-label">BEBIDA</span>
+              <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2">
+                <option value="">TODAS</option>
+                {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>)}
+              </Form.Select>
+            </div>
+          </div>
+        </Col>
+        <Col xs={12} md={4} className="d-flex align-items-center justify-content-md-end justify-content-center pt-md-0 pt-2">
+          <Badge bg="dark" className="border py-2 px-3 small">{stats.chartMain.length} PRODUCTOS FILTRADOS</Badge>
+        </Col>
+      </Row>
+
+      {!loading && Object.keys(todayInventory).length === 0 && (
+        <Alert variant="warning" className="border-0 shadow-sm mb-4 py-2 small fw-bold text-center">
+          <FaExclamationTriangle className="me-2" /> CONTEO PENDIENTE PARA ESTA FECHA. ALGUNOS DATOS PUEDEN SER ESTIMADOS.
+        </Alert>
+      )}
+
+      {/* KPIs */}
+      <Row className="g-2 mb-4">
+        {[
+          { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
+          { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#007bff' },
+          { label: 'EN TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#ffc107' },
+          { label: 'VENTAS REAL', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#28a745' },
+          { label: 'PREVENTA', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#17a2b8' },
+          { label: 'RECHAZOS', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#6c757d' }
+        ].map((kpi, i) => (
+          <Col key={i} xs={6} md={4} lg={2}>
+            <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
+              <div className="dash-kpi-icon" style={{ color: kpi.color }}>{kpi.icon}</div>
+              <div className="dash-kpi-data">
+                <div className="dash-kpi-value">{loading ? '...' : kpi.value}</div>
+                <div className="dash-kpi-label">{kpi.label}</div>
               </div>
             </div>
           </Col>
-          <Col xs={12} md={4}>
-            <div className="info-pill-new w-100">
-              <span className="pill-icon pill-icon-sober"><FaFilter /></span>
-              <div className="pill-content w-100">
-                <span className="pill-label">TIPO BEBIDA</span>
-                <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2">
-                  <option value="">TODAS</option>
-                  {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>)}
-                </Form.Select>
-              </div>
-            </div>
-          </Col>
-          <Col xs={12} md={4} className="d-flex align-items-center justify-content-end">
-            {loading && <Spinner animation="border" size="sm" className="text-danger me-2" />}
-            <Badge bg="dark" className="border py-2 px-3">{stats.chartData.length} PRODUCTOS</Badge>
-          </Col>
-        </Row>
+        ))}
+      </Row>
 
-        {!loading && Object.keys(todayInventory).length === 0 && (
-          <Alert variant="warning" className="border-0 shadow-sm mb-4 py-2 small fw-bold">
-            <FaExclamationTriangle className="me-2" /> CONTEO PENDIENTE PARA ESTA FECHA.
-          </Alert>
-        )}
-
-        {/* 2. KPIs COMPACTOS */}
-        <Row className="g-2 mb-4">
-          {[
-            { label: 'STOCK', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
-            { label: 'INVENTARIO', value: stats.tInventario, icon: <FaWarehouse />, color: '#007bff' },
-            { label: 'TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#ffc107' },
-            { label: 'VENTAS', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#28a745' },
-            { label: 'PREVENTA', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#17a2b8' },
-            { label: 'RECHAZOS', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#6c757d' }
-          ].map((kpi, i) => (
-            <Col key={i} xs={6} md={4} lg={2}>
-              <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
-                <div className="dash-kpi-icon" style={{ color: kpi.color }}>{kpi.icon}</div>
-                <div className="dash-kpi-data">
-                  <div className="dash-kpi-value">{loading ? '...' : kpi.value}</div>
-                  <div className="dash-kpi-label">{kpi.label}</div>
-                </div>
-              </div>
-            </Col>
-          ))}
-        </Row>
-
-        {/* 3. GRÁFICAS */}
-        <Row className="g-3 mb-4">
-          <Col xs={12} lg={7}>
-            <div className="dash-chart-box">
-              <div className="dash-chart-header">MOVIMIENTOS DE PRODUCTOS</div>
-              <div style={{ width: '100%', height: 300 }}>
-                <ResponsiveContainer>
-                  <BarChart data={stats.chartData.slice(0, 12)}>
+      {/* GRÁFICAS */}
+      <Row className="g-3 mb-4">
+        <Col xs={12} lg={8}>
+          <div className="dash-chart-box">
+            <div className="dash-chart-header"><FaChartArea className="me-2 text-danger" /> TENDENCIA DE STOCK (HISTÓRICO)</div>
+            <div className="chart-responsive-container">
+              {historyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={historyData}>
+                    <defs><linearGradient id="colorStock" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F40009" stopOpacity={0.3}/><stop offset="95%" stopColor="#F40009" stopOpacity={0}/></linearGradient></defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                    <XAxis dataKey="name" stroke="#555" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#555" fontSize={10} tickLine={false} />
+                    <XAxis dataKey="fecha" stroke="#555" fontSize={10} />
+                    <YAxis stroke="#555" fontSize={10} />
                     <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
-                    <Legend />
-                    <Bar dataKey="Stock" fill="#F40009" />
-                    <Bar dataKey="Tránsito" fill="#ffc107" />
-                    <Bar dataKey="Ventas" fill="#28a745" />
-                  </BarChart>
+                    <Area type="monotone" dataKey="stock" stroke="#F40009" fillOpacity={1} fill="url(#colorStock)" />
+                  </AreaChart>
                 </ResponsiveContainer>
-              </div>
+              ) : <div className="d-flex align-items-center justify-content-center h-100 text-muted small">Cargando histórico o falta índice...</div>}
+            </div>
+          </div>
+        </Col>
+        <Col xs={12} lg={4}>
+          <div className="dash-chart-box">
+            <div className="dash-chart-header">MIX DE INVENTARIO</div>
+            <div className="chart-responsive-container">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={stats.pieData} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value">{stats.pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                  <Legend iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+      <Row className="g-3 mb-4">
+        <Col xs={12} lg={6}>
+          <div className="dash-chart-box">
+            <div className="dash-chart-header">BALANCE: PREVENTA VS VENTAS</div>
+            <div className="chart-responsive-container">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.chartMain.slice(0, 10)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                  <XAxis dataKey="name" stroke="#555" fontSize={10} />
+                  <YAxis stroke="#555" fontSize={10} />
+                  <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                  <Legend />
+                  <Bar dataKey="Ventas" fill="#28a745" />
+                  <Bar dataKey="Preventa" fill="#17a2b8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </Col>
+        <Col xs={12} lg={6}>
+          <div className="dash-chart-box">
+            <div className="dash-chart-header">ESTADO FÍSICO (ALM/CON/RECH)</div>
+            <div className="chart-responsive-container">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.chartOps.slice(0, 10)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                  <XAxis dataKey="name" stroke="#555" fontSize={10} />
+                  <YAxis stroke="#555" fontSize={10} />
+                  <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                  <Legend />
+                  <Bar dataKey="ALM" stackId="a" fill="#007bff" />
+                  <Bar dataKey="CON" stackId="a" fill="#ffc107" />
+                  <Bar dataKey="RECH" stackId="a" fill="#6c757d" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+      {/* RANKINGS */}
+      <Row className="g-2 pb-4">
+        {[
+          { title: 'TOP VENTAS', data: stats.tops.ventas, valKey: 'ventas', color: 'text-success', icon: <FaTrophy /> },
+          { title: 'MÁS TRÁNSITO', data: stats.tops.transito, valKey: 'transito', color: 'text-warning', icon: <FaTruck /> },
+          { title: 'STOCK CRÍTICO', data: stats.tops.critico, valKey: 'stock', color: 'text-danger', icon: <FaExclamationTriangle /> }
+        ].map((top, i) => (
+          <Col key={i} xs={12} md={4}>
+            <div className="dash-top-card">
+              <div className="dash-top-header">{top.icon} {top.title}</div>
+              {top.data.map((p, idx) => (
+                <div key={idx} className="dash-top-item"><span className="dash-top-idx">{idx + 1}</span><div className="dash-top-info"><div className="dash-top-name">{p.name}</div><div className="dash-top-sap">{p.sap}</div></div><div className={`dash-top-val ${top.color}`}>{p[top.valKey]} U</div></div>
+              ))}
             </div>
           </Col>
-          <Col xs={12} lg={5}>
-            <div className="dash-chart-box">
-              <div className="dash-chart-header">MIX DE INVENTARIO</div>
-              <div style={{ width: '100%', height: 300 }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie data={stats.pieData} innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
-                      {stats.pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
-                    <Legend verticalAlign="bottom" />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </Col>
-        </Row>
-
-        {/* 4. RANKINGS */}
-        <Row className="g-2">
-          {[
-            { title: 'TOP VENTAS', data: stats.tops.ventas, valKey: 'ventas', color: 'text-success', icon: <FaTrophy /> },
-            { title: 'MÁS TRÁNSITO', data: stats.tops.transito, valKey: 'transito', color: 'text-warning', icon: <FaTruck /> },
-            { title: 'STOCK CRÍTICO', data: stats.tops.critico, valKey: 'stock', color: 'text-danger', icon: <FaExclamationTriangle /> }
-          ].map((top, i) => (
-            <Col key={i} xs={12} md={4}>
-              <div className="dash-top-card">
-                <div className="dash-top-header">{top.icon} {top.title}</div>
-                {top.data.map((p, idx) => (
-                  <div key={idx} className="dash-top-item">
-                    <span className="dash-top-idx">{idx + 1}</span>
-                    <div className="dash-top-info">
-                      <div className="dash-top-name">{p.name}</div>
-                      <div className="dash-top-sap">{p.sap}</div>
-                    </div>
-                    <div className={`dash-top-val ${top.color}`}>{p[top.valKey]} U</div>
-                  </div>
-                ))}
-              </div>
-            </Col>
-          ))}
-        </Row>
-
-      </div>
+        ))}
+      </Row>
 
       <style>{`
-        .admin-layout-container { padding: 0 !important; }
+        .dashboard-container { padding: 15px; }
         
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 4px; height: 45px; overflow: hidden; }
         .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); padding: 0 12px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
-        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; }
-        .pill-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; }
-        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: white !important; font-weight: 700; font-size: 0.75rem; cursor: pointer; padding: 0 !important; }
+        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; }
+        .pill-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; }
+        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: white !important; font-weight: 700; font-size: 0.75rem; cursor: pointer; padding: 0 !important; width: 100%; }
         .pill-date-input-v2::-webkit-calendar-picker-indicator { filter: invert(1); }
 
-        .dash-kpi-card { background: var(--theme-background-secondary); padding: 12px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 10px; height: 100%; }
-        .dash-kpi-icon { font-size: 1.2rem; opacity: 0.8; }
-        .dash-kpi-value { font-size: 1.1rem; font-weight: 900; color: white; line-height: 1; }
-        .dash-kpi-label { font-size: 0.55rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; margin-top: 2px; }
+        .dash-kpi-card { background: var(--theme-background-secondary); padding: 15px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 12px; }
+        .dash-kpi-icon { font-size: 1.3rem; opacity: 0.8; }
+        .dash-kpi-value { font-size: 1.2rem; font-weight: 900; color: white; line-height: 1; }
+        .dash-kpi-label { font-size: 0.55rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; margin-top: 4px; }
 
-        .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; height: 100%; }
-        .dash-chart-header { font-size: 0.65rem; font-weight: 900; color: var(--theme-text-secondary); margin-bottom: 15px; text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; }
+        .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 20px; }
+        .dash-chart-header { font-size: 0.65rem; font-weight: 900; color: var(--theme-text-secondary); margin-bottom: 20px; text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 10px; }
+        .chart-responsive-container { width: 100%; height: 250px; }
 
-        .dash-top-card { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); height: 100%; }
-        .dash-top-header { padding: 10px 12px; background: #000; font-size: 0.65rem; font-weight: 900; border-bottom: 1px solid var(--theme-border-default); color: var(--theme-text-secondary); }
-        .dash-top-item { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .dash-top-idx { width: 20px; font-weight: 900; color: var(--color-red-primary); font-size: 0.7rem; }
+        .dash-top-card { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); }
+        .dash-top-header { padding: 12px 15px; background: #000; font-size: 0.65rem; font-weight: 900; border-bottom: 1px solid var(--theme-border-default); color: var(--theme-text-secondary); }
+        .dash-top-item { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .dash-top-idx { width: 25px; font-weight: 900; color: var(--color-red-primary); font-size: 0.75rem; }
         .dash-top-info { flex: 1; min-width: 0; }
-        .dash-top-name { font-size: 0.7rem; font-weight: bold; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .dash-top-sap { font-size: 0.55rem; color: #555; }
-        .dash-top-val { font-weight: 900; font-size: 0.75rem; }
-
-        @media (max-width: 768px) {
-          .dash-kpi-value { font-size: 1rem; }
-          .dash-chart-box { height: auto; }
-        }
+        .top-name { font-size: 0.75rem; font-weight: bold; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .top-sap { font-size: 0.6rem; color: #555; }
+        .dash-top-val { font-weight: 900; font-size: 0.8rem; }
       `}</style>
     </div>
   );
