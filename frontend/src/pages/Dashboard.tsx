@@ -71,7 +71,7 @@ const Dashboard: FC = () => {
           return { fecha: data.fecha.substring(5), stock: total };
         }).reverse();
         setHistoryData(hist);
-      } catch (e) { console.warn("Índice pendiente."); }
+      } catch (e) { console.warn("Histórico pendiente."); }
     };
 
     loadHistory();
@@ -111,7 +111,7 @@ const Dashboard: FC = () => {
       productMetrics.push(metric);
 
       if (pInventario > 0 || pTransito > 0 || pVentas > 0) {
-        chartMain.push({ name: p.nombre.substring(0, 8), Stock: pStock, Ventas: pVentas, Preventa: pPreventa });
+        chartMain.push({ name: p.nombre.substring(0, 8), Stock: pStock, Ventas: pVentas });
         chartOps.push({ name: p.nombre.substring(0, 8), ALM: hoy.almacen, CON: hoy.consignacion, RECH: hoy.rechazo });
         const typeName = beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros';
         typeDistribution[typeName] = (typeDistribution[typeName] || 0) + pInventario;
@@ -132,11 +132,11 @@ const Dashboard: FC = () => {
 
   if (loadingMasterData) return <GlobalSpinner variant="overlay" />;
 
-  const COLORS = ['#F40009', '#007bff', '#ffc107', '#28a745', '#17a2b8', '#6c757d'];
+  const SYSTEM_COLORS = ['#F40009', '#FFFFFF', '#adb5bd', '#6c757d', '#343a40'];
 
   return (
     <div className="admin-layout-container overflow-hidden">
-      <div className="admin-section-table h-100 overflow-hidden p-0">
+      <div className="admin-section-table d-flex flex-column h-100 overflow-hidden p-0">
         
         {/* UN SOLO CONTENEDOR DE SCROLL PARA TODO */}
         <div className="h-100 overflow-auto custom-scrollbar p-3">
@@ -179,17 +179,17 @@ const Dashboard: FC = () => {
           <Row className="g-2 mb-4">
             {[
               { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
-              { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#007bff' },
-              { label: 'EN TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#ffc107' },
-              { label: 'VENTAS', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#28a745' },
-              { label: 'PREVENTA', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#17a2b8' },
-              { label: 'RECHAZOS', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#6c757d' }
+              { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#FFFFFF' },
+              { label: 'EN TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#adb5bd' },
+              { label: 'VENTAS', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#FFFFFF' },
+              { label: 'PREVENTA', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#6c757d' },
+              { label: 'RECHAZOS', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#F40009' }
             ].map((kpi, i) => (
               <Col key={i} xs={6} md={4} lg={2}>
                 <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
                   <div className="dash-kpi-icon" style={{ color: kpi.color }}>{kpi.icon}</div>
                   <div className="dash-kpi-data">
-                    <div className="dash-kpi-value">{loading ? '...' : kpi.value}</div>
+                    <div className="dash-kpi-value">{loading ? '0' : kpi.value}</div>
                     <div className="dash-kpi-label">{kpi.label}</div>
                   </div>
                 </div>
@@ -204,7 +204,16 @@ const Dashboard: FC = () => {
                 <div className="dash-chart-header"><FaChartArea className="me-2 text-danger" /> TENDENCIA SEMANAL</div>
                 <div style={{ height: 280 }}>
                   {historyData.length > 0 ? (
-                    <ResponsiveContainer><AreaChart data={historyData}><defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F40009" stopOpacity={0.3}/><stop offset="95%" stopColor="#F40009" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} /><XAxis dataKey="fecha" stroke="#555" fontSize={10} /><YAxis stroke="#555" fontSize={10} /><Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} /><Area type="monotone" dataKey="stock" stroke="#F40009" fill="url(#c)" /></AreaChart></ResponsiveContainer>
+                    <ResponsiveContainer>
+                      <AreaChart data={historyData}>
+                        <defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F40009" stopOpacity={0.3}/><stop offset="95%" stopColor="#F40009" stopOpacity={0}/></linearGradient></defs>
+                        <CartesianGrid stroke="#222" vertical={false} />
+                        <XAxis dataKey="fecha" stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                        <Area type="monotone" dataKey="stock" stroke="#F40009" strokeWidth={2} fillOpacity={1} fill="url(#c)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   ) : <div className="d-flex align-items-center justify-content-center h-100 text-muted small">Cargando histórico...</div>}
                 </div>
               </div>
@@ -213,7 +222,22 @@ const Dashboard: FC = () => {
               <div className="dash-chart-box">
                 <div className="dash-chart-header">DISTRIBUCIÓN</div>
                 <div style={{ height: 280 }}>
-                  <ResponsiveContainer><PieChart><Pie data={stats.pieData} innerRadius={60} outerRadius={80} dataKey="value">{stats.pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} /><Legend iconType="circle" /></PieChart></ResponsiveContainer>
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie 
+                        data={stats.pieData} 
+                        innerRadius={65} 
+                        outerRadius={90} 
+                        dataKey="value"
+                        stroke="#1a1a1a"
+                        strokeWidth={3}
+                      >
+                        {stats.pieData.map((_, i) => <Cell key={i} fill={SYSTEM_COLORS[i % SYSTEM_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0' }} />
+                      <Legend iconType="circle" />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </Col>
@@ -224,7 +248,16 @@ const Dashboard: FC = () => {
               <div className="dash-chart-box">
                 <div className="dash-chart-header">BALANCE COMERCIAL</div>
                 <div style={{ height: 280 }}>
-                  <ResponsiveContainer><BarChart data={stats.chartMain.slice(0, 8)}><CartesianGrid stroke="#222" vertical={false} /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip contentStyle={{ backgroundColor: '#000' }} /><Bar dataKey="Ventas" fill="#28a745" /><Bar dataKey="Preventa" fill="#17a2b8" /></BarChart></ResponsiveContainer>
+                  <ResponsiveContainer>
+                    <BarChart data={stats.chartMain.slice(0, 8)}>
+                      <CartesianGrid stroke="#222" vertical={false} strokeDasharray="0" />
+                      <XAxis dataKey="name" fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
+                      <YAxis fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0' }} />
+                      <Bar dataKey="Ventas" fill="#FFFFFF" radius={0} stroke="#000" strokeWidth={1} />
+                      <Bar dataKey="Stock" fill="#F40009" radius={0} stroke="#000" strokeWidth={1} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </Col>
@@ -233,7 +266,15 @@ const Dashboard: FC = () => {
                 <div className="dash-chart-header">ESTADO DEL PRODUCTO</div>
                 <div style={{ height: 280 }}>
                   <ResponsiveContainer>
-                    <BarChart data={stats.chartOps.slice(0, 8)}><CartesianGrid stroke="#222" vertical={false} /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip contentStyle={{ backgroundColor: '#000' }} /><Bar dataKey="ALM" stackId="a" fill="#007bff" /><Bar dataKey="CON" stackId="a" fill="#ffc107" /><Bar dataKey="RECH" stackId="a" fill="#6c757d" /></BarChart>
+                    <BarChart data={stats.chartOps.slice(0, 8)}>
+                      <CartesianGrid stroke="#222" vertical={false} strokeDasharray="0" />
+                      <XAxis dataKey="name" fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
+                      <YAxis fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0' }} />
+                      <Bar dataKey="ALM" stackId="a" fill="#adb5bd" radius={0} stroke="#000" strokeWidth={1} />
+                      <Bar dataKey="CON" stackId="a" fill="#6c757d" radius={0} stroke="#000" strokeWidth={1} />
+                      <Bar dataKey="RECH" stackId="a" fill="#F40009" radius={0} stroke="#000" strokeWidth={1} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
