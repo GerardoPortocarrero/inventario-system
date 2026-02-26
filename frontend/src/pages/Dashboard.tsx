@@ -1,10 +1,10 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Card, Badge, Alert, Spinner, Form } from 'react-bootstrap';
+import { Row, Col, Badge, Alert, Form } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
-import { FaTruck, FaBox, FaShoppingCart, FaExclamationTriangle, FaWarehouse, FaCalendarAlt } from 'react-icons/fa';
+import { FaTruck, FaBox, FaShoppingCart, FaExclamationTriangle, FaCalendarAlt } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
 import GenericTable, { type Column } from '../components/GenericTable';
 
