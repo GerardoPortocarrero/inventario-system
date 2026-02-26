@@ -8,6 +8,7 @@ import { useData } from '../context/DataContext';
 import GlobalSpinner from '../components/GlobalSpinner';
 import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle } from 'react-icons/fa';
 import GenericTable, { type Column } from '../components/GenericTable';
+import SearchInput from '../components/SearchInput';
 
 interface Product {
   id: string;
@@ -239,9 +240,11 @@ const AlmacenPage: FC = () => {
         )}
 
         <div className="mb-3">
-          <InputGroup size="sm" className="custom-search-group">
-            <Form.Control placeholder="Buscar producto por nombre o SAP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="border-start" />
-          </InputGroup>
+          <SearchInput 
+            searchTerm={searchTerm} 
+            onSearchChange={setSearchTerm} 
+            placeholder="Buscar producto por nombre o SAP..." 
+          />
         </div>
 
         <div className="flex-grow-1 overflow-auto pe-1 custom-scrollbar">
@@ -278,7 +281,7 @@ const AlmacenPage: FC = () => {
                 <GenericTable 
                   data={summaryData} 
                   columns={summaryColumns} 
-                  variant="dark"
+                  variant={localStorage.getItem('theme') === 'dark' ? 'dark' : ''}
                   noRecordsMessage="No se encontraron registros con datos para esta fecha."
                 />
               </div>
@@ -373,12 +376,15 @@ const AlmacenPage: FC = () => {
         .stat-label { display: block; font-size: 0.55rem; font-weight: bold; opacity: 0.5; }
         .stat-value { font-weight: 800; font-size: 0.75rem; }
 
-        /* CABECERA FIJA PARA TABLA DE RESUMEN */
+        /* CABECERA DE TABLA DE RESUMEN - IGUAL A CRUD */
         .sticky-table-container thead th { 
-          position: sticky !important; top: 0 !important; z-index: 100 !important;
-          background-color: var(--theme-background-secondary) !important;
-          color: white !important; font-size: 0.65rem; padding: 10px 15px; border-bottom: 2px solid var(--theme-border-default) !important;
-          letter-spacing: 0.05rem;
+          background-color: transparent !important;
+          color: var(--theme-text-secondary) !important; 
+          border-bottom: 1px solid var(--theme-table-border-color) !important;
+          font-size: 0.85rem;
+          padding: 12px 15px;
+          font-weight: 500;
+          text-align: left;
         }
 
         .inventory-modal-v3 .modal-content { background: #111 !important; border: 1px solid #333 !important; }
@@ -393,3 +399,4 @@ const AlmacenPage: FC = () => {
 };
 
 export default AlmacenPage;
+
