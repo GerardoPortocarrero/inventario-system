@@ -14,6 +14,7 @@ interface Product {
   id: string;
   nombre: string;
   sap: string;
+  basis: string;
   unidades: number;
 }
 
@@ -179,9 +180,10 @@ const AlmacenPage: FC = () => {
     { header: 'PRODUCTO', render: (p) => (
       <div className="ps-2">
         <div className="fw-bold text-white small">{p.nombre}</div>
-        <div className="text-secondary" style={{ fontSize: '0.65rem' }}>{p.sap}</div>
+        <div className="text-secondary" style={{ fontSize: '0.65rem' }}>{p.sap} / {p.basis}</div>
       </div>
     )},
+    { header: 'BASIS', accessorKey: 'basis' },
     { header: 'A / C / R', render: (p) => (
       <div className="text-light opacity-75 small">
         {formatQty(p.almacen, p.unidades)} / {formatQty(p.consignacion, p.unidades)} / {formatQty(p.rechazo, p.unidades)}
