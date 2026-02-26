@@ -203,7 +203,7 @@ const Dashboard: FC = () => {
       </div>
 
       <style>{`
-        .admin-layout-container { padding: 10px; max-height: calc(100vh - 70px); }
+        .admin-layout-container { max-height: calc(100vh - 70px); }
         .bg-card-custom { background-color: var(--theme-background-primary); }
         .mono-font { font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
         
