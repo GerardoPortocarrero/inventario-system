@@ -42,29 +42,24 @@ const Dashboard: FC = () => {
     if (!userSedeId) return;
     setLoading(true);
 
-    // 1. Productos
     const unsubProducts = onSnapshot(collection(db, 'productos'), (s) => {
       setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
     });
 
-    // 2. Inventario Hoy
     const unsubToday = onSnapshot(doc(db, 'inventario_diario', `${userSedeId}_${selectedDate}`), (s) => {
       setTodayInventory(s.exists() ? s.data().productos || {} : {});
     });
 
-    // 3. Inventario Ayer
     const unsubYesterday = onSnapshot(doc(db, 'inventario_diario', `${userSedeId}_${yesterdayStr}`), (s) => {
       setYesterdayInventory(s.exists() ? s.data().productos || {} : {});
     });
 
-    // 4. Órdenes (Hoy en adelante)
     const qOrders = query(collection(db, 'ordenes'), where('sedeId', '==', userSedeId), where('fechaCreacion', '>=', selectedDate));
     const unsubOrders = onSnapshot(qOrders, (s) => {
       setOrders(s.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
       setLoading(false);
     }, () => setLoading(false));
 
-    // 5. Histórico (Async)
     const loadHistory = async () => {
       try {
         const q = query(collection(db, 'inventario_diario'), where('sedeId', '==', userSedeId), orderBy('fecha', 'desc'), limit(7));
@@ -92,7 +87,6 @@ const Dashboard: FC = () => {
 
     products.forEach(p => {
       if (selectedType && p.tipoBebidaId !== selectedType) return;
-
       const hoy = todayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
       const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
       
@@ -142,9 +136,9 @@ const Dashboard: FC = () => {
 
   return (
     <div className="admin-layout-container overflow-hidden">
-      <div className="admin-section-table d-flex flex-column h-100 p-0">
+      <div className="admin-section-table d-flex flex-column h-100 overflow-hidden p-0">
         
-        {/* Cabecera Fija */}
+        {/* PARTE FIJA: FILTROS */}
         <div className="p-3 border-bottom bg-black">
           <Row className="g-2 align-items-center">
             <Col xs={6} md={4}>
@@ -162,7 +156,7 @@ const Dashboard: FC = () => {
                 <div className="pill-content">
                   <span className="pill-label">FILTRAR</span>
                   <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2">
-                    <option value="">TODAS</option>
+                    <option value="">TODAS LAS BEBIDAS</option>
                     {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>)}
                   </Form.Select>
                 </div>
@@ -174,8 +168,9 @@ const Dashboard: FC = () => {
           </Row>
         </div>
 
-        {/* Cuerpo con Scroll */}
+        {/* PARTE CON SCROLL ÚNICO: KPIs Y GRÁFICAS */}
         <div className="flex-grow-1 overflow-auto custom-scrollbar p-3">
+          
           {!loading && Object.keys(todayInventory).length === 0 && (
             <Alert variant="warning" className="border-0 py-2 small fw-bold mb-4">
               <FaExclamationTriangle className="me-2" /> SIN CONTEO REGISTRADO PARA HOY.
@@ -187,7 +182,7 @@ const Dashboard: FC = () => {
             {[
               { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
               { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#007bff' },
-              { label: 'TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#ffc107' },
+              { label: 'EN TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#ffc107' },
               { label: 'VENTAS', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#28a745' },
               { label: 'PREVENTA', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#17a2b8' },
               { label: 'RECHAZOS', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#6c757d' }
@@ -196,7 +191,7 @@ const Dashboard: FC = () => {
                 <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
                   <div className="dash-kpi-icon" style={{ color: kpi.color }}>{kpi.icon}</div>
                   <div className="dash-kpi-data">
-                    <div className="dash-kpi-value">{loading ? '...' : kpi.value}</div>
+                    <div className="dash-kpi-value">{loading ? '0' : kpi.value}</div>
                     <div className="dash-kpi-label">{kpi.label}</div>
                   </div>
                 </div>
@@ -204,12 +199,12 @@ const Dashboard: FC = () => {
             ))}
           </Row>
 
-          {/* Gráficas Principales */}
+          {/* Gráficas */}
           <Row className="g-3 mb-4">
             <Col xs={12} lg={8}>
-              <div className="dash-chart-box h-100">
+              <div className="dash-chart-box">
                 <div className="dash-chart-header"><FaChartArea className="me-2 text-danger" /> TENDENCIA SEMANAL</div>
-                <div style={{ height: 250 }}>
+                <div style={{ height: 280 }}>
                   <ResponsiveContainer>
                     <AreaChart data={historyData}>
                       <defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F40009" stopOpacity={0.3}/><stop offset="95%" stopColor="#F40009" stopOpacity={0}/></linearGradient></defs>
@@ -224,9 +219,9 @@ const Dashboard: FC = () => {
               </div>
             </Col>
             <Col xs={12} lg={4}>
-              <div className="dash-chart-box h-100">
+              <div className="dash-chart-box">
                 <div className="dash-chart-header">DISTRIBUCIÓN</div>
-                <div style={{ height: 250 }}>
+                <div style={{ height: 280 }}>
                   <ResponsiveContainer>
                     <PieChart>
                       <Pie data={stats.pieData} innerRadius={60} outerRadius={80} dataKey="value">{stats.pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie>
@@ -243,7 +238,7 @@ const Dashboard: FC = () => {
             <Col xs={12} lg={6}>
               <div className="dash-chart-box">
                 <div className="dash-chart-header">BALANCE COMERCIAL</div>
-                <div style={{ height: 250 }}>
+                <div style={{ height: 280 }}>
                   <ResponsiveContainer>
                     <BarChart data={stats.chartMain.slice(0, 8)}><CartesianGrid stroke="#222" vertical={false} /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip contentStyle={{ backgroundColor: '#000' }} /><Bar dataKey="Ventas" fill="#28a745" /><Bar dataKey="Preventa" fill="#17a2b8" /></BarChart>
                   </ResponsiveContainer>
@@ -253,7 +248,7 @@ const Dashboard: FC = () => {
             <Col xs={12} lg={6}>
               <div className="dash-chart-box">
                 <div className="dash-chart-header">ESTADO DEL PRODUCTO</div>
-                <div style={{ height: 250 }}>
+                <div style={{ height: 280 }}>
                   <ResponsiveContainer>
                     <BarChart data={stats.chartOps.slice(0, 8)}><CartesianGrid stroke="#222" vertical={false} /><XAxis dataKey="name" fontSize={10} /><YAxis fontSize={10} /><Tooltip contentStyle={{ backgroundColor: '#000' }} /><Bar dataKey="ALM" stackId="a" fill="#007bff" /><Bar dataKey="CON" stackId="a" fill="#ffc107" /><Bar dataKey="RECH" stackId="a" fill="#6c757d" /></BarChart>
                   </ResponsiveContainer>
@@ -263,7 +258,7 @@ const Dashboard: FC = () => {
           </Row>
 
           {/* Tops */}
-          <Row className="g-2">
+          <Row className="g-2 pb-2">
             {[
               { title: 'TOP VENTAS', data: stats.tops.ventas, key: 'ventas', color: 'text-success', icon: <FaTrophy /> },
               { title: 'MÁS TRÁNSITO', data: stats.tops.transito, key: 'transito', color: 'text-warning', icon: <FaTruck /> },
@@ -293,12 +288,15 @@ const Dashboard: FC = () => {
         .pill-label { font-size: 0.45rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; }
         .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: white !important; font-weight: 700; font-size: 0.7rem; cursor: pointer; padding: 0 !important; }
         .pill-date-input-v2::-webkit-calendar-picker-indicator { filter: invert(1); }
-        .dash-kpi-card { background: var(--theme-background-secondary); padding: 10px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 8px; height: 100%; }
+        
+        .dash-kpi-card { background: var(--theme-background-secondary); padding: 10px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 8px; }
         .dash-kpi-icon { font-size: 1rem; opacity: 0.8; }
         .dash-kpi-value { font-size: 1rem; font-weight: 900; color: white; line-height: 1; }
         .dash-kpi-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; margin-top: 2px; }
+        
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
         .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); margin-bottom: 10px; text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; }
+        
         .dash-top-card { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); height: 100%; }
         .dash-top-header { padding: 8px 12px; background: #000; font-size: 0.6rem; font-weight: 900; border-bottom: 1px solid var(--theme-border-default); color: var(--theme-text-secondary); }
         .dash-top-item { display: flex; align-items: center; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
