@@ -1,17 +1,25 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Badge, Alert, Form } from 'react-bootstrap';
+import { Row, Col, Badge, Alert, Form, Spinner } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
-import { FaTruck, FaBox, FaShoppingCart, FaExclamationTriangle, FaCalendarAlt } from 'react-icons/fa';
+import { useData } from '../context/DataContext';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, Legend 
+} from 'recharts';
+import { 
+  FaTruck, FaBox, FaShoppingCart, FaExclamationTriangle, 
+  FaCalendarAlt, FaWarehouse, FaHandHoldingUsd, FaUndoAlt, FaFilter, FaTrophy 
+} from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
-import GenericTable, { type Column } from '../components/GenericTable';
 
 interface Product {
   id: string;
   nombre: string;
   sap: string;
+  tipoBebidaId: string;
   unidades: number;
 }
 
@@ -23,6 +31,7 @@ interface InventoryEntry {
 
 interface Order {
   id: string;
+  estadoOrden: 'PENDIENTE' | 'DESPACHADA' | 'COMPLETADA';
   detalles: {
     productoId: string;
     cantidad: number;
@@ -31,15 +40,18 @@ interface Order {
 
 const Dashboard: FC = () => {
   const { userSedeId } = useAuth();
+  const { beverageTypes, loadingMasterData } = useData();
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [todayInventory, setTodayInventory] = useState<Record<string, InventoryEntry>>({});
   const [yesterdayInventory, setYesterdayInventory] = useState<Record<string, InventoryEntry>>({});
-  const [todayPreventa, setTodayPreventa] = useState<Record<string, number>>({});
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedType, setSelectedType] = useState<string>('');
 
   const yesterdayStr = useMemo(() => {
-    const d = new Date(selectedDate + 'T12:00:00'); // Evitar problemas de zona horaria
+    const d = new Date(selectedDate + 'T12:00:00');
     d.setDate(d.getDate() - 1);
     return d.toISOString().split('T')[0];
   }, [selectedDate]);
@@ -60,198 +72,226 @@ const Dashboard: FC = () => {
       setYesterdayInventory(s.exists() ? s.data().productos || {} : {});
     });
 
-    const q = query(
-      collection(db, 'ordenes'),
-      where('sedeId', '==', userSedeId),
-      where('fechaCreacion', '>=', selectedDate)
-    );
-    const unsubOrders = onSnapshot(q, (s) => {
-      const preventaMap: Record<string, number> = {};
-      s.docs.forEach(d => {
-        (d.data() as Order).detalles.forEach(item => {
-          preventaMap[item.productoId] = (preventaMap[item.productoId] || 0) + item.cantidad;
-        });
-      });
-      setTodayPreventa(preventaMap);
+    const qOrders = query(collection(db, 'ordenes'), where('sedeId', '==', userSedeId), where('fechaCreacion', '>=', selectedDate));
+    const unsubOrders = onSnapshot(qOrders, (s) => {
+      setOrders(s.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
       setLoading(false);
     });
 
     return () => { unsubProducts(); unsubToday(); unsubYesterday(); unsubOrders(); };
   }, [userSedeId, selectedDate, yesterdayStr]);
 
-  const dashboardData = useMemo(() => {
-    return products.map(p => {
-      const hoy = todayInventory[p.id];
-      const totalAyer = yesterdayInventory[p.id] ? (yesterdayInventory[p.id].almacen + yesterdayInventory[p.id].consignacion + yesterdayInventory[p.id].rechazo) : 0;
-      const hasTodayCount = todayInventory.hasOwnProperty(p.id);
-      const preventa = todayPreventa[p.id] || 0;
+  const stats = useMemo(() => {
+    let tStock = 0, tInventario = 0, tTransito = 0, tPreventa = 0, tVentas = 0, tRechazo = 0;
+    const chartData: any[] = [];
+    const typeDistribution: Record<string, number> = {};
+    const productMetrics: any[] = [];
 
-      return {
-        id: p.id,
-        nombre: p.nombre,
-        sap: p.sap,
-        almacen: hoy?.almacen ?? 0,
-        consignacion: hoy?.consignacion ?? 0,
-        rechazo: hoy?.rechazo ?? 0,
-        preventa,
-        transito: hasTodayCount ? Math.max(0, totalAyer - hoy.almacen) : null,
-        stock: hasTodayCount ? (hoy.almacen + hoy.consignacion + hoy.rechazo - preventa) : null,
-        hasTodayCount
-      };
+    products.forEach(p => {
+      if (selectedType && p.tipoBebidaId !== selectedType) return;
+
+      const hoy = todayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
+      const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
+      
+      let pPreventa = 0, pVentas = 0;
+      orders.forEach(o => {
+        const item = o.detalles.find(d => d.productoId === p.id);
+        if (item) {
+          if (o.estadoOrden === 'PENDIENTE') pPreventa += item.cantidad;
+          else pVentas += item.cantidad;
+        }
+      });
+
+      const pTransito = todayInventory.hasOwnProperty(p.id) ? Math.max(0, (ayer.almacen + ayer.consignacion + ayer.rechazo) - hoy.almacen) : 0;
+      const pInventario = hoy.almacen + hoy.consignacion + hoy.rechazo;
+      const pStock = pInventario - pPreventa;
+
+      tStock += pStock; tInventario += pInventario; tTransito += pTransito;
+      tPreventa += pPreventa; tVentas += pVentas; tRechazo += hoy.rechazo;
+
+      const metric = { id: p.id, name: p.nombre, sap: p.sap, stock: pStock, transito: pTransito, ventas: pVentas, inventario: pInventario };
+      productMetrics.push(metric);
+
+      if (pInventario > 0 || pTransito > 0 || pVentas > 0) {
+        chartData.push({ name: p.nombre.substring(0, 10), Stock: pStock, Tránsito: pTransito, Ventas: pVentas });
+        const typeName = beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros';
+        typeDistribution[typeName] = (typeDistribution[typeName] || 0) + pInventario;
+      }
     });
-  }, [products, todayInventory, yesterdayInventory, todayPreventa]);
 
-  const totals = useMemo(() => {
-    let tTransito = 0, tStock = 0, tPreventa = 0, productsCounted = 0;
-    dashboardData.forEach(d => {
-      if (d.hasTodayCount) { tTransito += d.transito || 0; tStock += d.stock || 0; productsCounted++; }
-      tPreventa += d.preventa;
-    });
-    return { tTransito, tStock, tPreventa, productsCounted, totalProducts: products.length };
-  }, [dashboardData, products.length]);
+    return { 
+      tStock, tInventario, tTransito, tPreventa, tVentas, tRechazo, 
+      chartData, 
+      pieData: Object.keys(typeDistribution).map(name => ({ name, value: typeDistribution[name] })),
+      tops: {
+        ventas: [...productMetrics].sort((a, b) => b.ventas - a.ventas).slice(0, 5),
+        transito: [...productMetrics].sort((a, b) => b.transito - a.transito).slice(0, 5),
+        critico: [...productMetrics].filter(p => p.inventario > 0).sort((a, b) => a.stock - b.stock).slice(0, 5)
+      }
+    };
+  }, [products, todayInventory, yesterdayInventory, orders, selectedType, beverageTypes]);
 
-  if (loading) return <GlobalSpinner variant="overlay" />;
+  if (loadingMasterData) return <GlobalSpinner variant="overlay" />;
 
-  const columns: Column<any>[] = [
-    { header: 'PRODUCTO', render: (d) => (
-      <div className="ps-2">
-        <div className="fw-bold text-white" style={{ fontSize: '0.85rem' }}>{d.nombre}</div>
-        <div className="text-secondary mono-font" style={{ fontSize: '0.7rem' }}>{d.sap}</div>
-      </div>
-    )},
-    { header: 'A / C / R', render: (d) => (
-      <div className="text-light small opacity-75">
-        {d.hasTodayCount ? `${d.almacen}/${d.consignacion}/${d.rechazo}` : '---'}
-      </div>
-    )},
-    { header: 'PREVENTA', render: (d) => <span className="fw-bold text-white">{d.preventa}</span> },
-    { header: 'TRÁNSITO', render: (d) => (
-      d.hasTodayCount ? (
-        <Badge bg={d.transito > 0 ? "warning" : "light"} className={`border ${d.transito > 0 ? 'text-dark' : 'text-muted'}`}>
-          {d.transito}
-        </Badge>
-      ) : <span className="text-muted">---</span>
-    )},
-    { header: 'STOCK REAL', render: (d) => (
-      d.hasTodayCount ? (
-        <Badge bg={d.stock > 0 ? "success" : "danger"} className="shadow-sm">
-          {d.stock}
-        </Badge>
-      ) : <span className="text-muted">---</span>
-    )}
-  ];
+  const COLORS = ['#F40009', '#007bff', '#ffc107', '#28a745', '#17a2b8', '#6c757d'];
 
   return (
     <div className="admin-layout-container overflow-hidden">
-      <div className="admin-section-table d-flex flex-column h-100 overflow-hidden">
+      <div className="admin-section-table d-flex flex-column h-100 overflow-auto custom-scrollbar p-3">
         
-        {/* Cabecera de KPIs Compacta */}
-        <Row className="g-2 mb-3 px-1">
-          <Col xs={6} md={3}>
-            <div className="info-pill-new w-100 h-100">
-              <span className="pill-icon pill-icon-sober"><FaTruck /></span>
-              <div className="pill-content">
-                <span className="pill-label">TRÁNSITO TOTAL</span>
-                <span className="pill-value h6 mb-0">{totals.productsCounted === 0 ? '---' : totals.tTransito}</span>
-              </div>
-            </div>
-          </Col>
-          <Col xs={6} md={3}>
-            <div className="info-pill-new w-100 h-100">
-              <span className="pill-icon pill-icon-sober highlight-system"><FaBox /></span>
-              <div className="pill-content">
-                <span className="pill-label">STOCK DISPONIBLE</span>
-                <span className="pill-value h6 mb-0">{totals.productsCounted === 0 ? '---' : totals.tStock}</span>
-              </div>
-            </div>
-          </Col>
-          <Col xs={6} md={3}>
-            <div className="info-pill-new w-100 h-100">
-              <span className="pill-icon pill-icon-sober"><FaShoppingCart /></span>
-              <div className="pill-content">
-                <span className="pill-label">PREVENTA HOY</span>
-                <span className="pill-value h6 mb-0">{totals.tPreventa}</span>
-              </div>
-            </div>
-          </Col>
-          <Col xs={6} md={3}>
-            <div className="info-pill-new w-100 h-100">
+        {/* 1. FILTROS (Mismo diseño que AlmacenPage) */}
+        <Row className="g-2 mb-4">
+          <Col xs={12} md={4}>
+            <div className="info-pill-new w-100">
               <span className="pill-icon pill-icon-sober"><FaCalendarAlt /></span>
-              <div className="pill-content">
-                <span className="pill-label">FECHA INVENTARIO</span>
-                <Form.Control 
-                  type="date" 
-                  value={selectedDate} 
-                  onChange={(e) => setSelectedDate(e.target.value)} 
-                  className="pill-date-input-v2"
-                />
+              <div className="pill-content w-100">
+                <span className="pill-label">FECHA ANÁLISIS</span>
+                <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2" />
+              </div>
+            </div>
+          </Col>
+          <Col xs={12} md={4}>
+            <div className="info-pill-new w-100">
+              <span className="pill-icon pill-icon-sober"><FaFilter /></span>
+              <div className="pill-content w-100">
+                <span className="pill-label">TIPO BEBIDA</span>
+                <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2">
+                  <option value="">TODAS</option>
+                  {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>)}
+                </Form.Select>
+              </div>
+            </div>
+          </Col>
+          <Col xs={12} md={4} className="d-flex align-items-center justify-content-end">
+            {loading && <Spinner animation="border" size="sm" className="text-danger me-2" />}
+            <Badge bg="dark" className="border py-2 px-3">{stats.chartData.length} PRODUCTOS</Badge>
+          </Col>
+        </Row>
+
+        {!loading && Object.keys(todayInventory).length === 0 && (
+          <Alert variant="warning" className="border-0 shadow-sm mb-4 py-2 small fw-bold">
+            <FaExclamationTriangle className="me-2" /> CONTEO PENDIENTE PARA ESTA FECHA.
+          </Alert>
+        )}
+
+        {/* 2. KPIs COMPACTOS */}
+        <Row className="g-2 mb-4">
+          {[
+            { label: 'STOCK', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
+            { label: 'INVENTARIO', value: stats.tInventario, icon: <FaWarehouse />, color: '#007bff' },
+            { label: 'TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#ffc107' },
+            { label: 'VENTAS', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#28a745' },
+            { label: 'PREVENTA', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#17a2b8' },
+            { label: 'RECHAZOS', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#6c757d' }
+          ].map((kpi, i) => (
+            <Col key={i} xs={6} md={4} lg={2}>
+              <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
+                <div className="dash-kpi-icon" style={{ color: kpi.color }}>{kpi.icon}</div>
+                <div className="dash-kpi-data">
+                  <div className="dash-kpi-value">{loading ? '...' : kpi.value}</div>
+                  <div className="dash-kpi-label">{kpi.label}</div>
+                </div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+
+        {/* 3. GRÁFICAS */}
+        <Row className="g-3 mb-4">
+          <Col xs={12} lg={7}>
+            <div className="dash-chart-box">
+              <div className="dash-chart-header">MOVIMIENTOS DE PRODUCTOS</div>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <BarChart data={stats.chartData.slice(0, 12)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                    <XAxis dataKey="name" stroke="#555" fontSize={10} tickLine={false} />
+                    <YAxis stroke="#555" fontSize={10} tickLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                    <Legend />
+                    <Bar dataKey="Stock" fill="#F40009" />
+                    <Bar dataKey="Tránsito" fill="#ffc107" />
+                    <Bar dataKey="Ventas" fill="#28a745" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </Col>
+          <Col xs={12} lg={5}>
+            <div className="dash-chart-box">
+              <div className="dash-chart-header">MIX DE INVENTARIO</div>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie data={stats.pieData} innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                      {stats.pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                    <Legend verticalAlign="bottom" />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </Col>
         </Row>
 
-        {totals.productsCounted === 0 && (
-          <Alert variant="warning" className="py-2 px-3 border-0 shadow-sm mb-3 mx-1 d-flex align-items-center">
-            <FaExclamationTriangle className="me-2" />
-            <small className="fw-bold">Conteo de almacén pendiente para {selectedDate}.</small>
-          </Alert>
-        )}
+        {/* 4. RANKINGS */}
+        <Row className="g-2">
+          {[
+            { title: 'TOP VENTAS', data: stats.tops.ventas, valKey: 'ventas', color: 'text-success', icon: <FaTrophy /> },
+            { title: 'MÁS TRÁNSITO', data: stats.tops.transito, valKey: 'transito', color: 'text-warning', icon: <FaTruck /> },
+            { title: 'STOCK CRÍTICO', data: stats.tops.critico, valKey: 'stock', color: 'text-danger', icon: <FaExclamationTriangle /> }
+          ].map((top, i) => (
+            <Col key={i} xs={12} md={4}>
+              <div className="dash-top-card">
+                <div className="dash-top-header">{top.icon} {top.title}</div>
+                {top.data.map((p, idx) => (
+                  <div key={idx} className="dash-top-item">
+                    <span className="dash-top-idx">{idx + 1}</span>
+                    <div className="dash-top-info">
+                      <div className="dash-top-name">{p.name}</div>
+                      <div className="dash-top-sap">{p.sap}</div>
+                    </div>
+                    <div className={`dash-top-val ${top.color}`}>{p[top.valKey]} U</div>
+                  </div>
+                ))}
+              </div>
+            </Col>
+          ))}
+        </Row>
 
-        {/* Tabla con Altura Adaptable */}
-        <div className="flex-grow-1 overflow-auto custom-scrollbar border rounded shadow-sm bg-card-custom mx-1">
-          <GenericTable 
-            data={dashboardData} 
-            columns={columns} 
-            variant={localStorage.getItem('theme') === 'dark' ? 'dark' : ''} 
-          />
-        </div>
       </div>
 
       <style>{`
-        .admin-layout-container { max-height: calc(100vh - 70px); }
-        .bg-card-custom { background-color: var(--theme-background-primary); }
-        .mono-font { font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .admin-layout-container { padding: 0 !important; }
         
-        /* Estilo de pills heredado de AlmacenPage para consistencia */
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; border-radius: 4px; }
-        .pill-icon { padding: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-        .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); border-right: 1px solid var(--theme-border-default); }
-        .pill-icon-sober.highlight-system { color: var(--color-red-primary); }
-        
-        .pill-content { padding: 4px 12px; display: flex; flex-direction: column; justify-content: center; }
-        .pill-label { font-size: 0.6rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; }
-        .pill-value { color: var(--theme-text-primary); font-family: 'Inter', sans-serif; }
+        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 4px; height: 45px; overflow: hidden; }
+        .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); padding: 0 12px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
+        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; }
+        .pill-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; }
+        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: white !important; font-weight: 700; font-size: 0.75rem; cursor: pointer; padding: 0 !important; }
+        .pill-date-input-v2::-webkit-calendar-picker-indicator { filter: invert(1); }
 
-        /* Estilo específico para el input de fecha en Dashboard */
-        .pill-date-input-v2 { 
-          background: transparent !important; 
-          border: none !important; 
-          color: var(--theme-text-primary) !important; 
-          font-weight: 700 !important; 
-          font-size: 0.85rem !important; 
-          padding: 0 !important; 
-          height: auto !important; 
-          cursor: pointer;
-          font-family: 'Inter', sans-serif;
-        }
-        .pill-date-input-v2::-webkit-calendar-picker-indicator {
-          filter: invert(1) brightness(100%);
-          cursor: pointer;
-        }
+        .dash-kpi-card { background: var(--theme-background-secondary); padding: 12px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 10px; height: 100%; }
+        .dash-kpi-icon { font-size: 1.2rem; opacity: 0.8; }
+        .dash-kpi-value { font-size: 1.1rem; font-weight: 900; color: white; line-height: 1; }
+        .dash-kpi-label { font-size: 0.55rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; margin-top: 2px; }
 
-        /* Mejora visual de la tabla */
-        .table thead th { 
-          background-color: var(--theme-background-secondary); 
-          font-size: 0.65rem; 
-          letter-spacing: 0.05rem; 
-          border-bottom: 2px solid var(--theme-border-default);
-          color: var(--theme-text-primary);
-          padding: 10px 15px;
-        }
-        .table tbody td { 
-          vertical-align: middle; 
-          padding: 10px 15px;
-          border-bottom: 1px solid var(--theme-border-default);
+        .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; height: 100%; }
+        .dash-chart-header { font-size: 0.65rem; font-weight: 900; color: var(--theme-text-secondary); margin-bottom: 15px; text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; }
+
+        .dash-top-card { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); height: 100%; }
+        .dash-top-header { padding: 10px 12px; background: #000; font-size: 0.65rem; font-weight: 900; border-bottom: 1px solid var(--theme-border-default); color: var(--theme-text-secondary); }
+        .dash-top-item { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .dash-top-idx { width: 20px; font-weight: 900; color: var(--color-red-primary); font-size: 0.7rem; }
+        .dash-top-info { flex: 1; min-width: 0; }
+        .dash-top-name { font-size: 0.7rem; font-weight: bold; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dash-top-sap { font-size: 0.55rem; color: #555; }
+        .dash-top-val { font-weight: 900; font-size: 0.75rem; }
+
+        @media (max-width: 768px) {
+          .dash-kpi-value { font-size: 1rem; }
+          .dash-chart-box { height: auto; }
         }
       `}</style>
     </div>
@@ -259,4 +299,3 @@ const Dashboard: FC = () => {
 };
 
 export default Dashboard;
-
