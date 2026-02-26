@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Card, Badge, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Alert, Spinner, Form } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
@@ -36,13 +36,13 @@ const Dashboard: FC = () => {
   const [yesterdayInventory, setYesterdayInventory] = useState<Record<string, InventoryEntry>>({});
   const [todayPreventa, setTodayPreventa] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const yesterdayStr = useMemo(() => {
-    const d = new Date();
+    const d = new Date(selectedDate + 'T12:00:00'); // Evitar problemas de zona horaria
     d.setDate(d.getDate() - 1);
     return d.toISOString().split('T')[0];
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     if (!userSedeId) return;
@@ -52,7 +52,7 @@ const Dashboard: FC = () => {
       setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
     });
 
-    const unsubToday = onSnapshot(doc(db, 'inventario_diario', `${userSedeId}_${todayStr}`), (s) => {
+    const unsubToday = onSnapshot(doc(db, 'inventario_diario', `${userSedeId}_${selectedDate}`), (s) => {
       setTodayInventory(s.exists() ? s.data().productos || {} : {});
     });
 
@@ -63,7 +63,7 @@ const Dashboard: FC = () => {
     const q = query(
       collection(db, 'ordenes'),
       where('sedeId', '==', userSedeId),
-      where('fechaCreacion', '>=', todayStr)
+      where('fechaCreacion', '>=', selectedDate)
     );
     const unsubOrders = onSnapshot(q, (s) => {
       const preventaMap: Record<string, number> = {};
@@ -77,7 +77,7 @@ const Dashboard: FC = () => {
     });
 
     return () => { unsubProducts(); unsubToday(); unsubYesterday(); unsubOrders(); };
-  }, [userSedeId, todayStr, yesterdayStr]);
+  }, [userSedeId, selectedDate, yesterdayStr]);
 
   const dashboardData = useMemo(() => {
     return products.map(p => {
@@ -178,8 +178,13 @@ const Dashboard: FC = () => {
             <div className="info-pill-new w-100 h-100">
               <span className="pill-icon pill-icon-sober"><FaCalendarAlt /></span>
               <div className="pill-content">
-                <span className="pill-label">FECHA ACTUAL</span>
-                <span className="pill-value h6 mb-0">{todayStr}</span>
+                <span className="pill-label">FECHA INVENTARIO</span>
+                <Form.Control 
+                  type="date" 
+                  value={selectedDate} 
+                  onChange={(e) => setSelectedDate(e.target.value)} 
+                  className="pill-date-input-v2"
+                />
               </div>
             </div>
           </Col>
@@ -188,7 +193,7 @@ const Dashboard: FC = () => {
         {totals.productsCounted === 0 && (
           <Alert variant="warning" className="py-2 px-3 border-0 shadow-sm mb-3 mx-1 d-flex align-items-center">
             <FaExclamationTriangle className="me-2" />
-            <small className="fw-bold">Conteo de almacén pendiente para hoy.</small>
+            <small className="fw-bold">Conteo de almacén pendiente para {selectedDate}.</small>
           </Alert>
         )}
 
@@ -217,6 +222,22 @@ const Dashboard: FC = () => {
         .pill-label { font-size: 0.6rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; }
         .pill-value { color: var(--theme-text-primary); font-family: 'Inter', sans-serif; }
 
+        /* Estilo específico para el input de fecha en Dashboard */
+        .pill-date-input-v2 { 
+          background: transparent !important; 
+          border: none !important; 
+          color: var(--theme-text-primary) !important; 
+          font-weight: 700 !important; 
+          font-size: 0.85rem !important; 
+          padding: 0 !important; 
+          height: auto !important; 
+          cursor: pointer;
+          font-family: 'Inter', sans-serif;
+        }
+        .pill-date-input-v2::-webkit-calendar-picker-indicator {
+          filter: invert(1) brightness(100%);
+          cursor: pointer;
+        }
 
         /* Mejora visual de la tabla */
         .table thead th { 
@@ -233,9 +254,9 @@ const Dashboard: FC = () => {
           border-bottom: 1px solid var(--theme-border-default);
         }
       `}</style>
-
     </div>
   );
 };
 
 export default Dashboard;
+
