@@ -113,11 +113,14 @@ const AlmacenPage: FC = () => {
       if (!aDirty && bDirty) return 1;
       return a.nombre.localeCompare(b.nombre);
     });
-  }, [processedData, searchTerm, draftInventory]);
+  }, [processedData, searchTerm, draftInventory, selectedBeverageType]);
 
   const summaryData = useMemo(() => {
-    return processedData.filter(p => p.hasData);
-  }, [processedData]);
+    return processedData.filter(p => 
+      p.hasData && 
+      (selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType)
+    );
+  }, [processedData, selectedBeverageType]);
 
   const formatQty = (totalUnits: number, unitsPerBox: number) => {
     const boxes = Math.floor(totalUnits / unitsPerBox);
