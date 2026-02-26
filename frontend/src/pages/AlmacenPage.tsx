@@ -6,9 +6,10 @@ import { collection, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/f
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle, FaWarehouse } from 'react-icons/fa';
+import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle, FaWarehouse, FaGlassMartiniAlt } from 'react-icons/fa';
 import GenericTable, { type Column } from '../components/GenericTable';
 import SearchInput from '../components/SearchInput';
+import GenericFilter from '../components/GenericFilter';
 
 interface Product {
   id: string;
@@ -26,7 +27,7 @@ interface InventoryEntry {
 
 const AlmacenPage: FC = () => {
   const { userSedeId, userName } = useAuth();
-  const { loadingMasterData } = useData();
+  const { beverageTypes, loadingMasterData } = useData();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [dailyInventory, setTodayInventory] = useState<Record<string, InventoryEntry>>({});
@@ -35,6 +36,7 @@ const AlmacenPage: FC = () => {
   
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBeverageType, setSelectedBeverageType] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -100,7 +102,10 @@ const AlmacenPage: FC = () => {
   }, [processedData]);
 
   const sortedProducts = useMemo(() => {
-    const list = processedData.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.includes(searchTerm));
+    let list = processedData.filter(p => 
+      (p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.includes(searchTerm)) &&
+      (selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType)
+    );
     return [...list].sort((a, b) => {
       const aDirty = draftInventory.hasOwnProperty(a.id);
       const bDirty = draftInventory.hasOwnProperty(b.id);
@@ -258,13 +263,33 @@ const AlmacenPage: FC = () => {
           </Alert>
         )}
 
-        <div className="mb-3 px-1">
-          <SearchInput 
-            searchTerm={searchTerm} 
-            onSearchChange={setSearchTerm} 
-            placeholder="Buscar producto por nombre o SAP..." 
-          />
-        </div>
+        <Row className="mb-3 px-1 g-2">
+          <Col xs={7} md={8}>
+            <SearchInput 
+              searchTerm={searchTerm} 
+              onSearchChange={setSearchTerm} 
+              placeholder="Buscar producto..." 
+            />
+          </Col>
+          <Col xs={5} md={4}>
+            <div className="info-pill-new w-100">
+              <span className="pill-icon pill-icon-sober"><FaGlassMartiniAlt /></span>
+              <div className="pill-content w-100">
+                <span className="pill-label">TIPO BEBIDA</span>
+                <Form.Select 
+                  value={selectedBeverageType} 
+                  onChange={(e) => setSelectedBeverageType(e.target.value)}
+                  className="pill-select-v2"
+                >
+                  <option value="">TODOS</option>
+                  {beverageTypes.map(type => (
+                    <option key={type.id} value={type.id}>{type.nombre.toUpperCase()}</option>
+                  ))}
+                </Form.Select>
+              </div>
+            </div>
+          </Col>
+        </Row>
 
         <div className="flex-grow-1 overflow-auto pe-1 custom-scrollbar">
           {loading ? <div className="text-center py-5 text-muted">Sincronizando...</div> : (
@@ -357,7 +382,7 @@ const AlmacenPage: FC = () => {
         .admin-layout-container { max-height: calc(100vh - 70px); }
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; border-radius: 4px; height: 100%; }
         .pill-icon { padding: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-        .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); border-right: 1px solid var(--theme-border-default); }
+        .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); border-right: 1px solid var(--theme-border-default); height: 100% !important; }
         .pill-icon-sober.highlight-system { color: var(--color-red-primary); }
         .pill-content { padding: 4px 12px; display: flex; flex-direction: column; justify-content: center; }
         .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; }
@@ -366,8 +391,31 @@ const AlmacenPage: FC = () => {
         .pill-date-input-v2 { 
           background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; 
           font-weight: 700 !important; font-size: 0.85rem !important; padding: 0 !important; height: auto !important; cursor: pointer;
+          width: 100% !important;
         }
-        .pill-date-input-v2::-webkit-calendar-picker-indicator { filter: invert(1); }
+        .pill-date-input-v2::-webkit-calendar-picker-indicator { 
+          filter: invert(1); 
+          cursor: pointer;
+          transform: scale(1.5);
+          margin-left: 10px;
+        }
+
+        .pill-select-v2 {
+          background: transparent !important;
+          border: none !important;
+          color: var(--theme-text-primary) !important;
+          font-weight: 700 !important;
+          font-size: 0.75rem !important;
+          padding: 0 !important;
+          height: auto !important;
+          cursor: pointer;
+          width: 100% !important;
+          text-transform: uppercase;
+        }
+        .pill-select-v2 option {
+          background-color: var(--theme-background-secondary) !important;
+          color: var(--theme-text-primary) !important;
+        }
 
         .product-card { border: 1px solid var(--theme-border-default); background: var(--theme-background-primary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 100%; transition: all 0.2s ease; min-height: 80px; }
         .product-card:hover { border-color: var(--color-red-primary); }
