@@ -347,11 +347,24 @@ const AlmacenPage: FC = () => {
         }
         .pill-date-input-v2::-webkit-calendar-picker-indicator { filter: invert(1); }
 
-        .product-card { border: 1px solid var(--theme-border-default); background: var(--theme-background-primary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 100%; transition: all 0.2s ease; }
+        .product-card { border: 1px solid var(--theme-border-default); background: var(--theme-background-primary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 100%; transition: all 0.2s ease; min-height: 80px; }
         .product-card:hover { border-color: var(--color-red-primary); }
         .product-card.dirty { border-left: 3px solid #ffc107; background: rgba(255, 193, 7, 0.05); }
-        .product-name { font-weight: bold; font-size: 0.85rem; color: var(--theme-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .product-sap { font-size: 0.65rem; color: var(--color-red-primary); font-weight: bold; }
+        
+        .product-card-info { flex: 1; min-width: 0; padding-right: 10px; }
+        .product-name { 
+          font-weight: bold; 
+          font-size: 0.85rem; 
+          color: var(--theme-text-primary); 
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.2;
+          margin-bottom: 2px;
+        }
+        .product-sap { font-size: 0.65rem; color: var(--color-red-primary); font-weight: bold; display: block; }
         .pending-indicator { font-size: 0.55rem; background: #ffc107; color: #000; padding: 0px 4px; font-weight: 900; }
         
         .product-card-stats { display: flex; gap: 4px; }
