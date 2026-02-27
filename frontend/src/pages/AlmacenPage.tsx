@@ -384,10 +384,10 @@ const AlmacenPage: FC = () => {
         .admin-layout-container { max-height: calc(100vh - 70px); }
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; border-radius: 4px; height: 100%; }
         .pill-icon { padding: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-        .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); border-right: 1px solid var(--theme-border-default); height: 100% !important; }
+        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); border-right: 1px solid var(--theme-border-default); height: 100% !important; }
         .pill-icon-sober.highlight-system { color: var(--color-red-primary); }
         .pill-content { padding: 4px 12px; display: flex; flex-direction: column; justify-content: center; }
-        .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; }
+        .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; color: var(--theme-text-primary); }
         .pill-value { color: var(--theme-text-primary); font-family: 'Inter', sans-serif; font-weight: bold; }
         
         .pill-date-input-v2 { 
@@ -396,7 +396,7 @@ const AlmacenPage: FC = () => {
           width: 100% !important;
         }
         .pill-date-input-v2::-webkit-calendar-picker-indicator { 
-          filter: invert(1); 
+          filter: invert(var(--theme-calendar-invert, 1)); 
           cursor: pointer;
           transform: scale(1.5);
           margin-left: 10px;
@@ -456,11 +456,11 @@ const AlmacenPage: FC = () => {
           text-align: left;
         }
 
-        .inventory-modal-v3 .modal-content { background: #111 !important; border: 1px solid #333 !important; }
+        .inventory-modal-v3 .modal-content { background: var(--theme-background-primary) !important; border: 1px solid var(--theme-border-default) !important; color: var(--theme-text-primary) !important; }
         .modal-header-v3 { background: var(--color-red-primary); padding: 15px; color: white; }
-        .input-v3 { background: #000 !important; border: none !important; border-bottom: 2px solid #333 !important; color: white !important; font-weight: bold; text-align: center; font-size: 1.2rem; }
+        .input-v3 { background: var(--theme-background-secondary) !important; border: none !important; border-bottom: 2px solid var(--theme-border-default) !important; color: var(--theme-text-primary) !important; font-weight: bold; text-align: center; font-size: 1.2rem; }
         .input-v3:focus { border-color: var(--color-red-primary) !important; }
-        .label-v3 { font-size: 0.6rem; font-weight: 800; color: #666; text-transform: uppercase; margin-bottom: 2px; }
+        .label-v3 { font-size: 0.6rem; font-weight: 800; color: var(--theme-text-secondary); text-transform: uppercase; margin-bottom: 2px; }
         .border-radius-0 { border-radius: 0 !important; }
 
         @media (max-width: 768px) {

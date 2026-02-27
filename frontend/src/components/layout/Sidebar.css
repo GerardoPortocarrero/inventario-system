@@ -75,9 +75,8 @@
 .sidebar .nav-link {
   display: flex; /* Para alinear ícono y texto */
   align-items: center; /* Centrado vertical */
-  color: var(--color-white) !important;
+  color: var(--theme-text-primary) !important;
   padding: 0.75rem 1rem; /* Padding consistente */
-  /* white-space: normal; // Por defecto, el texto salta de línea en móvil */
 }
 
 .sidebar .nav-link:hover {

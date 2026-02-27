@@ -18,24 +18,32 @@
   /* Tema Oscuro (Por Defecto) */
   --theme-background-primary: #111111;
   --theme-background-secondary: #1a1a1a;
+  --theme-background-tertiary: #222222;
   --theme-text-primary: var(--color-white);
   --theme-text-secondary: #a0a0a0;
   --theme-border-default: #333333;
   --theme-card-bg: #212529;
   --theme-input-bg: #1a1a1a;
-  --theme-table-border-color: rgba(255,255,255, 0.1); /* Nuevo color de borde para tablas */
+  --theme-table-border-color: rgba(255,255,255, 0.1);
+  --theme-icon-bg: #000000;
+  --theme-icon-color: rgba(255,255,255,0.7);
+  --theme-calendar-invert: 1;
 }
 
 /* 2. Sobrescribir variables para el tema claro cuando el body tiene clase .theme-light */
 body.theme-light {
-  --theme-background-primary: #f8f9fa;
-  --theme-background-secondary: #e9ecef;
-  --theme-text-primary: #213547;
-  --theme-text-secondary: var(--color-gray-medium);
-  --theme-border-default: #dee2e6;
-  --theme-card-bg: var(--color-white);
-  --theme-input-bg: var(--color-white);
-  --theme-table-border-color: rgba(0,0,0, 0.1); /* Nuevo color de borde para tablas en tema claro */
+  --theme-background-primary: #ffffff;
+  --theme-background-secondary: #f0f2f5;
+  --theme-background-tertiary: #e4e6e9;
+  --theme-text-primary: #1c1e21;
+  --theme-text-secondary: #65676b;
+  --theme-border-default: #ced4da;
+  --theme-card-bg: #ffffff;
+  --theme-input-bg: #ffffff;
+  --theme-table-border-color: rgba(0,0,0, 0.1);
+  --theme-icon-bg: #e4e6e9;
+  --theme-icon-color: #1c1e21;
+  --theme-calendar-invert: 0;
 }
 
 html, body, #root { /* Asegura que html y body y el div #root ocupen el 100% del alto */

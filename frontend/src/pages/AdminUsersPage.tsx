@@ -136,8 +136,16 @@ const UserForm: React.FC<{
 };
 
 const AdminUsersPage: FC = () => {
-  const isDarkMode = localStorage.getItem('theme') === 'dark' || localStorage.getItem('theme') === null;
+  const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
   const isMobile = useMediaQuery('(max-width: 768px)');
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.body.classList.contains('theme-dark'));
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
   const { roles, sedes } = useData();
   
   const [users, setUsers] = useState<UserProfile[]>([]);

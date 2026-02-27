@@ -132,7 +132,10 @@ const Dashboard: FC = () => {
 
   if (loadingMasterData) return <GlobalSpinner variant="overlay" />;
 
-  const SYSTEM_COLORS = ['#F40009', '#FFFFFF', '#adb5bd', '#6c757d', '#343a40'];
+  const isDark = document.body.classList.contains('theme-dark') || !document.body.classList.contains('theme-light');
+  const SYSTEM_COLORS = isDark ? ['#F40009', '#FFFFFF', '#adb5bd', '#6c757d', '#343a40'] : ['#F40009', '#212529', '#6c757d', '#adb5bd', '#e9ecef'];
+  const CHART_TEXT_COLOR = isDark ? '#FFFFFF' : '#212529';
+  const CHART_BORDER_COLOR = isDark ? '#333' : '#ced4da';
 
   return (
     <div className="admin-layout-container flex-column overflow-hidden gap-3">
@@ -264,8 +267,8 @@ const Dashboard: FC = () => {
                       <XAxis dataKey="name" fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
                       <YAxis fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                      <Bar dataKey="Ventas" fill="#FFFFFF" radius={0} stroke="#000" strokeWidth={1} />
-                      <Bar dataKey="Stock" fill="#F40009" radius={0} stroke="#000" strokeWidth={1} />
+                      <Bar dataKey="Ventas" fill={CHART_TEXT_COLOR} radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                      <Bar dataKey="Stock" fill="#F40009" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -281,9 +284,9 @@ const Dashboard: FC = () => {
                       <XAxis dataKey="name" fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
                       <YAxis fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                      <Bar dataKey="ALM" stackId="a" fill="#adb5bd" radius={0} stroke="#000" strokeWidth={1} />
-                      <Bar dataKey="CON" stackId="a" fill="#6c757d" radius={0} stroke="#000" strokeWidth={1} />
-                      <Bar dataKey="RECH" stackId="a" fill="#F40009" radius={0} stroke="#000" strokeWidth={1} />
+                      <Bar dataKey="ALM" stackId="a" fill="#adb5bd" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                      <Bar dataKey="CON" stackId="a" fill="#6c757d" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                      <Bar dataKey="RECH" stackId="a" fill="#F40009" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
