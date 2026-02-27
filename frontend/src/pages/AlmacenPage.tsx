@@ -198,22 +198,28 @@ const AlmacenPage: FC = () => {
   const summaryColumns: Column<any>[] = [
     { header: 'PRODUCTO', render: (p) => (
       <div className="ps-2">
-        <div className="fw-bold text-white small">{p.nombre}</div>
+        <div className="fw-bold small" style={{ color: 'var(--theme-text-primary)' }}>{p.nombre}</div>
         <div className="text-secondary" style={{ fontSize: '0.65rem' }}>{p.sap} / {p.basis}</div>
       </div>
     )},
     { header: 'A / C / R', render: (p) => (
-      <div className="text-light opacity-75 small">
+      <div className="small" style={{ color: 'var(--theme-text-primary)', opacity: 0.8 }}>
         {formatQty(p.almacen, p.unidades)} / {formatQty(p.consignacion, p.unidades)} / {formatQty(p.rechazo, p.unidades)}
       </div>
     )},
     { header: 'TRÁNSITO', render: (p) => (
-      <Badge bg={p.transito > 0 ? "warning" : "dark"} className={`border ${p.transito > 0 ? 'text-dark' : 'text-muted'}`}>
+      <Badge 
+        bg={p.transito > 0 ? "warning" : (isDarkMode ? "dark" : "light")} 
+        className={`border ${p.transito > 0 ? 'text-dark' : (isDarkMode ? 'text-muted' : 'text-dark')}`}
+      >
         {formatQty(p.transito, p.unidades)}
       </Badge>
     )},
     { header: 'INVENTARIO', render: (p) => (
-      <Badge bg="dark" className="border text-white">
+      <Badge 
+        bg={isDarkMode ? "dark" : "light"} 
+        className={`border ${isDarkMode ? 'text-white' : 'text-dark'}`}
+      >
         {formatQty(p.inventarioTotal, p.unidades)}
       </Badge>
     )}
@@ -342,7 +348,7 @@ const AlmacenPage: FC = () => {
                 <GenericTable 
                   data={summaryData} 
                   columns={summaryColumns} 
-                  variant={localStorage.getItem('theme') === 'dark' ? 'dark' : ''}
+                  variant={isDarkMode ? 'dark' : ''}
                   noRecordsMessage="No se encontraron registros con datos para esta fecha."
                   isLoading={loading}
                 />
