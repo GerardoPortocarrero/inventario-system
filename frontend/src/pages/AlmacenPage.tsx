@@ -294,7 +294,13 @@ const AlmacenPage: FC = () => {
         </Row>
 
         <div className="flex-grow-1 overflow-auto pe-1 custom-scrollbar">
-          {loading ? <div className="text-center py-5 text-muted">Sincronizando...</div> : (
+          {loading ? (
+            <div className="d-flex justify-content-center align-items-center h-100 py-5">
+              <div className="spinner-border text-danger" role="status">
+                <span className="visually-hidden">Sincronizando...</span>
+              </div>
+            </div>
+          ) : (
             viewMode === 'edit' ? (
               <Row className="g-2 m-0">
                 {sortedProducts.map(product => {
