@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Badge, Alert, Form } from 'react-bootstrap';
+import { Row, Col, Alert, Form } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, doc, onSnapshot, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
@@ -220,7 +220,7 @@ const Dashboard: FC = () => {
                         <CartesianGrid stroke="#222" vertical={false} />
                         <XAxis dataKey="fecha" stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
                         <YAxis stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', color: '#fff' }} itemStyle={{ color: '#fff' }} />
                         <Area type="monotone" dataKey="stock" stroke="#F40009" strokeWidth={2} fillOpacity={1} fill="url(#c)" />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -244,7 +244,7 @@ const Dashboard: FC = () => {
                       >
                         {stats.pieData.map((_, i) => <Cell key={i} fill={SYSTEM_COLORS[i % SYSTEM_COLORS.length]} />)}
                       </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0', color: '#fff' }} itemStyle={{ color: '#fff' }} />
                       <Legend iconType="circle" />
                     </PieChart>
                   </ResponsiveContainer>
@@ -263,7 +263,7 @@ const Dashboard: FC = () => {
                       <CartesianGrid stroke="#222" vertical={false} strokeDasharray="0" />
                       <XAxis dataKey="name" fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
                       <YAxis fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0', color: '#fff' }} itemStyle={{ color: '#fff' }} />
                       <Bar dataKey="Ventas" fill="#FFFFFF" radius={0} stroke="#000" strokeWidth={1} />
                       <Bar dataKey="Stock" fill="#F40009" radius={0} stroke="#000" strokeWidth={1} />
                     </BarChart>
@@ -280,7 +280,7 @@ const Dashboard: FC = () => {
                       <CartesianGrid stroke="#222" vertical={false} strokeDasharray="0" />
                       <XAxis dataKey="name" fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
                       <YAxis fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0', color: '#fff' }} itemStyle={{ color: '#fff' }} />
                       <Bar dataKey="ALM" stackId="a" fill="#adb5bd" radius={0} stroke="#000" strokeWidth={1} />
                       <Bar dataKey="CON" stackId="a" fill="#6c757d" radius={0} stroke="#000" strokeWidth={1} />
                       <Bar dataKey="RECH" stackId="a" fill="#F40009" radius={0} stroke="#000" strokeWidth={1} />
