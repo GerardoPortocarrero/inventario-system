@@ -135,47 +135,49 @@ const Dashboard: FC = () => {
   const SYSTEM_COLORS = ['#F40009', '#FFFFFF', '#adb5bd', '#6c757d', '#343a40'];
 
   return (
-    <div className="admin-layout-container overflow-hidden">
-      <div className="admin-section-table d-flex flex-column h-100 overflow-hidden p-0">
-        
-        {/* UN SOLO CONTENEDOR DE SCROLL PARA TODO */}
+    <div className="admin-layout-container flex-column overflow-hidden gap-3">
+      
+      {/* 1. SECCIÓN DE FILTROS (Caja independiente con borde y hover) */}
+      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto' }}>
+        <Row className="g-2 align-items-center">
+          <Col xs={6} md={4}>
+            <div className="info-pill-new w-100">
+              <span className="pill-icon-sober"><FaCalendarAlt /></span>
+              <div className="pill-content">
+                <span className="pill-label">FECHA</span>
+                <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2" />
+              </div>
+            </div>
+          </Col>
+          <Col xs={6} md={4}>
+            <div className="info-pill-new w-100">
+              <span className="pill-icon-sober"><FaFilter /></span>
+              <div className="pill-content">
+                <span className="pill-label">FILTRAR</span>
+                <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2">
+                  <option value="">TODAS LAS BEBIDAS</option>
+                  {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>)}
+                </Form.Select>
+              </div>
+            </div>
+          </Col>
+          <Col xs={12} md={4} className="text-md-end text-center pt-md-0 pt-2">
+            <Badge bg="dark" className="border py-2 px-3 small">{stats.chartMain.length} PRODUCTOS FILTRADOS</Badge>
+          </Col>
+        </Row>
+      </div>
+
+      {/* 2. SECCIÓN DE CONTENIDO (Caja independiente con borde, hover y scroll) */}
+      <div className="admin-section-table flex-grow-1 overflow-hidden p-0">
         <div className="h-100 overflow-auto custom-scrollbar p-3">
           
-          {/* 1. FILTROS (Integrados en el flujo) */}
-          <Row className="g-2 mb-4 align-items-center">
-            <Col xs={6} md={4}>
-              <div className="info-pill-new w-100">
-                <span className="pill-icon-sober"><FaCalendarAlt /></span>
-                <div className="pill-content">
-                  <span className="pill-label">FECHA</span>
-                  <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2" />
-                </div>
-              </div>
-            </Col>
-            <Col xs={6} md={4}>
-              <div className="info-pill-new w-100">
-                <span className="pill-icon-sober"><FaFilter /></span>
-                <div className="pill-content">
-                  <span className="pill-label">FILTRAR</span>
-                  <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2">
-                    <option value="">TODAS LAS BEBIDAS</option>
-                    {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>)}
-                  </Form.Select>
-                </div>
-              </div>
-            </Col>
-            <Col xs={12} md={4} className="text-md-end text-center pt-md-0 pt-2">
-              <Badge bg="dark" className="border py-2 px-3 small">{stats.chartMain.length} PRODUCTOS FILTRADOS</Badge>
-            </Col>
-          </Row>
-
           {!loading && Object.keys(todayInventory).length === 0 && (
             <Alert variant="warning" className="border-0 py-2 small fw-bold mb-4">
               <FaExclamationTriangle className="me-2" /> SIN CONTEO REGISTRADO PARA HOY.
             </Alert>
           )}
 
-          {/* 2. KPIs */}
+          {/* KPIs */}
           <Row className="g-2 mb-4">
             {[
               { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
@@ -197,7 +199,7 @@ const Dashboard: FC = () => {
             ))}
           </Row>
 
-          {/* 3. GRÁFICAS */}
+          {/* GRÁFICAS */}
           <Row className="g-3 mb-4">
             <Col xs={12} lg={8}>
               <div className="dash-chart-box">
@@ -281,7 +283,7 @@ const Dashboard: FC = () => {
             </Col>
           </Row>
 
-          {/* 4. TOPS */}
+          {/* TOPS */}
           <Row className="g-2 pb-2">
             {[
               { title: 'TOP VENTAS', data: stats.tops.ventas, key: 'ventas', color: 'text-success', icon: <FaTrophy /> },
