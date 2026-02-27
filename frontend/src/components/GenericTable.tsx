@@ -42,9 +42,7 @@ const GenericTable = <T extends { id: string }>({
         {data.map((item) => (
           <Card 
             key={item.id} 
-            className="mb-3" // Clases base, el borde se gestiona en CSS. El padding se gestiona en los contenedores internos.
-            bg={variant} 
-            text={variant === 'dark' ? 'white' : 'dark'}
+            className="mb-3" // Clases base, el borde se gestiona en CSS.
           >
             {/* Contenedor explícito para la información */}
             <div className="card-information-container p-3"> {/* Padding aplicado aquí */}
@@ -52,10 +50,10 @@ const GenericTable = <T extends { id: string }>({
                 .filter(column => column.header !== UI_TEXTS.TABLE_HEADER_ACTIONS)
                 .map((column, idx) => (
                   <Row key={idx} className="mb-2 align-items-center">
-                    <Col xs="auto" className="text-secondary fw-bold"> 
+                    <Col xs="auto" className="text-secondary fw-bold" style={{ fontSize: '0.8rem' }}> 
                       {column.header}:
                     </Col>
-                    <Col xs className="fw-bold text-wrap text-end">
+                    <Col xs className="fw-bold text-wrap text-end" style={{ color: 'var(--theme-text-primary)', fontSize: '0.9rem' }}>
                       {column.render
                         ? column.render(item)
                         : (column.accessorKey
@@ -91,7 +89,7 @@ const GenericTable = <T extends { id: string }>({
   // Vista de Escritorio (Tabla) - Sin scrollbar interno
   return (
     <div>
-      <Table responsive variant={variant}>
+      <Table responsive hover className="mb-0">
         <thead>
           <tr>
             {columns.map((column, idx) => (

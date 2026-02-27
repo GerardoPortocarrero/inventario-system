@@ -178,83 +178,48 @@ a:hover {
 
 /* Estilos para Tablas */
 .table {
-  color: var(--theme-text-primary) !important; /* Color de texto general de la tabla */
-  margin-bottom: 0 !important; /* Eliminar el margen inferior por defecto de Bootstrap */
+  color: var(--theme-text-primary) !important;
+  background-color: var(--theme-background-primary) !important;
+  margin-bottom: 0 !important;
+  border-color: var(--theme-table-border-color) !important;
+}
+
+.table > :not(caption) > * > * {
+  background-color: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
 }
 
 /* Headers de tabla */
 .table thead th {
-  color: var(--theme-text-secondary) !important; /* Color de texto secundario para headers */
-  border-bottom: 1px solid var(--theme-table-border-color) !important; /* Borde sutil inferior */
-  border-top: none !important; /* Quitar borde superior si existe */
+  color: var(--theme-text-secondary) !important;
+  border-bottom: 1px solid var(--theme-table-border-color) !important;
+  border-top: none !important;
+  background-color: transparent !important;
 }
 
-/* Bordes sutiles entre filas para todas las variantes */
+/* Filas de tabla */
 .table tbody tr {
-  border-bottom: 1px solid var(--theme-table-border-color) !important; /* Borde sutil entre filas */
+  border-bottom: 1px solid var(--theme-table-border-color) !important;
+  transition: background-color 0.2s ease;
 }
 
-/* Eliminar bordes laterales para todas las variantes */
-.table th, .table td {
-  border-left: none !important;
-  border-right: none !important;
-}
-
-/* Estilos para filas impares en tablas striped (si se usa) */
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: var(--theme-background-secondary) !important;
-}
-
-/* Estilos para el hover en filas de tabla */
 .table-hover tbody tr:hover {
   background-color: var(--theme-background-secondary) !important;
 }
 
-/* Align content of the last column to the right for tables */
+/* Eliminar bordes laterales */
+.table th, .table td {
+  border-left: none !important;
+  border-right: none !important;
+  padding: 12px 15px !important;
+  vertical-align: middle;
+}
+
+/* Align last column */
 .table th:last-child,
 .table td:last-child {
   text-align: end !important;
-}
-
-/* Ensure action containers inside cells are also pushed to the end */
-.table td:last-child > div {
-  justify-content: flex-end !important;
-}
-
-/* Fondo de tabla oscuro */
-.table-dark tbody tr {
-  background-color: var(--theme-background-primary) !important; /* Todas las filas igual al fondo principal */
-}
-.table-dark.table-striped tbody tr:nth-of-type(odd) { /* Desactivar striped background color */
-  background-color: var(--theme-background-primary) !important;
-}
-.table-dark.table-hover tbody tr:hover { /* Desactivar hover background color */
-  background-color: var(--theme-background-primary) !important;
-}
-.table-dark {
-  --bs-table-bg: var(--theme-background-primary) !important;
-  --bs-table-striped-bg: var(--theme-background-primary) !important; /* Actualizar BS var */
-  --bs-table-hover-bg: var(--theme-background-primary) !important; /* Actualizar BS var */
-  --bs-table-border-color: var(--theme-table-border-color) !important; /* Usar nuevo color de borde */
-  color: var(--theme-text-primary) !important;
-}
-
-/* Fondo de tabla claro */
-.table-light tbody tr {
-  background-color: var(--theme-background-primary) !important; /* Todas las filas igual al fondo principal */
-}
-.table-light.table-striped tbody tr:nth-of-type(odd) { /* Desactivar striped background color */
-  background-color: var(--theme-background-primary) !important;
-}
-.table-light.table-hover tbody tr:hover { /* Desactivar hover background color */
-  background-color: var(--theme-background-primary) !important;
-}
-.table-light {
-  --bs-table-bg: var(--theme-background-primary) !important;
-  --bs-table-striped-bg: var(--theme-background-primary) !important; /* Actualizar BS var */
-  --bs-table-hover-bg: var(--theme-background-primary) !important; /* Actualizar BS var */
-  --bs-table-border-color: var(--theme-table-border-color) !important; /* Usar nuevo color de borde */
-  color: var(--theme-text-primary) !important;
 }
 
 /* Estilos para el Header de la aplicación */
