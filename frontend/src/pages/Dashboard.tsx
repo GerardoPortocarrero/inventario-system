@@ -180,13 +180,13 @@ const Dashboard: FC = () => {
         <div className="h-100 overflow-auto custom-scrollbar p-3">
           
           {!loading && Object.keys(todayInventory).length === 0 && (
-            <Alert variant="warning" className="border-0 py-2 small fw-bold mb-4">
+            <Alert variant="warning" className="border-0 py-2 small fw-bold mb-3">
               <FaExclamationTriangle className="me-2" /> SIN CONTEO REGISTRADO PARA HOY.
             </Alert>
           )}
 
           {/* KPIs */}
-          <Row className="g-2 mb-4">
+          <Row className="g-2 mb-3">
             {[
               { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
               { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#FFFFFF' },
@@ -208,7 +208,7 @@ const Dashboard: FC = () => {
           </Row>
 
           {/* GRÁFICAS */}
-          <Row className="g-3 mb-4">
+          <Row className="g-3 mb-3">
             <Col xs={12} lg={8}>
               <div className="dash-chart-box">
                 <div className="dash-chart-header"><FaChartArea className="me-2 text-danger" /> TENDENCIA SEMANAL</div>
@@ -253,7 +253,7 @@ const Dashboard: FC = () => {
             </Col>
           </Row>
 
-          <Row className="g-3 mb-4">
+          <Row className="g-3 mb-3">
             <Col xs={12} lg={6}>
               <div className="dash-chart-box">
                 <div className="dash-chart-header">BALANCE COMERCIAL</div>
