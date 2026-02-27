@@ -20,8 +20,17 @@ interface InventoryEntry { almacen: number; consignacion: number; rechazo: numbe
 interface Order { id: string; estadoOrden: string; detalles: { productoId: string; cantidad: number; }[]; }
 
 const Dashboard: FC = () => {
+  const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
   const { userSedeId } = useAuth();
   const { beverageTypes, loadingMasterData } = useData();
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.body.classList.contains('theme-dark'));
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
   
   const [products, setProducts] = useState<Product[]>([]);
   const [todayInventory, setTodayInventory] = useState<Record<string, InventoryEntry>>({});
@@ -130,8 +139,8 @@ const Dashboard: FC = () => {
     };
   }, [products, todayInventory, yesterdayInventory, orders, selectedType, beverageTypes]);
 
-  const isDark = document.body.classList.contains('theme-dark') || !document.body.classList.contains('theme-light');
-  const SYSTEM_COLORS = isDark ? ['#F40009', '#FFFFFF', '#adb5bd', '#6c757d', '#343a40'] : ['#F40009', '#212529', '#6c757d', '#adb5bd', '#e9ecef'];
+  const isDark = isDarkMode;
+  const SYSTEM_COLORS = isDark ? ['#F40009', '#FFFFFF', '#adb5bd', '#6c757d', '#343a40'] : ['#F40009', '#212529', '#6c757d', '#adb5bd', '#dee2e6'];
   const CHART_TEXT_COLOR = isDark ? '#FFFFFF' : '#212529';
   const CHART_BORDER_COLOR = isDark ? '#333' : '#ced4da';
   const GRID_COLOR = isDark ? '#222' : '#e9ecef';
@@ -233,7 +242,7 @@ const Dashboard: FC = () => {
                         <ResponsiveContainer>
                                                 <AreaChart data={historyData}>
                                                   <defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F40009" stopOpacity={0.3}/><stop offset="95%" stopColor="#F40009" stopOpacity={0}/></linearGradient></defs>
-                                                  <CartesianGrid stroke={GRID_COLOR} vertical={false} />
+                                                  <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} strokeDasharray="3 3" />
                                                   <XAxis dataKey="fecha" stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
                                                   <YAxis stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
                                                   <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
@@ -249,15 +258,13 @@ const Dashboard: FC = () => {
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                         <PieChart>
-                          <Pie 
-                            data={stats.pieData} 
-                            innerRadius={65} 
-                            outerRadius={90} 
-                            dataKey="value"
-                            stroke="#1a1a1a"
-                            strokeWidth={3}
-                          >
-                                                    {stats.pieData.map((_, i) => <Cell key={i} fill={SYSTEM_COLORS[i % SYSTEM_COLORS.length]} />)}
+                                                  <Pie 
+                                                    data={stats.pieData} 
+                                                    innerRadius={65} 
+                                                    outerRadius={90} 
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                  >                                                    {stats.pieData.map((_, i) => <Cell key={i} fill={SYSTEM_COLORS[i % SYSTEM_COLORS.length]} />)}
                                                   </Pie>
                                                   <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
                                                   <Legend iconType="circle" />                        </PieChart>
@@ -274,7 +281,7 @@ const Dashboard: FC = () => {
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                                             <BarChart data={stats.chartMain.slice(0, 8)}>
-                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} strokeDasharray="0" />
+                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} strokeDasharray="3 3" />
                                               <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
@@ -290,7 +297,7 @@ const Dashboard: FC = () => {
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                                             <BarChart data={stats.chartOps.slice(0, 8)}>
-                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} strokeDasharray="0" />
+                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} strokeDasharray="3 3" />
                                               <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
