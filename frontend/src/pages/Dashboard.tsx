@@ -143,7 +143,7 @@ const Dashboard: FC = () => {
   const SYSTEM_COLORS = isDark ? ['#F40009', '#FFFFFF', '#adb5bd', '#6c757d', '#343a40'] : ['#F40009', '#212529', '#6c757d', '#adb5bd', '#dee2e6'];
   const CHART_TEXT_COLOR = isDark ? '#FFFFFF' : '#212529';
   const CHART_BORDER_COLOR = isDark ? '#333' : '#ced4da';
-  const GRID_COLOR = isDark ? '#222' : '#e9ecef';
+  const GRID_COLOR = isDark ? '#333333' : '#dee2e6';
   const AXIS_COLOR = isDark ? '#555' : '#888';
   const TOOLTIP_BG = isDark ? '#000' : '#fff';
   const TOOLTIP_BORDER = isDark ? '#333' : '#ced4da';
@@ -242,7 +242,7 @@ const Dashboard: FC = () => {
                         <ResponsiveContainer>
                                                 <AreaChart data={historyData}>
                                                   <defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F40009" stopOpacity={0.3}/><stop offset="95%" stopColor="#F40009" stopOpacity={0}/></linearGradient></defs>
-                                                  <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} strokeDasharray="0" />
+                                                  <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                                                   <XAxis dataKey="fecha" stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
                                                   <YAxis stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
                                                   <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
@@ -281,7 +281,7 @@ const Dashboard: FC = () => {
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                                             <BarChart data={stats.chartMain.slice(0, 8)}>
-                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} strokeDasharray="0" />
+                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                                               <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
@@ -297,7 +297,7 @@ const Dashboard: FC = () => {
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                                             <BarChart data={stats.chartOps.slice(0, 8)}>
-                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} strokeDasharray="0" />
+                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                                               <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />

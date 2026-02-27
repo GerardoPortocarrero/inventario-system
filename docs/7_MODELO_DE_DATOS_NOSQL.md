@@ -47,6 +47,29 @@ La estructura se basará en las siguientes colecciones principales:
     ```
     *Nota: Las cantidades totales de `ALMACEN` y `CONSIGNACION` se calculan agregando los datos de esta colección, filtradas por `sedeId`.*
 
+### Colección: `inventario_diario`
+*   **Propósito:** Almacena el estado consolidado del inventario físico y los compromisos de venta por sede y fecha. Es el documento central para el cálculo de Stock y Tránsito.
+*   **ID del Documento:** `{ID_Sede}_{YYYY-MM-DD}` (ej. `central_2024-02-06`)
+*   **Estructura del Documento:**
+    ```json
+    {
+      "sedeId": "ID_de_la_sede",
+      "fecha": "2024-02-06",
+      "productos": {
+        "ID_Producto_A": {
+          "almacen": 100,      // Conteo físico real (unidades)
+          "consignacion": 20,   // Llegando a sede (unidades)
+          "rechazo": 5,        // Vuelto de ruta (unidades)
+          "preventa": 15       // Acumulado de órdenes del día (unidades)
+        },
+        "ID_Producto_B": { ... }
+      },
+      "actualizadoPor": "Nombre del Usuario",
+      "timestamp": "ServerTimestamp"
+    }
+    ```
+    *Nota: El campo `preventa` se actualiza mediante transacciones de Firestore cada vez que se crea una nueva `orden`, asegurando que `STOCK = (almacen + consignacion + rechazo) - preventa` siempre sea exacto.*
+
 ### Colección: `ordenes`
 *   **Propósito:** Almacena todas las órdenes de pedido generadas por los preventistas, vinculadas a una sede específica.
 *   **Estructura del Documento:** Cada documento es una orden.

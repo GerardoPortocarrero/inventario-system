@@ -10,3 +10,6 @@ Este documento lista las capacidades y funciones que el sistema debe realizar.
 *   **RF-6: Cálculo de Tránsito por Reconciliación:** El sistema debe proveer una interfaz o proceso para registrar los conteos del `ALMACEN` antes y después de la carga, para así calcular el `TRANSITO`.
 *   **RF-7: Trazabilidad por Códigos:** El sistema debe poder asociar un código (QR/Barras) a las unidades de stock.
 *   **RF-8: Exportación de Datos:** El sistema debe ofrecer una función para descargar datos para sistemas externos.
+*   **RF-9: Validación de Stock Transaccional:** El sistema debe impedir la creación de órdenes si el stock disponible (Físico - Preventa Acumulada) es insuficiente, utilizando transacciones de base de datos para asegurar la consistencia.
+*   **RF-10: Sincronización Automática de Preventa:** Al registrar una orden, el sistema debe actualizar automáticamente el contador de preventa del producto en el inventario diario de la sede.
+*   **RF-11: Bloqueo de Venta sin Inventario:** El sistema debe bloquear la creación de órdenes de preventa si el Almacenero no ha registrado el conteo físico inicial del día.
