@@ -129,9 +129,13 @@ const AdminSedesPage: FC = () => {
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (s) => (
-        <div className="d-flex gap-2">
-          <Button variant="link" size="sm" className="p-0" onClick={() => { setEditingSede(s); setShowModal(true); }}><FaPencilAlt /></Button>
-          <Button variant="link" size="sm" className="p-0 text-danger" onClick={() => setDeletingSede(s)}><FaTrash /></Button>
+        <div className="d-flex gap-2 action-buttons-container">
+          <Button variant="link" size="sm" className="p-0 action-btn edit-btn" onClick={() => { setEditingSede(s); setShowModal(true); }}>
+            <FaPencilAlt className="icon-desktop" /> <span className="text-mobile">Editar</span>
+          </Button>
+          <Button variant="link" size="sm" className="p-0 text-danger action-btn delete-btn" onClick={() => setDeletingSede(s)}>
+            <FaTrash className="icon-desktop" /> <span className="text-mobile">Eliminar</span>
+          </Button>
         </div>
       )
     }

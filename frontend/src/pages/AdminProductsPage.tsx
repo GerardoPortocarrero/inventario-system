@@ -291,9 +291,13 @@ const AdminProductsPage: FC = () => {
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (p) => (
-        <div className="d-flex gap-2">
-          <Button variant="link" size="sm" className="p-0" onClick={() => { setEditingProduct(p); setShowModal(true); }}><FaPencilAlt /></Button>
-          <Button variant="link" size="sm" className="p-0 text-danger" onClick={() => setDeletingProduct(p)}><FaTrash /></Button>
+        <div className="d-flex gap-2 action-buttons-container">
+          <Button variant="link" size="sm" className="p-0 action-btn edit-btn" onClick={() => { setEditingProduct(p); setShowModal(true); }}>
+            <FaPencilAlt className="icon-desktop" /> <span className="text-mobile">Editar</span>
+          </Button>
+          <Button variant="link" size="sm" className="p-0 text-danger action-btn delete-btn" onClick={() => setDeletingProduct(p)}>
+            <FaTrash className="icon-desktop" /> <span className="text-mobile">Eliminar</span>
+          </Button>
         </div>
       )
     }

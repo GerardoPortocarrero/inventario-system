@@ -216,10 +216,38 @@ a:hover {
   vertical-align: middle;
 }
 
-/* Align last column */
-.table th:last-child,
-.table td:last-child {
-  text-align: end !important;
+/* Action Buttons Utilities for Responsive Tables */
+.text-mobile { display: none; }
+
+@media (max-width: 768px) {
+  .icon-desktop { display: none !important; }
+  .text-mobile { display: inline !important; }
+  
+  .action-buttons-container {
+    width: 100%;
+    gap: 0 !important;
+  }
+
+  .action-btn { 
+    text-decoration: none !important; 
+    font-weight: 800 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase;
+    padding: 8px 12px !important;
+    border: 1px solid var(--theme-border-default) !important;
+    flex: 1;
+    text-align: center;
+    background-color: var(--theme-background-secondary) !important;
+  }
+
+  .edit-btn {
+    color: var(--theme-text-primary) !important;
+    border-right: none !important;
+  }
+
+  .delete-btn {
+    color: var(--color-red-primary) !important;
+  }
 }
 
 /* Estilos para el Header de la aplicación */
