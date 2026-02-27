@@ -130,12 +130,17 @@ const Dashboard: FC = () => {
     };
   }, [products, todayInventory, yesterdayInventory, orders, selectedType, beverageTypes]);
 
-  if (loadingMasterData || loading) return <GlobalSpinner variant="overlay" />;
-
   const isDark = document.body.classList.contains('theme-dark') || !document.body.classList.contains('theme-light');
   const SYSTEM_COLORS = isDark ? ['#F40009', '#FFFFFF', '#adb5bd', '#6c757d', '#343a40'] : ['#F40009', '#212529', '#6c757d', '#adb5bd', '#e9ecef'];
   const CHART_TEXT_COLOR = isDark ? '#FFFFFF' : '#212529';
   const CHART_BORDER_COLOR = isDark ? '#333' : '#ced4da';
+  const GRID_COLOR = isDark ? '#222' : '#e9ecef';
+  const AXIS_COLOR = isDark ? '#555' : '#888';
+  const TOOLTIP_BG = isDark ? '#000' : '#fff';
+  const TOOLTIP_BORDER = isDark ? '#333' : '#ced4da';
+  const TOOLTIP_TEXT = isDark ? '#fff' : '#000';
+
+  if (loadingMasterData || loading) return <GlobalSpinner variant="overlay" />;
 
   return (
     <div className="admin-layout-container flex-column overflow-hidden gap-3">
@@ -226,15 +231,14 @@ const Dashboard: FC = () => {
                     <div style={{ height: 280 }}>
                       {historyData.length > 0 ? (
                         <ResponsiveContainer>
-                          <AreaChart data={historyData}>
-                            <defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F40009" stopOpacity={0.3}/><stop offset="95%" stopColor="#F40009" stopOpacity={0}/></linearGradient></defs>
-                            <CartesianGrid stroke="#222" vertical={false} />
-                            <XAxis dataKey="fecha" stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
-                            <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                            <Area type="monotone" dataKey="stock" stroke="#F40009" strokeWidth={2} fillOpacity={1} fill="url(#c)" />
-                          </AreaChart>
-                        </ResponsiveContainer>
+                                                <AreaChart data={historyData}>
+                                                  <defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F40009" stopOpacity={0.3}/><stop offset="95%" stopColor="#F40009" stopOpacity={0}/></linearGradient></defs>
+                                                  <CartesianGrid stroke={GRID_COLOR} vertical={false} />
+                                                  <XAxis dataKey="fecha" stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
+                                                  <YAxis stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
+                                                  <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
+                                                  <Area type="monotone" dataKey="stock" stroke="#F40009" strokeWidth={2} fillOpacity={1} fill="url(#c)" />
+                                                </AreaChart>                        </ResponsiveContainer>
                       ) : <div className="d-flex align-items-center justify-content-center h-100 text-muted small">Cargando histórico...</div>}
                     </div>
                   </div>
@@ -253,11 +257,10 @@ const Dashboard: FC = () => {
                             stroke="#1a1a1a"
                             strokeWidth={3}
                           >
-                            {stats.pieData.map((_, i) => <Cell key={i} fill={SYSTEM_COLORS[i % SYSTEM_COLORS.length]} />)}
-                          </Pie>
-                          <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                          <Legend iconType="circle" />
-                        </PieChart>
+                                                    {stats.pieData.map((_, i) => <Cell key={i} fill={SYSTEM_COLORS[i % SYSTEM_COLORS.length]} />)}
+                                                  </Pie>
+                                                  <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
+                                                  <Legend iconType="circle" />                        </PieChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
@@ -270,15 +273,14 @@ const Dashboard: FC = () => {
                     <div className="dash-chart-header">BALANCE COMERCIAL</div>
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
-                        <BarChart data={stats.chartMain.slice(0, 8)}>
-                          <CartesianGrid stroke="#222" vertical={false} strokeDasharray="0" />
-                          <XAxis dataKey="name" fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
-                          <YAxis fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                          <Bar dataKey="Ventas" fill={CHART_TEXT_COLOR} radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
-                          <Bar dataKey="Stock" fill="#F40009" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                                            <BarChart data={stats.chartMain.slice(0, 8)}>
+                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} strokeDasharray="0" />
+                                              <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
+                                              <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
+                                              <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
+                                              <Bar dataKey="Ventas" fill={CHART_TEXT_COLOR} radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                                              <Bar dataKey="Stock" fill="#F40009" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                                            </BarChart>                      </ResponsiveContainer>
                     </div>
                   </div>
                 </Col>
@@ -287,16 +289,15 @@ const Dashboard: FC = () => {
                     <div className="dash-chart-header">ESTADO DEL PRODUCTO</div>
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
-                        <BarChart data={stats.chartOps.slice(0, 8)}>
-                          <CartesianGrid stroke="#222" vertical={false} strokeDasharray="0" />
-                          <XAxis dataKey="name" fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
-                          <YAxis fontSize={10} stroke="#555" tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '0', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                          <Bar dataKey="ALM" stackId="a" fill="#adb5bd" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
-                          <Bar dataKey="CON" stackId="a" fill="#6c757d" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
-                          <Bar dataKey="RECH" stackId="a" fill="#F40009" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                                            <BarChart data={stats.chartOps.slice(0, 8)}>
+                                              <CartesianGrid stroke={GRID_COLOR} vertical={false} strokeDasharray="0" />
+                                              <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
+                                              <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
+                                              <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
+                                              <Bar dataKey="ALM" stackId="a" fill="#adb5bd" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                                              <Bar dataKey="CON" stackId="a" fill="#6c757d" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                                              <Bar dataKey="RECH" stackId="a" fill="#F40009" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                                            </BarChart>                      </ResponsiveContainer>
                     </div>
                   </div>
                 </Col>
@@ -330,12 +331,12 @@ const Dashboard: FC = () => {
 
       <style>{`
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 4px; height: 40px; overflow: hidden; }
-        .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); padding: 0 10px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
+        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); padding: 0 10px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
         .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; }
-        .pill-label { font-size: 0.45rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; }
-        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: white !important; font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 2px 0 !important; margin-top: -2px; }
+        .pill-label { font-size: 0.45rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; color: var(--theme-text-primary); }
+        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 2px 0 !important; margin-top: -2px; }
         .pill-date-input-v2::-webkit-calendar-picker-indicator { 
-          filter: invert(1); 
+          filter: invert(var(--theme-calendar-invert, 1)); 
           cursor: pointer;
           transform: scale(1.5);
           margin-right: 10px;
@@ -343,17 +344,17 @@ const Dashboard: FC = () => {
         }
         .dash-kpi-card { background: var(--theme-background-secondary); padding: 10px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 8px; height: 100%; }
         .dash-kpi-icon { font-size: 1rem; opacity: 0.8; }
-        .dash-kpi-value { font-size: 1.1rem; font-weight: 900; color: white; line-height: 1; }
-        .dash-kpi-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; margin-top: 2px; }
+        .dash-kpi-value { font-size: 1.1rem; font-weight: 900; color: var(--theme-text-primary); line-height: 1; }
+        .dash-kpi-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; margin-top: 2px; color: var(--theme-text-primary); }
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
         .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); margin-bottom: 10px; text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; }
         .dash-top-card { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); height: 100%; }
-        .dash-top-header { padding: 10px 12px; background: #000; font-size: 0.6rem; font-weight: 900; border-bottom: 1px solid var(--theme-border-default); color: var(--theme-text-secondary); }
-        .dash-top-item { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        .dash-top-header { padding: 10px 12px; background: var(--theme-icon-bg); font-size: 0.6rem; font-weight: 900; border-bottom: 1px solid var(--theme-border-default); color: var(--theme-text-secondary); }
+        .dash-top-item { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--theme-table-border-color); }
         .dash-top-idx { width: 20px; font-weight: 900; color: var(--color-red-primary); font-size: 0.65rem; }
         .dash-top-info { flex: 1; min-width: 0; }
-        .dash-top-name { font-size: 0.7rem; font-weight: bold; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .dash-top-sap { font-size: 0.55rem; color: #444; }
+        .dash-top-name { font-size: 0.7rem; font-weight: bold; color: var(--theme-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dash-top-sap { font-size: 0.55rem; color: var(--theme-text-secondary); }
         .dash-top-val { font-weight: 900; font-size: 0.75rem; }
       `}</style>
     </div>
