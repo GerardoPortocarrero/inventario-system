@@ -143,26 +143,34 @@ const Dashboard: FC = () => {
           <Col xs={6} md={4}>
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober"><FaCalendarAlt /></span>
-              <div className="pill-content">
+              <div className="pill-content flex-grow-1">
                 <span className="pill-label">FECHA</span>
-                <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2" />
+                <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2 w-100" />
               </div>
             </div>
           </Col>
           <Col xs={6} md={4}>
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober"><FaFilter /></span>
-              <div className="pill-content">
+              <div className="pill-content flex-grow-1">
                 <span className="pill-label">FILTRAR</span>
-                <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2">
+                <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2 w-100">
                   <option value="">TODAS LAS BEBIDAS</option>
                   {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
             </div>
           </Col>
-          <Col xs={12} md={4} className="text-md-end text-center pt-md-0 pt-2">
-            <Badge bg="dark" className="border py-2 px-3 small">{stats.chartMain.length} PRODUCTOS FILTRADOS</Badge>
+          <Col xs={12} md={4}>
+            <div className="info-pill-new w-100">
+              <span className="pill-icon-sober"><FaBox /></span>
+              <div className="pill-content flex-grow-1">
+                <span className="pill-label">RESULTADOS</span>
+                <span className="pill-date-input-v2 d-block text-uppercase">
+                  {stats.chartMain.length} PRODUCTOS
+                </span>
+              </div>
+            </div>
           </Col>
         </Row>
       </div>
@@ -312,8 +320,14 @@ const Dashboard: FC = () => {
         .pill-icon-sober { background-color: #000; color: rgba(255,255,255,0.7); padding: 0 10px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
         .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; }
         .pill-label { font-size: 0.45rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; }
-        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: white !important; font-weight: 700; font-size: 0.7rem; cursor: pointer; padding: 0 !important; }
-        .pill-date-input-v2::-webkit-calendar-picker-indicator { filter: invert(1); }
+        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: white !important; font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 2px 0 !important; margin-top: -2px; }
+        .pill-date-input-v2::-webkit-calendar-picker-indicator { 
+          filter: invert(1); 
+          cursor: pointer;
+          transform: scale(1.5);
+          margin-right: 10px;
+          opacity: 0.8;
+        }
         .dash-kpi-card { background: var(--theme-background-secondary); padding: 10px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 8px; height: 100%; }
         .dash-kpi-icon { font-size: 1rem; opacity: 0.8; }
         .dash-kpi-value { font-size: 1.1rem; font-weight: 900; color: white; line-height: 1; }
