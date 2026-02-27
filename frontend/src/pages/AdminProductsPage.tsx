@@ -333,9 +333,12 @@ const AdminProductsPage: FC = () => {
                 className="flex-shrink-0"
               />
             </div>
-            {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
-              <GenericTable data={filteredProducts} columns={columns} variant={isDarkMode ? 'dark' : ''} />
-            )}
+            <GenericTable 
+              data={filteredProducts} 
+              columns={columns} 
+              variant={isDarkMode ? 'dark' : ''} 
+              isLoading={loading}
+            />
           </div>
         </div>
       </Container>

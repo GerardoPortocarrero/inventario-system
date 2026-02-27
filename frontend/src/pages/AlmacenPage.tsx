@@ -329,6 +329,7 @@ const AlmacenPage: FC = () => {
                   columns={summaryColumns} 
                   variant={localStorage.getItem('theme') === 'dark' ? 'dark' : ''}
                   noRecordsMessage="No se encontraron registros con datos para esta fecha."
+                  isLoading={loading}
                 />
               </div>
             )

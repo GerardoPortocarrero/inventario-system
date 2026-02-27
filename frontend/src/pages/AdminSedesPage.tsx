@@ -164,9 +164,12 @@ const AdminSedesPage: FC = () => {
                 className="flex-grow-1 mb-0" 
               />
             </div>
-            {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
-              <GenericTable data={filteredSedes} columns={columns} variant={isDarkMode ? 'dark' : ''} />
-            )}
+            <GenericTable 
+              data={filteredSedes} 
+              columns={columns} 
+              variant={isDarkMode ? 'dark' : ''} 
+              isLoading={loading}
+            />
           </div>
         </div>
       </Container>

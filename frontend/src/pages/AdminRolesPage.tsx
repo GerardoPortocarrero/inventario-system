@@ -177,9 +177,12 @@ const AdminRolesPage: FC = () => {
                 className="flex-grow-1 mb-0" 
               />
             </div>
-            {loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
-              <GenericTable data={filteredRoles} columns={columns} variant={isDarkMode ? 'dark' : ''} />
-            )}
+            <GenericTable 
+              data={filteredRoles} 
+              columns={columns} 
+              variant={isDarkMode ? 'dark' : ''} 
+              isLoading={loading}
+            />
           </div>
         </div>
       </Container>

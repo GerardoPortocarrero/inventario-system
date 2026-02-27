@@ -17,19 +17,31 @@ interface GenericTableProps<T> {
   columns: Column<T>[];
   variant?: 'dark' | 'light' | '';
   noRecordsMessage?: string;
+  isLoading?: boolean;
 }
 
 const GenericTable = <T extends { id: string }>({
   data,
   columns,
   variant,
-  noRecordsMessage = UI_TEXTS.NO_RECORDS_FOUND
+  noRecordsMessage = UI_TEXTS.NO_RECORDS_FOUND,
+  isLoading = false
 }: GenericTableProps<T>) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
 
+  if (isLoading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center p-5" style={{ minHeight: '300px' }}>
+        <div className="spinner-border text-danger" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (data.length === 0) {
     return (
-      <div className="text-center p-4">
+      <div className="text-center p-5 text-secondary fw-bold" style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {noRecordsMessage}
       </div>
     );
