@@ -25,9 +25,18 @@ interface InventoryEntry {
 }
 
 const AlmacenPage: FC = () => {
+  const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
   const { userSedeId, userName } = useAuth();
   const { beverageTypes, loadingMasterData } = useData();
-  
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.body.classList.contains('theme-dark'));
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [dailyInventory, setTodayInventory] = useState<Record<string, InventoryEntry>>({});
   const [yesterdayInventory, setYesterdayInventory] = useState<Record<string, InventoryEntry>>({});
@@ -247,7 +256,7 @@ const AlmacenPage: FC = () => {
           </Col>
           <Col xs={6} md={3}>
             <div className="d-flex flex-column gap-1 h-100">
-              <Button variant="outline-light" size="sm" className="w-100 h-50 d-flex align-items-center justify-content-center gap-2 py-1" onClick={() => setViewMode(viewMode === 'edit' ? 'summary' : 'edit')}>
+              <Button variant={isDarkMode ? "outline-light" : "outline-dark"} size="sm" className="w-100 h-50 d-flex align-items-center justify-content-center gap-2 py-1" onClick={() => setViewMode(viewMode === 'edit' ? 'summary' : 'edit')}>
                 {viewMode === 'edit' ? <><FaListAlt /> RESUMEN</> : <><FaEdit /> EDICIÓN</>}
               </Button>
               <Button variant={saveSuccess ? "success" : "primary"} size="sm" className="w-100 h-50 d-flex align-items-center justify-content-center gap-2 py-1" onClick={handleSave} disabled={isSaving || (Object.keys(draftInventory).length === 0 && !saveSuccess)}>
