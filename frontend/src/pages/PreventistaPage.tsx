@@ -6,7 +6,7 @@ import { collection, onSnapshot, doc, runTransaction, serverTimestamp, query, wh
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCashRegister, FaCheck, FaExclamationTriangle, FaCalendarAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCheck, FaExclamationTriangle, FaCalendarAlt } from 'react-icons/fa';
 import SearchInput from '../components/SearchInput';
 
 interface Product {

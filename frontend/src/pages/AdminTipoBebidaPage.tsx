@@ -9,8 +9,7 @@ import useMediaQuery from '../hooks/useMediaQuery';
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
-import { UI_TEXTS, SPINNER_VARIANTS } from '../constants';
-import GlobalSpinner from '../components/GlobalSpinner';
+import { UI_TEXTS } from '../constants';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 

@@ -23,7 +23,6 @@ interface GenericTableProps<T> {
 const GenericTable = <T extends { id: string }>({
   data,
   columns,
-  variant,
   noRecordsMessage = UI_TEXTS.NO_RECORDS_FOUND,
   isLoading = false
 }: GenericTableProps<T>) => {
