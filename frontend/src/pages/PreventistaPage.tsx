@@ -6,7 +6,7 @@ import { collection, onSnapshot, doc, runTransaction, serverTimestamp } from 'fi
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCashRegister, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
+import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCashRegister, FaCheck, FaExclamationTriangle, FaCalendarAlt } from 'react-icons/fa';
 import SearchInput from '../components/SearchInput';
 
 interface Product {
@@ -51,7 +51,7 @@ const PreventistaPage: FC = () => {
   const [tempBoxes, setTempBoxes] = useState(0);
   const [tempUnits, setTempUnits] = useState(0);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const unsubProducts = onSnapshot(collection(db, 'productos'), (s) => {
@@ -63,12 +63,12 @@ const PreventistaPage: FC = () => {
   useEffect(() => {
     if (!userSedeId) return;
     setLoading(true);
-    const unsubInventory = onSnapshot(doc(db, 'inventario_diario', `${userSedeId}_${todayStr}`), (s) => {
+    const unsubInventory = onSnapshot(doc(db, 'inventario_diario', `${userSedeId}_${selectedDate}`), (s) => {
       setDailyInventory(s.exists() ? s.data().productos || {} : {});
       setLoading(false);
     }, () => setLoading(false));
     return () => unsubInventory();
-  }, [userSedeId, todayStr]);
+  }, [userSedeId, selectedDate]);
 
   const processedData = useMemo(() => {
     return products.map(p => {
@@ -133,7 +133,7 @@ const PreventistaPage: FC = () => {
     setIsSaving(true);
     try {
       await runTransaction(db, async (transaction) => {
-        const invDocRef = doc(db, 'inventario_diario', `${userSedeId}_${todayStr}`);
+        const invDocRef = doc(db, 'inventario_diario', `${userSedeId}_${selectedDate}`);
         const invSnap = await transaction.get(invDocRef);
         if (!invSnap.exists()) throw new Error("No hay inventario hoy.");
         const currentInvData = invSnap.data().productos || {};
@@ -148,7 +148,7 @@ const PreventistaPage: FC = () => {
           updatedInvProducts[pid] = { ...inv, preventa: (inv.preventa || 0) + qty };
         }
         const orderRef = doc(collection(db, 'ordenes'));
-        transaction.set(orderRef, { sedeId: userSedeId, preventistaId: userId, nombrePreventista: userName, fechaCreacion: todayStr, estadoOrden: 'PENDIENTE', total: totals.value, detalles: orderDetails, timestamp: serverTimestamp() });
+        transaction.set(orderRef, { sedeId: userSedeId, preventistaId: userId, nombrePreventista: userName, fechaCreacion: selectedDate, estadoOrden: 'PENDIENTE', total: totals.value, detalles: orderDetails, timestamp: serverTimestamp() });
         transaction.update(invDocRef, { productos: updatedInvProducts });
       });
       setSaveSuccess(true);
@@ -169,17 +169,17 @@ const PreventistaPage: FC = () => {
             <div className="info-pill-new w-100">
               <span className="pill-icon pill-icon-sober highlight-system"><FaShoppingCart /></span>
               <div className="pill-content">
-                <span className="pill-label">ÍTEMS PEDIDO</span>
-                <span className="pill-value h6 mb-0">{Object.keys(cart).length}</span>
+                <span className="pill-label">ÍTEMS / ESTIMADO</span>
+                <span className="pill-value h6 mb-0">{Object.keys(cart).length} / S/ {totals.value.toFixed(2)}</span>
               </div>
             </div>
           </Col>
           <Col xs={6} md={3}>
             <div className="info-pill-new w-100">
-              <span className="pill-icon pill-icon-sober text-success"><FaCashRegister /></span>
+              <span className="pill-icon pill-icon-sober"><FaCalendarAlt /></span>
               <div className="pill-content">
-                <span className="pill-label">TOTAL ESTIMADO</span>
-                <span className="pill-value h6 mb-0">S/ {totals.value.toFixed(2)}</span>
+                <span className="pill-label">FECHA VENTAS</span>
+                <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2" />
               </div>
             </div>
           </Col>
@@ -340,6 +340,19 @@ const PreventistaPage: FC = () => {
         .pill-content { padding: 4px 12px; display: flex; flex-direction: column; justify-content: center; }
         .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; color: var(--theme-text-primary); }
         .pill-value { color: var(--theme-text-primary); font-family: 'Inter', sans-serif; font-weight: bold; }
+        
+        .pill-date-input-v2 { 
+          background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; 
+          font-weight: 700 !important; font-size: 0.85rem !important; padding: 0 !important; height: auto !important; cursor: pointer;
+          width: 100% !important;
+        }
+        .pill-date-input-v2::-webkit-calendar-picker-indicator { 
+          filter: invert(var(--theme-calendar-invert, 1)); 
+          cursor: pointer;
+          transform: scale(1.5);
+          margin-left: 10px;
+        }
+
         .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem !important; cursor: pointer; text-transform: uppercase; padding: 0 !important; width: 100% !important; }
         
         .product-card { border: 1px solid var(--theme-border-default); background: var(--theme-background-primary); padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 100%; transition: all 0.2s ease; min-height: 90px; }
