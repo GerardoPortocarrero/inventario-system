@@ -323,11 +323,25 @@ const PreventistaPage: FC = () => {
                 <Row className="g-3">
                   <Col xs={6}>
                     <Form.Label className="label-v3">CAJAS</Form.Label>
-                    <Form.Control type="number" value={tempBoxes || ''} onChange={(e) => setTempBoxes(parseInt(e.target.value || '0'))} onFocus={(e) => e.target.select()} className="input-v3" />
+                    <Form.Control 
+                      type="number" 
+                      value={tempBoxes === 0 ? '' : tempBoxes} 
+                      placeholder="0"
+                      onChange={(e) => setTempBoxes(parseInt(e.target.value || '0'))} 
+                      onFocus={(e) => e.target.select()} 
+                      className="input-v3" 
+                    />
                   </Col>
                   <Col xs={6}>
                     <Form.Label className="label-v3">UNIDADES</Form.Label>
-                    <Form.Control type="number" value={tempUnits || ''} onChange={(e) => setTempUnits(parseInt(e.target.value || '0'))} onFocus={(e) => e.target.select()} className="input-v3" />
+                    <Form.Control 
+                      type="number" 
+                      value={tempUnits === 0 ? '' : tempUnits} 
+                      placeholder="0"
+                      onChange={(e) => setTempUnits(parseInt(e.target.value || '0'))} 
+                      onFocus={(e) => e.target.select()} 
+                      className="input-v3" 
+                    />
                   </Col>
                 </Row>
               </div>
