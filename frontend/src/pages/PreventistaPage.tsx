@@ -16,6 +16,8 @@ interface Product {
   unidades: number;
   tipoBebidaId: string;
   precio: number;
+  stockDisponible?: number;
+  inCart?: number;
 }
 
 interface InventoryEntry {
@@ -26,7 +28,7 @@ interface InventoryEntry {
 }
 
 const PreventistaPage: FC = () => {
-  const { userSedeId, userName, userId } = useAuth();
+  const { userSedeId, userName, currentUser } = useAuth();
   const { beverageTypes, loadingMasterData } = useData();
   const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
 
@@ -86,7 +88,7 @@ const PreventistaPage: FC = () => {
       const p = products.find(prod => prod.id === pid);
       if (p) {
         totalItems += qty;
-        totalValue += qty * (p.precio || 0);
+        totalValue += (qty / p.unidades) * (p.precio || 0);
       }
     });
     return { items: totalItems, value: totalValue };
@@ -115,7 +117,7 @@ const PreventistaPage: FC = () => {
   const handleConfirmAddToCart = () => {
     if (!selectedProduct) return;
     const totalUnitsRequested = (tempBoxes * selectedProduct.unidades) + tempUnits;
-    if (totalUnitsRequested > selectedProduct.stockDisponible) {
+    if (totalUnitsRequested > (selectedProduct.stockDisponible || 0)) {
       alert(`Stock insuficiente.`);
       return;
     }
@@ -144,11 +146,21 @@ const PreventistaPage: FC = () => {
           if (!p) continue;
           const inv = currentInvData[pid] || { almacen: 0, consignacion: 0, rechazo: 0, preventa: 0 };
           if (qty > (inv.almacen + inv.consignacion + inv.rechazo - (inv.preventa || 0))) throw new Error(`Stock insuficiente para ${p.nombre}`);
-          orderDetails.push({ productoId: pid, nombreProducto: p.nombre, cantidad: qty, precioUnitario: p.precio || 0, subtotal: qty * (p.precio || 0) });
+          const subtotal = (qty / p.unidades) * (p.precio || 0);
+          orderDetails.push({ productoId: pid, nombreProducto: p.nombre, cantidad: qty, precioCaja: p.precio || 0, subtotal });
           updatedInvProducts[pid] = { ...inv, preventa: (inv.preventa || 0) + qty };
         }
         const orderRef = doc(collection(db, 'ordenes'));
-        transaction.set(orderRef, { sedeId: userSedeId, preventistaId: userId, nombrePreventista: userName, fechaCreacion: selectedDate, estadoOrden: 'PENDIENTE', total: totals.value, detalles: orderDetails, timestamp: serverTimestamp() });
+        transaction.set(orderRef, { 
+          sedeId: userSedeId, 
+          preventistaId: currentUser?.uid, 
+          nombrePreventista: userName, 
+          fechaCreacion: selectedDate, 
+          estadoOrden: 'PENDIENTE', 
+          total: totals.value, 
+          detalles: orderDetails, 
+          timestamp: serverTimestamp() 
+        });
         transaction.update(invDocRef, { productos: updatedInvProducts });
       });
       setSaveSuccess(true);
@@ -229,19 +241,19 @@ const PreventistaPage: FC = () => {
 
               <Row className="g-2 m-0">
                 {filteredProducts.map(product => {
-                  const hasStock = product.stockDisponible > 0;
+                  const hasStock = (product.stockDisponible || 0) > 0;
                   return (
                     <Col key={product.id} xs={12} sm={6} lg={4} className="p-1">
-                      <div className={`product-card ${product.inCart > 0 ? 'in-cart' : ''} ${!hasStock ? 'opacity-75' : ''}`} onClick={() => handleOpenModal(product)}>
+                      <div className={`product-card ${product.inCart && product.inCart > 0 ? 'in-cart' : ''} ${!hasStock ? 'opacity-75' : ''}`} onClick={() => handleOpenModal(product)}>
                         <div className="product-card-info">
                           <span className="product-sap">{product.sap}</span>
                           <div className="product-name">{product.nombre}</div>
-                          {product.inCart > 0 && <span className="cart-indicator">PEDIDO: {formatQty(product.inCart, product.unidades)}</span>}
+                          {product.inCart && product.inCart > 0 && <span className="cart-indicator">PEDIDO: {formatQty(product.inCart, product.unidades)}</span>}
                         </div>
                         <div className="product-card-stats">
                           <div className={`stat-box ${hasStock ? 'stock-ok' : 'stock-none'}`}>
                             <span className="stat-label">DISP</span>
-                            <span className="stat-value">{formatQty(product.stockDisponible, product.unidades)}</span>
+                            <span className="stat-value">{formatQty(product.stockDisponible || 0, product.unidades)}</span>
                           </div>
                         </div>
                       </div>
@@ -254,7 +266,7 @@ const PreventistaPage: FC = () => {
             /* VISTA DE STOCK (ESTILO DASHBOARD) */
             <Row className="g-3 m-0">
               {beverageTypes.map(type => {
-                const typeProducts = processedData.filter(p => p.tipoBebidaId === type.id && p.stockDisponible > 0);
+                const typeProducts = processedData.filter(p => (p.stockDisponible || 0) > 0 && p.tipoBebidaId === type.id);
                 if (typeProducts.length === 0) return null;
                 return (
                   <Col key={type.id} xs={12} md={6} lg={4} className="p-1">
@@ -269,8 +281,8 @@ const PreventistaPage: FC = () => {
                             <div className="dash-top-name">{p.nombre}</div>
                             <div className="dash-top-sap">{p.sap}</div>
                           </div>
-                          <div className={`dash-top-val ${p.stockDisponible < 10 ? 'text-danger' : 'text-success'}`}>
-                            {formatQty(p.stockDisponible, p.unidades)}
+                          <div className={`dash-top-val ${(p.stockDisponible || 0) < 10 ? 'text-danger' : 'text-success'}`}>
+                            {formatQty(p.stockDisponible || 0, p.unidades)}
                           </div>
                         </div>
                       ))}
@@ -292,7 +304,7 @@ const PreventistaPage: FC = () => {
               <div className="d-flex justify-content-between">
                 <div>
                   <span className="label-v3-header text-white-50 small fw-bold d-block text-uppercase">Stock Disponible</span>
-                  <span className="value-v3-header text-white h5 fw-bold">{formatQty(selectedProduct.stockDisponible, selectedProduct.unidades)}</span>
+                  <span className="value-v3-header text-white h5 fw-bold">{formatQty(selectedProduct.stockDisponible || 0, selectedProduct.unidades)}</span>
                 </div>
                 <div className="text-end">
                   <span className="label-v3-header text-white-50 small fw-bold d-block text-uppercase">Precio Unit.</span>
@@ -320,10 +332,10 @@ const PreventistaPage: FC = () => {
                 </Row>
               </div>
               
-              <div className="mb-4 text-center">
-                <div className="text-muted small text-uppercase fw-bold mb-1">Subtotal</div>
-                <div className="h3 fw-bold" style={{ color: 'var(--theme-text-primary)' }}>
-                  S/ {((tempBoxes * selectedProduct.unidades + tempUnits) * (selectedProduct.precio || 0)).toFixed(2)}
+              <div className="mb-4 text-center p-3 rounded" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)' }}>
+                <div className="text-uppercase fw-bold mb-1" style={{ color: 'var(--color-red-primary)', fontSize: '0.75rem', letterSpacing: '1px' }}>Total de esta línea</div>
+                <div className="h3 fw-bold mb-0" style={{ color: 'var(--theme-text-primary)' }}>
+                  S/ {((tempBoxes + (tempUnits / selectedProduct.unidades)) * (selectedProduct.precio || 0)).toFixed(2)}
                 </div>
               </div>
 
