@@ -38,7 +38,6 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    // Master Data: Roles, Sedes, TiposBebida
     match /roles/{roleId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
@@ -54,66 +53,57 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Catálogo Global de Productos
     match /productos/{productId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
 
-    // Usuarios: Información de perfil y asignación
     match /usuarios/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow write: if isAdmin();
-      // Permitir que el usuario actualice algunos campos de su propio perfil si fuera necesario
       allow update: if request.auth.uid == userId && 
                     request.resource.data.rolId == resource.data.rolId &&
                     request.resource.data.sedeId == resource.data.sedeId;
     }
 
-    // Inventario Consolidado (Controlador)
     match /inventario/{inventoryId} {
-      // Lectura: Admin global, otros solo su sede
       allow read: if isAdmin() || (isAuthenticated() && resource.data.sedeId == getSedeId());
-      
-      // Escritura: Admin global, Almacenero solo su sede
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
     }
 
-    // Unidades de Stock (Detalle físico)
     match /unidadesDeStock/{unitId} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.sedeId == getSedeId());
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
     }
 
-    // Inventario Diario (Hojas históricas por día y sede)
     match /inventario_diario/{docId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.sedeId == getSedeId());
+      allow read: if isAuthenticated();
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
+      // Permitir que Preventistas (y Admin) actualicen la preventa durante la transacción de venta
+      allow update: if isAdmin() || 
+                    (isAlmacenero() && request.resource.data.sedeId == getSedeId()) ||
+                    (isPreventista() && request.resource.data.sedeId == getSedeId());
     }
 
-    // Tránsito (Reportes detallados de salida diaria)
     match /transito/{docId} {
       allow read: if isAdmin() || 
                   ((isSupervisor() || isAlmacenero()) && resource.data.sedeId == getSedeId());
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
     }
 
-    // Órdenes de Pedido
     match /ordenes/{orderId} {
-      // Lectura: 
-      // - Admin/Supervisor: Toda la sede
-      // - Preventista: Solo sus propias órdenes
       allow read: if isAdmin() || 
                   (isSupervisor() && resource.data.sedeId == getSedeId()) ||
                   (isPreventista() && resource.data.preventistaId == request.auth.uid);
 
-      // Escritura: 
-      // - Preventista: Crear y editar sus propias órdenes en su sede
-      allow create: if isPreventista() && request.resource.data.sedeId == getSedeId() && 
-                    request.resource.data.preventistaId == request.auth.uid;
+      // CORRECCIÓN: Permitir create si es Admin O si es Preventista con los datos correctos
+      allow create: if isAdmin() || 
+                    (isPreventista() && request.resource.data.sedeId == getSedeId() && 
+                     request.resource.data.preventistaId == request.auth.uid);
       
-      allow update: if isPreventista() && resource.data.preventistaId == request.auth.uid &&
-                    resource.data.estadoOrden == 'PENDIENTE'; // Solo si sigue pendiente
+      allow update: if isAdmin() || 
+                    (isPreventista() && resource.data.preventistaId == request.auth.uid &&
+                     resource.data.estadoOrden == 'PENDIENTE');
 
       allow delete: if isAdmin();
     }
