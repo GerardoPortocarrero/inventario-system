@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Button, Form, Modal, Badge, Spinner, Alert } from 'react-bootstrap';
 import { db } from '../api/firebase';
-import { collection, onSnapshot, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, runTransaction, serverTimestamp, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import GlobalSpinner from '../components/GlobalSpinner';
@@ -18,6 +18,7 @@ interface Product {
   precio: number;
   stockDisponible?: number;
   inCart?: number;
+  preventa?: number;
 }
 
 interface InventoryEntry {
@@ -40,6 +41,7 @@ const PreventistaPage: FC = () => {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [dailyInventory, setDailyInventory] = useState<Record<string, InventoryEntry>>({});
+  const [userOrdersToday, setUserOrdersToday] = useState<Record<string, number>>({});
   const [cart, setCart] = useState<Record<string, number>>({}); 
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +64,31 @@ const PreventistaPage: FC = () => {
     return () => unsubProducts();
   }, []);
 
+  // Nuevo useEffect para cargar SOLO las órdenes del preventista actual
+  useEffect(() => {
+    if (!currentUser || !selectedDate) return;
+    
+    // Usamos una query filtrada para cumplir con las reglas de seguridad de Firestore
+    const q = query(
+      collection(db, 'ordenes'), 
+      where('preventistaId', '==', currentUser.uid),
+      where('fechaCreacion', '==', selectedDate)
+    );
+
+    const unsubOrders = onSnapshot(q, (s) => {
+      const totals: Record<string, number> = {};
+      s.docs.forEach(doc => {
+        const data = doc.data();
+        data.detalles.forEach((det: any) => {
+          totals[det.productoId] = (totals[det.productoId] || 0) + det.cantidad;
+        });
+      });
+      setUserOrdersToday(totals);
+    });
+    
+    return () => unsubOrders();
+  }, [currentUser, selectedDate]);
+
   useEffect(() => {
     if (!userSedeId) return;
     setLoading(true);
@@ -77,22 +104,24 @@ const PreventistaPage: FC = () => {
       const inv = dailyInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0, preventa: 0 };
       const físicoTotal = inv.almacen + inv.consignacion + inv.rechazo;
       const stockDisponible = físicoTotal - (inv.preventa || 0);
-      return { ...p, stockDisponible, inCart: cart[p.id] || 0 };
+      const myTotal = userOrdersToday[p.id] || 0;
+      return { ...p, stockDisponible, inCart: cart[p.id] !== undefined ? cart[p.id] : myTotal, myTotal };
     });
-  }, [products, dailyInventory, cart]);
+  }, [products, dailyInventory, cart, userOrdersToday]);
 
   const totals = useMemo(() => {
     let totalItems = 0;
     let totalValue = 0;
-    Object.entries(cart).forEach(([pid, qty]) => {
-      const p = products.find(prod => prod.id === pid);
-      if (p) {
+    // El total estimado debe basarse en lo que el usuario tiene en su pedido actual (cart o myTotal)
+    processedData.forEach(p => {
+      const qty = p.inCart || 0;
+      if (qty > 0) {
         totalItems += qty;
         totalValue += (qty / p.unidades) * (p.precio || 0);
       }
     });
     return { items: totalItems, value: totalValue };
-  }, [cart, products]);
+  }, [processedData]);
 
   const filteredProducts = useMemo(() => {
     return processedData.filter(p => 
@@ -108,7 +137,8 @@ const PreventistaPage: FC = () => {
   };
 
   const handleOpenModal = (product: any) => {
-    const currentQty = cart[product.id] || 0;
+    // Al abrir, mostramos lo que el usuario ya tiene en el carrito O lo que ya envió (myTotal)
+    const currentQty = product.inCart || 0;
     setTempBoxes(Math.floor(currentQty / product.unidades));
     setTempUnits(currentQty % product.unidades);
     setSelectedProduct(product);
@@ -117,16 +147,21 @@ const PreventistaPage: FC = () => {
   const handleConfirmAddToCart = () => {
     if (!selectedProduct) return;
     const totalUnitsRequested = (tempBoxes * selectedProduct.unidades) + tempUnits;
-    if (totalUnitsRequested > (selectedProduct.stockDisponible || 0)) {
-      alert(`Stock insuficiente.`);
+    
+    // Validar contra el stock físico real (almacen + consignacion + rechazo)
+    // No contra el stock disponible calculado, ya que estamos editando el total del día
+    const inv = dailyInventory[selectedProduct.id] || { almacen: 0, consignacion: 0, rechazo: 0, preventa: 0 };
+    const maxFisico = inv.almacen + inv.consignacion + inv.rechazo;
+    
+    if (totalUnitsRequested > maxFisico) {
+      alert(`No puedes exceder el stock físico total (${formatQty(maxFisico, selectedProduct.unidades)}).`);
       return;
     }
-    setCart(prev => {
-      const newCart = { ...prev };
-      if (totalUnitsRequested > 0) newCart[selectedProduct.id] = totalUnitsRequested;
-      else delete newCart[selectedProduct.id];
-      return newCart;
-    });
+
+    setCart(prev => ({
+      ...prev,
+      [selectedProduct.id]: totalUnitsRequested
+    }));
     setSelectedProduct(null);
   };
 
@@ -138,18 +173,46 @@ const PreventistaPage: FC = () => {
         const invDocRef = doc(db, 'inventario_diario', `${userSedeId}_${selectedDate}`);
         const invSnap = await transaction.get(invDocRef);
         if (!invSnap.exists()) throw new Error("No hay inventario hoy.");
+        
         const currentInvData = invSnap.data().productos || {};
         const orderDetails: any[] = [];
         const updatedInvProducts = { ...currentInvData };
+        let orderTotalDelta = 0;
+
         for (const [pid, qty] of Object.entries(cart)) {
           const p = products.find(prod => prod.id === pid);
           if (!p) continue;
+
           const inv = currentInvData[pid] || { almacen: 0, consignacion: 0, rechazo: 0, preventa: 0 };
-          if (qty > (inv.almacen + inv.consignacion + inv.rechazo - (inv.preventa || 0))) throw new Error(`Stock insuficiente para ${p.nombre}`);
-          const subtotal = (qty / p.unidades) * (p.precio || 0);
-          orderDetails.push({ productoId: pid, nombreProducto: p.nombre, cantidad: qty, precioCaja: p.precio || 0, subtotal });
-          updatedInvProducts[pid] = { ...inv, preventa: (inv.preventa || 0) + qty };
+          const myCurrentTotal = userOrdersToday[pid] || 0;
+          const delta = (qty as number) - myCurrentTotal;
+
+          if (delta === 0) continue; 
+
+          // Verificar si el delta (incremento) no excede el stock disponible global
+          const fisicoGlobal = inv.almacen + inv.consignacion + inv.rechazo;
+          const globalPreventaActual = inv.preventa || 0;
+          const stockDispGlobal = fisicoGlobal - globalPreventaActual;
+
+          if (delta > stockDispGlobal) {
+            throw new Error(`Stock insuficiente para ${p.nombre}. Solo quedan ${formatQty(stockDispGlobal, p.unidades)}`);
+          }
+
+          const subtotal = (delta / p.unidades) * (p.precio || 0);
+          orderDetails.push({ 
+            productoId: pid, 
+            nombreProducto: p.nombre, 
+            cantidad: delta, 
+            precioCaja: p.precio || 0, 
+            subtotal 
+          });
+
+          orderTotalDelta += subtotal;
+          updatedInvProducts[pid] = { ...inv, preventa: (inv.preventa || 0) + delta };
         }
+
+        if (orderDetails.length === 0) throw new Error("No hay cambios que guardar.");
+
         const orderRef = doc(collection(db, 'ordenes'));
         transaction.set(orderRef, { 
           sedeId: userSedeId, 
@@ -157,10 +220,12 @@ const PreventistaPage: FC = () => {
           nombrePreventista: userName, 
           fechaCreacion: selectedDate, 
           estadoOrden: 'PENDIENTE', 
-          total: totals.value, 
+          total: orderTotalDelta, 
           detalles: orderDetails, 
-          timestamp: serverTimestamp() 
+          timestamp: serverTimestamp(),
+          esAjuste: true 
         });
+        
         transaction.update(invDocRef, { productos: updatedInvProducts });
       });
       setSaveSuccess(true);
@@ -248,7 +313,13 @@ const PreventistaPage: FC = () => {
                         <div className="product-card-info">
                           <span className="product-sap">{product.sap}</span>
                           <div className="product-name">{product.nombre}</div>
-                          {product.inCart && product.inCart > 0 && <span className="cart-indicator">PEDIDO: {formatQty(product.inCart, product.unidades)}</span>}
+                          <div className="d-flex gap-1 flex-wrap">
+                            {( (product.myTotal || 0) > 0 || (cart[product.id] !== undefined) ) && (
+                              <span className={`badge ${cart[product.id] !== undefined ? 'bg-primary' : 'bg-success'}`} style={{ fontSize: '0.6rem' }}>
+                                MI TOTAL: {formatQty(cart[product.id] !== undefined ? cart[product.id] : (product.myTotal || 0), product.unidades)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="product-card-stats">
                           <div className={`stat-box ${hasStock ? 'stock-ok' : 'stock-none'}`}>
@@ -301,14 +372,18 @@ const PreventistaPage: FC = () => {
           <Modal.Body className="p-0 overflow-hidden">
             <div className="modal-header-v3">
               <h5 className="mb-2 fw-bold text-uppercase">{selectedProduct.nombre}</h5>
-              <div className="d-flex justify-content-between">
+              <div className="d-flex justify-content-between gap-2 flex-wrap">
                 <div>
-                  <span className="label-v3-header text-white-50 small fw-bold d-block text-uppercase">Stock Disponible</span>
-                  <span className="value-v3-header text-white h5 fw-bold">{formatQty(selectedProduct.stockDisponible || 0, selectedProduct.unidades)}</span>
+                  <span className="label-v3-header text-white-50 small fw-bold d-block text-uppercase">Stock Global</span>
+                  <span className="value-v3-header text-white h6 fw-bold">{formatQty(selectedProduct.stockDisponible || 0, selectedProduct.unidades)}</span>
+                </div>
+                <div className="text-center">
+                  <span className="label-v3-header text-white-50 small fw-bold d-block text-uppercase">Mi Pedido</span>
+                  <span className="value-v3-header text-white h6 fw-bold">{formatQty(userOrdersToday[selectedProduct.id] || 0, selectedProduct.unidades)}</span>
                 </div>
                 <div className="text-end">
-                  <span className="label-v3-header text-white-50 small fw-bold d-block text-uppercase">Precio Unit.</span>
-                  <span className="value-v3-header text-white h5 fw-bold">S/ {selectedProduct.precio?.toFixed(2)}</span>
+                  <span className="label-v3-header text-white-50 small fw-bold d-block text-uppercase">Precio Caja</span>
+                  <span className="value-v3-header text-white h6 fw-bold">S/ {selectedProduct.precio?.toFixed(2)}</span>
                 </div>
               </div>
             </div>
