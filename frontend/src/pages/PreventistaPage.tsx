@@ -110,25 +110,32 @@ const PreventistaPage: FC = () => {
   }, [products, dailyInventory, cart, userOrdersToday]);
 
   const totals = useMemo(() => {
-    let totalItems = 0;
+    let totalItemsCount = 0;
     let totalValue = 0;
-    // El total estimado debe basarse en lo que el usuario tiene en su pedido actual (cart o myTotal)
     processedData.forEach(p => {
       const qty = p.inCart || 0;
       if (qty > 0) {
-        totalItems += qty;
+        totalItemsCount++;
         totalValue += (qty / p.unidades) * (p.precio || 0);
       }
     });
-    return { items: totalItems, value: totalValue };
+    return { items: totalItemsCount, value: totalValue };
   }, [processedData]);
 
   const filteredProducts = useMemo(() => {
-    return processedData.filter(p => 
+    let list = processedData.filter(p => 
       (p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.includes(searchTerm)) &&
       (selectedBeverageType === '' || p.tipoBebidaId === selectedBeverageType)
     );
-  }, [processedData, searchTerm, selectedBeverageType]);
+    // Ordenar: primero los que están en el carrito (cambios pendientes), luego alfabéticamente
+    return [...list].sort((a, b) => {
+      const aInCart = cart[a.id] !== undefined;
+      const bInCart = cart[b.id] !== undefined;
+      if (aInCart && !bInCart) return -1;
+      if (!aInCart && bInCart) return 1;
+      return a.nombre.localeCompare(b.nombre);
+    });
+  }, [processedData, searchTerm, selectedBeverageType, cart]);
 
   const formatQty = (totalUnits: number, unitsPerBox: number) => {
     const boxes = Math.floor(totalUnits / unitsPerBox);
@@ -247,7 +254,7 @@ const PreventistaPage: FC = () => {
               <span className="pill-icon pill-icon-sober highlight-system"><FaShoppingCart /></span>
               <div className="pill-content">
                 <span className="pill-label">ÍTEMS / ESTIMADO</span>
-                <span className="pill-value h6 mb-0">{Object.keys(cart).length} / S/ {totals.value.toFixed(2)}</span>
+                <span className="pill-value h6 mb-0">{totals.items} / S/ {totals.value.toFixed(2)}</span>
               </div>
             </div>
           </Col>
@@ -307,16 +314,17 @@ const PreventistaPage: FC = () => {
               <Row className="g-2 m-0">
                 {filteredProducts.map(product => {
                   const hasStock = (product.stockDisponible || 0) > 0;
+                  const isDirty = cart[product.id] !== undefined;
                   return (
                     <Col key={product.id} xs={12} sm={6} lg={4} className="p-1">
-                      <div className={`product-card ${product.inCart && product.inCart > 0 ? 'in-cart' : ''} ${!hasStock ? 'opacity-75' : ''}`} onClick={() => handleOpenModal(product)}>
+                      <div className={`product-card ${isDirty ? 'dirty' : ''} ${!hasStock ? 'opacity-75' : ''}`} onClick={() => handleOpenModal(product)}>
                         <div className="product-card-info">
                           <span className="product-sap">{product.sap}</span>
                           <div className="product-name">{product.nombre}</div>
                           <div className="d-flex gap-1 flex-wrap">
-                            {( (product.myTotal || 0) > 0 || (cart[product.id] !== undefined) ) && (
-                              <span className={`badge ${cart[product.id] !== undefined ? 'bg-primary' : 'bg-success'}`} style={{ fontSize: '0.6rem' }}>
-                                MI TOTAL: {formatQty(cart[product.id] !== undefined ? cart[product.id] : (product.myTotal || 0), product.unidades)}
+                            {( (product.myTotal || 0) > 0 || isDirty ) && (
+                              <span className={`badge ${isDirty ? 'bg-primary' : 'bg-success'}`} style={{ fontSize: '0.6rem' }}>
+                                MI TOTAL: {formatQty(isDirty ? cart[product.id] : (product.myTotal || 0), product.unidades)}
                               </span>
                             )}
                           </div>
@@ -458,7 +466,7 @@ const PreventistaPage: FC = () => {
         
         .product-card { border: 1px solid var(--theme-border-default); background: var(--theme-background-primary); padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 100%; transition: all 0.2s ease; min-height: 90px; }
         .product-card:hover { border-color: var(--color-red-primary); }
-        .product-card.in-cart { border-left: 4px solid var(--color-red-primary); background: rgba(244, 0, 9, 0.05); }
+        .product-card.dirty { border-left: 4px solid #ffc107 !important; background: rgba(255, 193, 7, 0.1) !important; }
         
         .product-card-info { flex: 1; min-width: 0; padding-right: 10px; }
         .product-name { font-weight: bold; font-size: 0.85rem; color: var(--theme-text-primary); line-height: 1.2; margin-bottom: 4px; }
