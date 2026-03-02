@@ -69,8 +69,6 @@ const UserForm: React.FC<{
     }
   };
 
-  if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
-
   return (
     <Form onSubmit={handleSubmit}>
       <Form.Group className="mb-3">
@@ -146,7 +144,7 @@ const AdminUsersPage: FC = () => {
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
-  const { roles, sedes } = useData();
+  const { roles, sedes, loadingMasterData } = useData();
   
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -246,6 +244,8 @@ const AdminUsersPage: FC = () => {
       )
     }
   ], [roles, sedes]);
+
+  if (loading || loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
 
   return (
     <Fragment>

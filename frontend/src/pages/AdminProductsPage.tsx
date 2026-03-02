@@ -99,8 +99,6 @@ const ProductForm: React.FC<{
     }
   };
 
-  if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
-
   const selectedTypeName = beverageTypes.find(t => t.id === tipoBebidaId)?.nombre?.toLowerCase() || '';
   const isHiddenType = selectedTypeName === 'envase' || selectedTypeName === 'jaba';
 
@@ -228,7 +226,7 @@ const AdminProductsPage: FC = () => {
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
-  const { beverageTypes } = useData();
+  const { beverageTypes, loadingMasterData } = useData();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -302,6 +300,8 @@ const AdminProductsPage: FC = () => {
       )
     }
   ];
+
+  if (loading || loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
 
   return (
     <Fragment>

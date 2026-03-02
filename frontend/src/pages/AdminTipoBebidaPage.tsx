@@ -9,9 +9,11 @@ import useMediaQuery from '../hooks/useMediaQuery';
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
-import { UI_TEXTS } from '../constants';
+import { UI_TEXTS, SPINNER_VARIANTS } from '../constants';
+import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
+import { useData } from '../context/DataContext';
 
 interface BeverageType {
   id: string;
@@ -88,6 +90,7 @@ const AdminTipoBebidaPage: FC = () => {
     return () => observer.disconnect();
   }, []);
   
+  const { loadingMasterData } = useData();
   const [beverageTypes, setBeverageTypes] = useState<BeverageType[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,6 +143,8 @@ const AdminTipoBebidaPage: FC = () => {
       )
     }
   ];
+
+  if (loading || loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
 
   return (
     <Fragment>

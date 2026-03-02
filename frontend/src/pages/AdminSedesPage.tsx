@@ -9,9 +9,11 @@ import useMediaQuery from '../hooks/useMediaQuery';
 
 import SearchInput from '../components/SearchInput';
 import GenericTable, { type Column } from '../components/GenericTable';
-import { UI_TEXTS } from '../constants';
+import { UI_TEXTS, SPINNER_VARIANTS } from '../constants';
+import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
+import { useData } from '../context/DataContext';
 
 interface Sede {
   id: string;
@@ -87,6 +89,7 @@ const AdminSedesPage: FC = () => {
     return () => observer.disconnect();
   }, []);
   
+  const { loadingMasterData } = useData();
   const [sedes, setSedes] = useState<Sede[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -139,6 +142,8 @@ const AdminSedesPage: FC = () => {
       )
     }
   ];
+
+  if (loading || loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
 
   return (
     <Fragment>
