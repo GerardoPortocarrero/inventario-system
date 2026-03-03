@@ -64,11 +64,14 @@ const Dashboard: FC = () => {
       setYesterdayInventory(s.exists() ? s.data().productos || {} : {});
     });
 
-    const qOrders = query(collection(db, 'ordenes'), where('sedeId', '==', userSedeId), where('fechaCreacion', '>=', selectedDate));
+    const qOrders = query(collection(db, 'ordenes'), where('sedeId', '==', userSedeId), where('fechaCreacion', '==', selectedDate));
     const unsubOrders = onSnapshot(qOrders, (s) => {
       setOrders(s.docs.map(d => ({ id: d.id, ...d.data() } as Order)));
       setLoading(false); 
-    }, () => setLoading(false));
+    }, (err) => { 
+      console.error("Error en órdenes:", err);
+      setLoading(false); 
+    });
 
     const loadHistory = async () => {
       try {
@@ -100,12 +103,11 @@ const Dashboard: FC = () => {
       const hoy = todayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
       const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
       
-      let pPreventa = 0, pVentas = 0;
+      let pPreventa = 0;
       orders.forEach(o => {
         const item = o.detalles.find(d => d.productoId === p.id);
         if (item) {
-          if (o.estadoOrden === 'PENDIENTE') pPreventa += item.cantidad;
-          else pVentas += item.cantidad;
+          pPreventa += item.cantidad;
         }
       });
 
@@ -114,19 +116,30 @@ const Dashboard: FC = () => {
       const pInventario = hoy.almacen + hoy.consignacion + hoy.rechazo;
       const pStock = pInventario - pPreventa;
 
-      tStock += pStock; tInventario += pInventario; tTransito += pTransito;
-      tPreventa += pPreventa; tVentas += pVentas; tRechazo += hoy.rechazo;
+      tStock += pStock; 
+      tInventario += pInventario; 
+      tTransito += pTransito;
+      tPreventa += pPreventa; 
+      tRechazo += hoy.rechazo;
 
-      const metric = { id: p.id, name: p.nombre, sap: p.sap, stock: pStock, transito: pTransito, ventas: pVentas, inventario: pInventario, preventa: pPreventa, rechazo: hoy.rechazo };
+      const metric = { id: p.id, name: p.nombre, sap: p.sap, stock: pStock, transito: pTransito, ventas: pTransito, inventario: pInventario, preventa: pPreventa, rechazo: hoy.rechazo };
       productMetrics.push(metric);
 
-      if (pInventario > 0 || pTransito > 0 || pVentas > 0) {
-        chartMain.push({ name: p.nombre.substring(0, 8), Stock: pStock, Ventas: pVentas });
+      if (pInventario > 0 || pTransito > 0 || pPreventa > 0) {
+        chartMain.push({ 
+          name: p.nombre.substring(0, 8), 
+          Stock: pStock, 
+          Preventa: pPreventa,
+          Ventas: pTransito // Siguiendo lógica de negocio: Venta = Tránsito
+        });
         chartOps.push({ name: p.nombre.substring(0, 8), ALM: hoy.almacen, CON: hoy.consignacion, RECH: hoy.rechazo });
         const typeName = beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros';
         typeDistribution[typeName] = (typeDistribution[typeName] || 0) + pInventario;
       }
     });
+
+    // KPI de VENTAS asignado al Tránsito total
+    tVentas = tTransito;
 
     return { 
       tStock, tInventario, tTransito, tPreventa, tVentas, tRechazo, 
@@ -213,8 +226,8 @@ const Dashboard: FC = () => {
                   { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
                   { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#FFFFFF' },
                   { label: 'EN TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#adb5bd' },
-                  { label: 'VENTAS', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#FFFFFF' },
-                  { label: 'PREVENTA', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#6c757d' },
+                  { label: 'VENTAS (TRÁNS)', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#FFFFFF' },
+                  { label: 'PREVENTA HOY', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#6c757d' },
                   { label: 'RECHAZOS', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#F40009' }
                 ].map((kpi, i) => (
                   <Col key={i} xs={6} md={4} lg={2}>
@@ -274,7 +287,7 @@ const Dashboard: FC = () => {
               <Row className="g-3 mb-3">
                 <Col xs={12} lg={6}>
                   <div className="dash-chart-box">
-                    <div className="dash-chart-header">BALANCE COMERCIAL</div>
+                    <div className="dash-chart-header">BALANCE COMERCIAL (VENTAS = TRÁNSITO)</div>
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                                             <BarChart data={stats.chartMain.slice(0, 8)}>
@@ -282,15 +295,16 @@ const Dashboard: FC = () => {
                                               <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                                               <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
-                                              <Bar dataKey="Ventas" fill={CHART_TEXT_COLOR} radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
                                               <Bar dataKey="Stock" fill="#F40009" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                                              <Bar dataKey="Preventa" fill="#adb5bd" radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
+                                              <Bar dataKey="Ventas" fill={CHART_TEXT_COLOR} radius={0} stroke={CHART_BORDER_COLOR} strokeWidth={1} />
                                             </BarChart>                      </ResponsiveContainer>
                     </div>
                   </div>
                 </Col>
                 <Col xs={12} lg={6}>
                   <div className="dash-chart-box">
-                    <div className="dash-chart-header">ESTADO DEL PRODUCTO</div>
+                    <div className="dash-chart-header">ESTADO DEL PRODUCTO (ALM / CON / RECH)</div>
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                                             <BarChart data={stats.chartOps.slice(0, 8)}>
