@@ -5,6 +5,7 @@ import { db } from '../api/firebase';
 import { collection, onSnapshot, doc, runTransaction, serverTimestamp, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCheck, FaExclamationTriangle, FaCalendarAlt } from 'react-icons/fa';
 import SearchInput from '../components/SearchInput';
@@ -241,7 +242,7 @@ const PreventistaPage: FC = () => {
     } catch (e: any) { alert(e.message); } finally { setIsSaving(false); }
   };
 
-  if (loadingMasterData) return <GlobalSpinner variant="overlay" />;
+  if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
 
   return (
     <div className="admin-layout-container flex-column overflow-hidden">
@@ -295,9 +296,7 @@ const PreventistaPage: FC = () => {
         <div className="flex-grow-1 overflow-auto pe-1 custom-scrollbar">
           
           {loading ? (
-            <div className="d-flex justify-content-center align-items-center h-100 py-5">
-              <div className="spinner-border text-danger" role="status"></div>
-            </div>
+            <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
           ) : viewMode === 'sell' ? (
             <>
               <div className="mb-3 px-1">

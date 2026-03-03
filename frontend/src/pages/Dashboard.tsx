@@ -5,6 +5,7 @@ import { db } from '../api/firebase';
 import { collection, doc, onSnapshot, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { SPINNER_VARIANTS } from '../constants';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend, AreaChart, Area
@@ -149,7 +150,7 @@ const Dashboard: FC = () => {
   const TOOLTIP_BORDER = isDark ? '#333' : '#ced4da';
   const TOOLTIP_TEXT = isDark ? '#fff' : '#000';
 
-  if (loadingMasterData || loading) return <GlobalSpinner variant="overlay" />;
+  if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
 
   return (
     <div className="admin-layout-container flex-column overflow-hidden gap-3">
@@ -184,7 +185,7 @@ const Dashboard: FC = () => {
               <div className="pill-content flex-grow-1">
                 <span className="pill-label">RESULTADOS</span>
                 <span className="pill-date-input-v2 d-block text-uppercase">
-                  {stats.chartMain.length} PRODUCTOS
+                  {loading ? '...' : `${stats.chartMain.length} PRODUCTOS`}
                 </span>
               </div>
             </div>
@@ -197,11 +198,7 @@ const Dashboard: FC = () => {
         <div className="h-100 overflow-auto custom-scrollbar p-3">
           
           {loading ? (
-            <div className="d-flex justify-content-center align-items-center h-100" style={{ minHeight: '300px' }}>
-              <div className="spinner-border text-danger" role="status">
-                <span className="visually-hidden">Cargando Dashboard...</span>
-              </div>
-            </div>
+            <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
           ) : (
             <>
               {!loading && Object.keys(todayInventory).length === 0 && (

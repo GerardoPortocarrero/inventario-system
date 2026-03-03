@@ -5,6 +5,7 @@ import { db } from '../api/firebase';
 import { collection, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle, FaWarehouse, FaGlassMartiniAlt } from 'react-icons/fa';
 import GenericTable, { type Column } from '../components/GenericTable';
@@ -225,7 +226,7 @@ const AlmacenPage: FC = () => {
     )}
   ];
 
-  if (loadingMasterData) return <GlobalSpinner variant="overlay" />;
+  if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
 
   return (
     <div className="admin-layout-container overflow-hidden">
@@ -310,11 +311,7 @@ const AlmacenPage: FC = () => {
 
         <div className="flex-grow-1 overflow-auto pe-1 custom-scrollbar">
           {loading ? (
-            <div className="d-flex justify-content-center align-items-center h-100 py-5">
-              <div className="spinner-border text-danger" role="status">
-                <span className="visually-hidden">Sincronizando...</span>
-              </div>
-            </div>
+            <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
           ) : (
             viewMode === 'edit' ? (
               <Row className="g-2 m-0">
