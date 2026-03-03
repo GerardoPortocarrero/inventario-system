@@ -59,7 +59,7 @@ service cloud.firestore {
     }
 
     match /usuarios/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isSupervisor());
       allow write: if isAdmin();
       allow update: if request.auth.uid == userId && 
                     request.resource.data.rolId == resource.data.rolId &&
@@ -67,33 +67,30 @@ service cloud.firestore {
     }
 
     match /inventario/{inventoryId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.sedeId == getSedeId());
+      allow read: if isAdmin() || isSupervisor() || (isAuthenticated() && resource.data.sedeId == getSedeId());
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
     }
 
     match /unidadesDeStock/{unitId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.sedeId == getSedeId());
+      allow read: if isAdmin() || isSupervisor() || (isAuthenticated() && resource.data.sedeId == getSedeId());
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
     }
 
     match /inventario_diario/{docId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
-      // Permitir que Preventistas (y Admin) actualicen la preventa durante la transacción de venta
       allow update: if isAdmin() || 
                     (isAlmacenero() && request.resource.data.sedeId == getSedeId()) ||
                     (isPreventista() && request.resource.data.sedeId == getSedeId());
     }
 
     match /transito/{docId} {
-      allow read: if isAdmin() || 
-                  ((isSupervisor() || isAlmacenero()) && resource.data.sedeId == getSedeId());
+      allow read: if isAdmin() || isSupervisor() || isAlmacenero();
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
     }
 
     match /ordenes/{orderId} {
-      allow read: if isAdmin() || 
-                  (isSupervisor() && resource.data.sedeId == getSedeId()) ||
+      allow read: if isAdmin() || isSupervisor() || 
                   (isPreventista() && resource.data.preventistaId == request.auth.uid);
 
       // CORRECCIÓN: Permitir create si es Admin O si es Preventista con los datos correctos
