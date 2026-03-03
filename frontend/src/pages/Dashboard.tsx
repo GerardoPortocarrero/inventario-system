@@ -113,6 +113,7 @@ const Dashboard: FC = () => {
 
       const totalAyer = ayer.almacen + ayer.consignacion + ayer.rechazo;
       const pTransito = todayInventory.hasOwnProperty(p.id) ? Math.max(0, totalAyer - hoy.almacen) : 0;
+      const pVentaReal = Math.max(0, pTransito - hoy.rechazo); // Venta = Tránsito - Rechazo
       const pInventario = hoy.almacen + hoy.consignacion + hoy.rechazo;
       const pStock = pInventario - pPreventa;
 
@@ -120,9 +121,10 @@ const Dashboard: FC = () => {
       tInventario += pInventario; 
       tTransito += pTransito;
       tPreventa += pPreventa; 
+      tVentas += pVentaReal; // Venta acumulada real
       tRechazo += hoy.rechazo;
 
-      const metric = { id: p.id, name: p.nombre, sap: p.sap, stock: pStock, transito: pTransito, ventas: pTransito, inventario: pInventario, preventa: pPreventa, rechazo: hoy.rechazo };
+      const metric = { id: p.id, name: p.nombre, sap: p.sap, stock: pStock, transito: pTransito, ventas: pVentaReal, inventario: pInventario, preventa: pPreventa, rechazo: hoy.rechazo };
       productMetrics.push(metric);
 
       if (pInventario > 0 || pTransito > 0 || pPreventa > 0) {
@@ -130,16 +132,13 @@ const Dashboard: FC = () => {
           name: p.nombre.substring(0, 8), 
           Stock: pStock, 
           Preventa: pPreventa,
-          Ventas: pTransito // Siguiendo lógica de negocio: Venta = Tránsito
+          Ventas: pVentaReal // Venta Real (lo cobrado)
         });
         chartOps.push({ name: p.nombre.substring(0, 8), ALM: hoy.almacen, CON: hoy.consignacion, RECH: hoy.rechazo });
         const typeName = beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros';
         typeDistribution[typeName] = (typeDistribution[typeName] || 0) + pInventario;
       }
     });
-
-    // KPI de VENTAS asignado al Tránsito total
-    tVentas = tTransito;
 
     return { 
       tStock, tInventario, tTransito, tPreventa, tVentas, tRechazo, 
@@ -225,10 +224,10 @@ const Dashboard: FC = () => {
                 {[
                   { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
                   { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#FFFFFF' },
-                  { label: 'EN TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#adb5bd' },
-                  { label: 'VENTAS (TRÁNS)', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#FFFFFF' },
+                  { label: 'TRÁNSITO (SALIDA)', value: stats.tTransito, icon: <FaTruck />, color: '#adb5bd' },
+                  { label: 'VENTA REAL (NETA)', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#FFFFFF' },
                   { label: 'PREVENTA HOY', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#6c757d' },
-                  { label: 'RECHAZOS', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#F40009' }
+                  { label: 'RECHAZOS HOY', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#F40009' }
                 ].map((kpi, i) => (
                   <Col key={i} xs={6} md={4} lg={2}>
                     <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
