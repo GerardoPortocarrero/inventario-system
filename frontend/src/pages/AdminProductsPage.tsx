@@ -36,7 +36,7 @@ const ProductForm: React.FC<{
   onCancel?: () => void;
   loading: boolean;
 }> = ({ initialData, onSubmit, onCancel, loading }) => {
-  const { beverageTypes, loadingMasterData } = useData();
+  const { beverageTypes } = useData();
   const [nombre, setNombre] = useState(initialData?.nombre || '');
   const [sap, setSap] = useState(initialData?.sap || '');
   const [tipoBebidaId, setTipoBebidaId] = useState(initialData?.tipoBebidaId || '');

@@ -33,7 +33,7 @@ const UserForm: React.FC<{
   onCancel?: () => void;
   loading: boolean;
 }> = ({ initialData, onSubmit, onCancel, loading }) => {
-  const { roles, sedes, loadingMasterData } = useData();
+  const { roles, sedes } = useData();
   const [nombre, setNombre] = useState(initialData?.nombre || '');
   const [email, setEmail] = useState(initialData?.email || '');
   const [password, setPassword] = useState('');
