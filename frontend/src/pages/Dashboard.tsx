@@ -181,7 +181,6 @@ const Dashboard: FC = () => {
   const isDark = isDarkMode;
   const SYSTEM_COLORS = ['#F40009', '#6c757d', '#adb5bd', '#343a40', '#495057', '#212529', '#000000'];
   const CHART_TEXT_COLOR = isDark ? '#FFFFFF' : '#212529';
-  const CHART_BORDER_COLOR = isDark ? '#333' : '#ced4da';
   const GRID_COLOR = isDark ? '#333333' : '#dee2e6';
   const AXIS_COLOR = isDark ? '#aaa' : '#666';
   const TOOLTIP_BG = isDark ? '#1a1a1a' : '#fff';
@@ -317,7 +316,7 @@ const Dashboard: FC = () => {
                             contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '4px' }} 
                             itemStyle={{ color: TOOLTIP_TEXT, fontSize: '11px' }}
                             labelStyle={{ color: '#F40009', fontWeight: 'bold', marginBottom: '5px', fontSize: '12px' }}
-                            formatter={(val: any, name: string) => [`${val} CJ`, name]} 
+                            formatter={(val: any, name: string | undefined) => [`${val} CJ`, name || '']} 
                           />
                           <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                           <Bar name="STOCK VENTA" dataKey="Stock" fill="#F40009" radius={0} />
