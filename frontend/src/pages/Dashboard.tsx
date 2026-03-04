@@ -126,7 +126,6 @@ const Dashboard: FC = () => {
       const uInventario = hoy.almacen + hoy.consignacion + hoy.rechazo;
       const uStock = uInventario - uPreventa;
 
-      // Conversión a CAJAS (CJ)
       const cStock = uStock / factor;
       const cInventario = uInventario / factor;
       const cTransito = uTransito / factor;
@@ -185,7 +184,7 @@ const Dashboard: FC = () => {
   const CHART_BORDER_COLOR = isDark ? '#333' : '#ced4da';
   const GRID_COLOR = isDark ? '#333333' : '#dee2e6';
   const AXIS_COLOR = isDark ? '#aaa' : '#666';
-  const TOOLTIP_BG = isDark ? '#000' : '#fff';
+  const TOOLTIP_BG = isDark ? '#1a1a1a' : '#fff';
   const TOOLTIP_BORDER = isDark ? '#333' : '#ced4da';
   const TOOLTIP_TEXT = isDark ? '#fff' : '#000';
 
@@ -193,8 +192,6 @@ const Dashboard: FC = () => {
 
   return (
     <div className="admin-layout-container flex-column overflow-hidden gap-3">
-      
-      {/* 1. FILTROS */}
       <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto' }}>
         <Row className="g-2 align-items-center">
           <Col xs={6} md={4}>
@@ -232,10 +229,8 @@ const Dashboard: FC = () => {
         </Row>
       </div>
 
-      {/* 2. CONTENIDO */}
       <div className="admin-section-table flex-grow-1 overflow-hidden p-0">
         <div className="h-100 overflow-auto custom-scrollbar p-3">
-          
           {loading ? ( <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> ) : (
             <>
               {!loading && Object.keys(todayInventory).length === 0 && (
@@ -244,7 +239,6 @@ const Dashboard: FC = () => {
                 </Alert>
               )}
 
-              {/* KPIs (MOSTRANDO CAJAS) */}
               <Row className="g-2 mb-3">
                 {[
                   { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
@@ -266,11 +260,10 @@ const Dashboard: FC = () => {
                 ))}
               </Row>
 
-              {/* GRÁFICAS */}
               <Row className="g-3 mb-3">
                 <Col xs={12} lg={8}>
                   <div className="dash-chart-box">
-                    <div className="dash-chart-header"><FaChartArea className="me-2 text-danger" /> TENDENCIA SEMANAL (CAJAS)</div>
+                    <div className="dash-chart-header"><FaChartArea className="me-2 text-danger" /> TENDENCIA SEMANAL</div>
                     <div style={{ height: 280 }}>
                       {historyData.length > 0 ? (
                         <ResponsiveContainer>
@@ -279,7 +272,7 @@ const Dashboard: FC = () => {
                             <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                             <XAxis dataKey="fecha" stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
                             <YAxis stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
-                            <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`, 'STOCK']} />
+                            <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`, 'STOCK']} />
                             <Area type="monotone" dataKey="stock" stroke="#F40009" strokeWidth={2} fillOpacity={1} fill="url(#c)" />
                           </AreaChart>
                         </ResponsiveContainer>
@@ -296,7 +289,11 @@ const Dashboard: FC = () => {
                           <Pie data={stats.pieData} innerRadius={65} outerRadius={90} dataKey="value" stroke="none">
                             {stats.pieData.map((_, i) => <Cell key={i} fill={SYSTEM_COLORS[i % SYSTEM_COLORS.length]} />)}
                           </Pie>
-                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`, 'INV.']} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '4px' }} 
+                            itemStyle={{ color: TOOLTIP_TEXT, fontSize: '12px', fontWeight: 'bold' }}
+                            formatter={(val: any) => [`${val} CJ`, 'INVENTARIO']} 
+                          />
                           <Legend iconType="circle" />
                         </PieChart>
                       </ResponsiveContainer>
@@ -315,7 +312,12 @@ const Dashboard: FC = () => {
                           <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                           <XAxis dataKey="name" fontSize={9} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                           <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`]} />
+                          <Tooltip 
+                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                            contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '4px' }} 
+                            itemStyle={{ color: TOOLTIP_TEXT, fontSize: '11px' }}
+                            formatter={(val: any) => [`${val} CJ`]} 
+                          />
                           <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                           <Bar name="STOCK DISP." dataKey="Stock" fill="#F40009" radius={0} />
                           <Bar name="PREVENTA" dataKey="Preventa" fill="#adb5bd" radius={0} />
@@ -334,7 +336,12 @@ const Dashboard: FC = () => {
                           <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                           <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                           <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`]} />
+                          <Tooltip 
+                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                            contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '4px' }} 
+                            itemStyle={{ color: TOOLTIP_TEXT, fontSize: '12px', fontWeight: 'bold' }}
+                            formatter={(val: any) => [`${val} CJ`, 'VALOR']}
+                          />
                           <Bar dataKey="value" radius={0}>
                             {stats.chartOps.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                           </Bar>
@@ -358,7 +365,7 @@ const Dashboard: FC = () => {
                         <div key={idx} className="dash-top-item">
                           <span className="dash-top-idx">{idx + 1}</span>
                           <div className="dash-top-info"><div className="dash-top-name">{p.name}</div><div className="dash-top-sap">{p.sap}</div></div>
-                          <div className={`dash-top-val ${top.color}`}>{p[top.key]} CJ</div>
+                          <div className={`dash-top-val ${top.color}`}>{p[top.key]} U</div>
                         </div>
                       ))}
                     </div>
