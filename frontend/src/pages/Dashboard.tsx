@@ -241,11 +241,11 @@ const Dashboard: FC = () => {
 
               <Row className="g-2 mb-3">
                 {[
-                  { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
                   { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#FFFFFF' },
-                  { label: 'TRÁNSITO (SALIDA)', value: stats.tTransito, icon: <FaTruck />, color: '#6c757d' },
-                  { label: 'VENTA REAL (NETA)', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#FFFFFF' },
+                  { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
                   { label: 'PREVENTA HOY', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#adb5bd' },
+                  { label: 'TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#6c757d' },
+                  { label: 'VENTA REAL', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#FFFFFF' },
                   { label: 'RECHAZOS HOY', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#F40009' }
                 ].map((kpi, i) => (
                   <Col key={i} xs={6} md={4} lg={2}>
