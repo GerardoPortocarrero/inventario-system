@@ -10,7 +10,8 @@ import {
 } from 'recharts';
 import { 
   FaUserTie, FaShoppingCart, FaTruck, FaHandHoldingUsd, FaUndoAlt, 
-  FaChartLine, FaWarehouse, FaCalendarAlt, FaSearch, FaBox
+  FaChartLine, FaWarehouse, FaCalendarAlt, FaSearch, FaBox,
+  FaSort, FaSortUp, FaSortDown
 } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
 import GenericTable from '../components/GenericTable';
@@ -34,6 +35,9 @@ const SupervisorPage: FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedSedeId, setSelectedSedeId] = useState<string>('GLOBAL');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const [sortConfig1, setSortConfig1] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig2, setSortConfig2] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const yesterdayStr = useMemo(() => {
     const d = new Date(selectedDate + 'T12:00:00');
@@ -133,13 +137,62 @@ const SupervisorPage: FC = () => {
 
     return {
       totals: { tPrev, tTrans, tRech, tVenta, efectividad: tTrans > 0 ? (tVenta / tTrans) * 100 : 0 },
-      preventistas: Object.values(prevStats).sort((a, b) => b.ventaRealMoney - a.ventaRealMoney),
+      preventistas: Object.values(prevStats),
       masterLog,
       chartData: Object.values(catStats).filter(c => c.PREVENTA > 0 || c.VENTA > 0)
     };
   }, [sedes, beverageTypes, allInventory, yesterdayInventory, products, ordersToday, users, selectedSedeId]);
 
-  const filteredLog = useMemo(() => stats.masterLog.filter(l => l.producto.toLowerCase().includes(searchTerm.toLowerCase()) || l.preventista.toLowerCase().includes(searchTerm.toLowerCase()) || l.sap.toLowerCase().includes(searchTerm.toLowerCase())), [stats.masterLog, searchTerm]);
+  const sortedPreventistas = useMemo(() => {
+    if (!sortConfig1) return [...stats.preventistas].sort((a, b) => b.ventaRealMoney - a.ventaRealMoney);
+    return [...stats.preventistas].sort((a, b) => {
+      if (a[sortConfig1.key] < b[sortConfig1.key]) return sortConfig1.direction === 'asc' ? -1 : 1;
+      if (a[sortConfig1.key] > b[sortConfig1.key]) return sortConfig1.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [stats.preventistas, sortConfig1]);
+
+  const sortedLog = useMemo(() => {
+    let list = stats.masterLog.filter(l => l.producto.toLowerCase().includes(searchTerm.toLowerCase()) || l.preventista.toLowerCase().includes(searchTerm.toLowerCase()) || l.sap.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (!sortConfig2) return list;
+    return [...list].sort((a, b) => {
+      if (a[sortConfig2.key] < b[sortConfig2.key]) return sortConfig2.direction === 'asc' ? -1 : 1;
+      if (a[sortConfig2.key] > b[sortConfig2.key]) return sortConfig2.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [stats.masterLog, searchTerm, sortConfig2]);
+
+  const handleSort1 = (key: string) => {
+    setSortConfig1(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const handleSort2 = (key: string) => {
+    setSortConfig2(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const SortableHeader = ({ label, sortKey, config, onSort }: any) => {
+    const isSorted = config?.key === sortKey;
+    return (
+      <div className="d-flex align-items-center gap-1 cursor-pointer select-none" onClick={() => onSort(sortKey)} style={{ cursor: 'pointer' }}>
+        {label}
+        {isSorted ? (
+          config.direction === 'asc' ? <FaSortUp size={10} /> : <FaSortDown size={10} />
+        ) : (
+          <FaSort size={10} style={{ opacity: 0.3 }} />
+        )}
+      </div>
+    );
+  };
 
   if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
 
@@ -229,17 +282,20 @@ const SupervisorPage: FC = () => {
               <div className="dash-chart-box mb-4">
                 <div className="dash-chart-header"><FaUserTie className="me-2 text-danger" /> RENDIMIENTO POR PREVENTISTA</div>
                 <GenericTable 
-                  data={stats.preventistas} 
+                  data={sortedPreventistas} 
                   columns={[
                     { accessorKey: 'sede', header: 'SEDE' },
                     { accessorKey: 'nombre', header: 'PREVENTISTA' },
-                    { accessorKey: 'prevHoy', header: 'PREVENTA (U)' },
                     { 
-                      header: 'UNIDADES', 
+                      header: <SortableHeader label="PREVENTA (U)" sortKey="prevHoy" config={sortConfig1} onSort={handleSort1} />,
+                      render: (p: any) => <span>{p.prevHoy} U</span>
+                    },
+                    { 
+                      header: <SortableHeader label="UNIDADES" sortKey="ventaReal" config={sortConfig1} onSort={handleSort1} />,
                       render: (p: any) => <span className="fw-bold text-success">{p.ventaReal} U</span> 
                     },
                     { 
-                      header: 'INGRESOS', 
+                      header: <SortableHeader label="INGRESOS" sortKey="ventaRealMoney" config={sortConfig1} onSort={handleSort1} />,
                       render: (p: any) => <span className="fw-bold">S/ {p.ventaRealMoney.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> 
                     }
                   ]} 
@@ -255,7 +311,7 @@ const SupervisorPage: FC = () => {
                   </div>
                 </div>
                 <GenericTable 
-                  data={filteredLog} 
+                  data={sortedLog} 
                   columns={[
                     { accessorKey: 'sede', header: 'SEDE' },
                     { accessorKey: 'sap', header: 'SAP' },
@@ -265,7 +321,10 @@ const SupervisorPage: FC = () => {
                       header: 'TIPO', 
                       render: (l: any) => <Badge bg={l.tipo.includes('VENTA') ? 'success' : 'secondary'}>{l.tipo}</Badge> 
                     },
-                    { accessorKey: 'cant', header: 'CANTIDAD (U)' }
+                    { 
+                      header: <SortableHeader label="CANTIDAD (U)" sortKey="cant" config={sortConfig2} onSort={handleSort2} />,
+                      render: (l: any) => <span>{l.cant} U</span>
+                    }
                   ]} 
                 />
               </div>

@@ -6,7 +6,7 @@ import './GenericTable.css'; // Importar los estilos para la tarjeta
 
 // Define la interfaz para la configuración de una columna
 export interface Column<T> {
-  header: string;
+  header: React.ReactNode;
   accessorKey?: keyof T;
   render?: (item: T) => React.ReactNode;
 }
