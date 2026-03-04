@@ -100,7 +100,7 @@ const ProductForm: React.FC<{
   };
 
   const selectedTypeName = beverageTypes.find(t => t.id === tipoBebidaId)?.nombre?.toLowerCase() || '';
-  const isHiddenType = selectedTypeName === 'envase' || selectedTypeName === 'jaba';
+  const isEnvase = selectedTypeName === 'envase';
 
   return (
     <Form onSubmit={handleSubmit}>
@@ -135,19 +135,19 @@ const ProductForm: React.FC<{
           disabled={loading}
         />
       </Form.Group>
-      {!isHiddenType && (
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.PRICE}</Form.Label>
+        <Form.Control
+          type="number"
+          step="0.01"
+          value={precio}
+          onChange={(e) => setPrecio(e.target.value)}
+          required
+          disabled={loading}
+        />
+      </Form.Group>
+      {!isEnvase && (
         <>
-          <Form.Group className="mb-3">
-            <Form.Label>{UI_TEXTS.PRICE}</Form.Label>
-            <Form.Control
-              type="number"
-              step="0.01"
-              value={precio}
-              onChange={(e) => setPrecio(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>{UI_TEXTS.MILILITROS}</Form.Label>
             <Form.Control
