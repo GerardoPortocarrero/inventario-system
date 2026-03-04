@@ -1,31 +1,32 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Alert, Form, Badge } from 'react-bootstrap';
+import { Row, Col, Form, Badge } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { 
   FaUserTie, FaShoppingCart, FaTruck, FaHandHoldingUsd, FaUndoAlt, 
-  FaChartLine, FaWarehouse, FaCalendarAlt, FaSearch, FaBox, FaFilter
+  FaChartLine, FaWarehouse, FaCalendarAlt, FaSearch, FaBox
 } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
-import GenericTable, { type Column } from '../components/GenericTable';
+import GenericTable from '../components/GenericTable';
 
-interface Product { id: string; nombre: string; sap: string; tipoBebidaId: string; }
+interface Product { id: string; nombre: string; sap: string; tipoBebidaId: string; precio: number; unidades: number; }
 interface Order { id: string; preventistaId: string; sedeId: string; fechaCreacion: string; detalles: { productoId: string; cantidad: number; }[]; }
 interface User { id: string; nombre: string; rolId: string; sedeId: string; }
 interface DailyInventory { id: string; productos: Record<string, { almacen: number; consignacion: number; rechazo: number; }>; }
 
 const SupervisorPage: FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
-  const { sedes, loadingMasterData } = useData();
+  const { sedes, beverageTypes, loadingMasterData } = useData();
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersToday, setOrdersToday] = useState<Order[]>([]);
+  const [ordersYesterday, setOrdersYesterday] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [allInventory, setAllInventory] = useState<Record<string, DailyInventory>>({});
   const [yesterdayInventory, setYesterdayInventory] = useState<Record<string, DailyInventory>>({});
@@ -42,9 +43,7 @@ const SupervisorPage: FC = () => {
   }, [selectedDate]);
 
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDarkMode(document.body.classList.contains('theme-dark'));
-    });
+    const observer = new MutationObserver(() => setIsDarkMode(document.body.classList.contains('theme-dark')));
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
@@ -53,8 +52,9 @@ const SupervisorPage: FC = () => {
     setLoading(true);
     const unsubProducts = onSnapshot(collection(db, 'productos'), s => setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product))));
     const unsubUsers = onSnapshot(collection(db, 'usuarios'), s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User))));
-    const qOrders = query(collection(db, 'ordenes'), where('fechaCreacion', '==', selectedDate));
-    const unsubOrders = onSnapshot(qOrders, s => setOrders(s.docs.map(d => ({ id: d.id, ...d.data() } as Order))));
+    
+    const unsubOrdersToday = onSnapshot(query(collection(db, 'ordenes'), where('fechaCreacion', '==', selectedDate)), s => setOrdersToday(s.docs.map(d => ({ id: d.id, ...d.data() } as Order))));
+    const unsubOrdersYesterday = onSnapshot(query(collection(db, 'ordenes'), where('fechaCreacion', '==', yesterdayStr)), s => setOrdersYesterday(s.docs.map(d => ({ id: d.id, ...d.data() } as Order))));
 
     const fetchInventories = async () => {
       const qToday = query(collection(db, 'inventario_diario'), where('fecha', '==', selectedDate));
@@ -72,77 +72,87 @@ const SupervisorPage: FC = () => {
     };
 
     fetchInventories();
-    return () => { unsubProducts(); unsubUsers(); unsubOrders(); };
+    return () => { unsubProducts(); unsubUsers(); unsubOrdersToday(); unsubOrdersYesterday(); };
   }, [selectedDate, yesterdayStr]);
 
   const stats = useMemo(() => {
-    const preventistasStats: Record<string, any> = {};
-    const productStats: any[] = [];
-    let gPreventa = 0, gTransito = 0, gRechazo = 0, gVentaNeta = 0;
+    const prevStats: Record<string, any> = {};
+    const masterLog: any[] = [];
+    const catStats: Record<string, any> = {};
+    let tPrev = 0, tTrans = 0, tRech = 0, tVenta = 0;
 
+    beverageTypes.forEach(t => { catStats[t.id] = { name: t.nombre, PREVENTA: 0, VENTA: 0 }; });
+
+    // 1. Mapear productos para acceso rápido
+    const productMap = products.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, Product>);
+
+    // 2. Procesar Órdenes de HOY (Preventa e Ingresos)
+    ordersToday.forEach(order => {
+      if (selectedSedeId !== 'GLOBAL' && order.sedeId !== selectedSedeId) return;
+      
+      if (!prevStats[order.preventistaId]) {
+        const u = users.find(u => u.id === order.preventistaId);
+        const s = sedes.find(s => s.id === order.sedeId);
+        prevStats[order.preventistaId] = { id: order.preventistaId, nombre: u?.nombre || 'Desconocido', sede: s?.nombre || 'Sede', prevHoy: 0, ventaReal: 0, ventaRealMoney: 0 };
+      }
+
+      order.detalles.forEach(det => {
+        const prod = productMap[det.productoId];
+        if (!prod) return;
+
+        tPrev += det.cantidad;
+        catStats[prod.tipoBebidaId].PREVENTA += det.cantidad;
+        prevStats[order.preventistaId].prevHoy += det.cantidad;
+        
+        // Unidades e Ingresos se basan en Preventa Hoy para visualización inmediata
+        prevStats[order.preventistaId].ventaReal += det.cantidad;
+        const subtotal = (det.cantidad / (prod.unidades || 1)) * (prod.precio || 0);
+        prevStats[order.preventistaId].ventaRealMoney += subtotal;
+
+        masterLog.push({ id: `${order.id}_${prod.id}`, sap: prod.sap, producto: prod.nombre, sede: prevStats[order.preventistaId].sede, preventista: prevStats[order.preventistaId].nombre, tipo: 'PREVENTA (HOY)', cant: det.cantidad });
+      });
+    });
+
+    // 3. Procesar Auditoría (Tránsito, Rechazo y Logro de Ayer)
     sedes.forEach(sede => {
       if (selectedSedeId !== 'GLOBAL' && sede.id !== selectedSedeId) return;
+      
       const hoySede = allInventory[sede.id]?.productos || {};
       const ayerSede = yesterdayInventory[sede.id]?.productos || {};
 
       products.forEach(prod => {
-        let pPreventa = 0;
-        const prodOrders = orders.filter(o => o.sedeId === sede.id);
-        prodOrders.forEach(o => {
-          const item = o.detalles.find(d => d.productoId === prod.id);
-          if (item) {
-            pPreventa += item.cantidad;
-            if (!preventistasStats[o.preventistaId]) {
-              const u = users.find(u => u.id === o.preventistaId);
-              preventistasStats[o.preventistaId] = { id: o.preventistaId, nombre: u?.nombre || 'Desconocido', sede: sedes.find(s => s.id === u?.sedeId)?.nombre || 'N/A', ordenes: 0, preventa: 0, rechazo: 0, ventaNeta: 0 };
-            }
-            preventistasStats[o.preventistaId].preventa += item.cantidad;
-          }
-        });
-
-        const uniqueOrders = new Set(prodOrders.map(o => o.id));
-        uniqueOrders.forEach(oid => {
-          const o = orders.find(ord => ord.id === oid);
-          if (o && preventistasStats[o.preventistaId]) preventistasStats[o.preventistaId].ordenes++;
-        });
-
         const ayerData = ayerSede[prod.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
         const hoyData = hoySede[prod.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
         const totalAyer = ayerData.almacen + ayerData.consignacion + ayerData.rechazo;
         const pTransito = allInventory[sede.id] ? Math.max(0, totalAyer - hoyData.almacen) : 0;
         const pRechazo = hoyData.rechazo;
-        const pVentaNeta = Math.max(0, pTransito - pRechazo);
+        const pVenta = Math.max(0, pTransito - pRechazo);
 
-        gPreventa += pPreventa; gTransito += pTransito; gRechazo += pRechazo; gVentaNeta += pVentaNeta;
+        tTrans += pTransito; tRech += pRechazo; tVenta += pVenta;
+        catStats[prod.tipoBebidaId].VENTA += pVenta;
 
-        if (pPreventa > 0 || pTransito > 0 || pRechazo > 0) {
-          productStats.push({ id: `${sede.id}_${prod.id}`, producto: prod.nombre, sap: prod.sap, sede: sede.nombre, preventa: pPreventa, transito: pTransito, rechazo: pRechazo, ventaNeta: pVentaNeta, efectividad: pTransito > 0 ? (pVentaNeta / pTransito) * 100 : 0 });
-        }
+        // Aquí podríamos añadir auditoría extra si se requiere comparar contra pedidos específicos de ayer
       });
     });
 
     return {
-      totals: { gPreventa, gTransito, gRechazo, gVentaNeta, efectividad: gTransito > 0 ? (gVentaNeta / gTransito) * 100 : 0 },
-      preventistas: Object.values(preventistasStats).sort((a, b) => b.ventaNeta - a.ventaNeta),
-      products: productStats,
-      chartData: productStats.slice(0, 8).map(p => ({ name: p.producto.substring(0, 8), Prev: p.preventa, Venta: p.ventaNeta }))
+      totals: { tPrev, tTrans, tRech, tVenta, efectividad: tTrans > 0 ? (tVenta / tTrans) * 100 : 0 },
+      preventistas: Object.values(prevStats).sort((a, b) => b.ventaRealMoney - a.ventaRealMoney),
+      masterLog,
+      chartData: Object.values(catStats).filter(c => c.PREVENTA > 0 || c.VENTA > 0)
     };
-  }, [sedes, products, orders, users, allInventory, yesterdayInventory, selectedDate, selectedSedeId]);
+  }, [sedes, beverageTypes, allInventory, yesterdayInventory, products, ordersToday, users, selectedSedeId]);
 
-  const filteredMaster = useMemo(() => stats.products.filter(p => p.producto.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.toLowerCase().includes(searchTerm.toLowerCase()) || p.sede.toLowerCase().includes(searchTerm.toLowerCase())), [stats.products, searchTerm]);
+  const filteredLog = useMemo(() => stats.masterLog.filter(l => l.producto.toLowerCase().includes(searchTerm.toLowerCase()) || l.preventista.toLowerCase().includes(searchTerm.toLowerCase()) || l.sap.toLowerCase().includes(searchTerm.toLowerCase())), [stats.masterLog, searchTerm]);
 
   if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
 
   const isDark = isDarkMode;
-  const GRID_COLOR = isDark ? '#333333' : '#dee2e6';
-  const AXIS_COLOR = isDark ? '#555' : '#888';
-  const TOOLTIP_BG = isDark ? '#000' : '#fff';
-  const TOOLTIP_TEXT = isDark ? '#fff' : '#000';
+  const GRID_COLOR = isDark ? '#333' : '#eee';
+  const TEXT_COLOR = isDark ? '#fff' : '#000';
 
   return (
     <div className="admin-layout-container flex-column overflow-hidden gap-3">
-      
-      {/* 1. SECCIÓN DE FILTROS (ESPEJO DASHBOARD) */}
       <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto' }}>
         <Row className="g-2 align-items-center">
           <Col xs={12} md={4}>
@@ -161,7 +171,7 @@ const SupervisorPage: FC = () => {
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober"><FaCalendarAlt /></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">FECHA DE ANÁLISIS</span>
+                <span className="pill-label">FECHA DE AUDITORÍA</span>
                 <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2 w-100" />
               </div>
             </div>
@@ -178,20 +188,18 @@ const SupervisorPage: FC = () => {
         </Row>
       </div>
 
-      {/* 2. SECCIÓN DE CONTENIDO (ESPEJO DASHBOARD) */}
       <div className="admin-section-table flex-grow-1 overflow-hidden p-0">
         <div className="h-100 overflow-auto custom-scrollbar p-3">
           {loading ? (
             <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
           ) : (
             <>
-              {/* KPIs (ESPEJO DASHBOARD) */}
               <Row className="g-2 mb-3">
                 {[
-                  { label: 'DEMANDA (PREVENTA)', value: stats.totals.gPreventa, icon: <FaShoppingCart />, color: '#adb5bd' },
-                  { label: 'SALIDAS (TRÁNSITO)', value: stats.totals.gTransito, icon: <FaTruck />, color: '#6c757d' },
-                  { label: 'DEVOLUCIONES', value: stats.totals.gRechazo, icon: <FaUndoAlt />, color: '#F40009' },
-                  { label: 'VENTA NETA (LOGRO)', value: stats.totals.gVentaNeta, icon: <FaHandHoldingUsd />, color: '#FFFFFF' }
+                  { label: 'PREVENTA (HOY)', value: stats.totals.tPrev, icon: <FaShoppingCart />, color: '#adb5bd' },
+                  { label: 'TRÁNSITO (SALIDA)', value: stats.totals.tTrans, icon: <FaTruck />, color: '#6c757d' },
+                  { label: 'RECHAZO (RETORNO)', value: stats.totals.tRech, icon: <FaUndoAlt />, color: '#F40009' },
+                  { label: 'VENTA (LOGRO REAL)', value: stats.totals.tVenta, icon: <FaHandHoldingUsd />, color: '#FFFFFF' }
                 ].map((kpi, i) => (
                   <Col key={i} xs={6} md={3}>
                     <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
@@ -205,58 +213,63 @@ const SupervisorPage: FC = () => {
                 ))}
               </Row>
 
-              {/* GRÁFICA COMERCIAL */}
               <div className="dash-chart-box mb-4">
-                <div className="dash-chart-header"><FaChartLine className="me-2 text-danger" /> COMPARATIVO PREVENTA VS LOGRO REAL</div>
-                <div style={{ height: 250 }}>
+                <div className="dash-chart-header"><FaChartLine className="me-2 text-danger" /> DESEMPEÑO POR CATEGORÍA DE PRODUCTO</div>
+                <div style={{ height: 300 }}>
                   <ResponsiveContainer>
                     <BarChart data={stats.chartData}>
                       <CartesianGrid stroke={GRID_COLOR} vertical={false} />
-                      <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
-                      <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: 'none', borderRadius: '0', color: TOOLTIP_TEXT }} />
-                      <Bar dataKey="Prev" fill="#adb5bd" radius={0} />
-                      <Bar dataKey="Venta" fill="#F40009" radius={0} />
+                      <XAxis dataKey="name" fontSize={10} stroke={TEXT_COLOR} tickLine={false} axisLine={false} />
+                      <YAxis fontSize={10} stroke={TEXT_COLOR} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{ backgroundColor: '#000', border: 'none', color: '#fff' }} />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                      <Bar name="PREVENTA (HOY)" dataKey="PREVENTA" fill="#adb5bd" radius={0} />
+                      <Bar name="VENTA (LOGRO)" dataKey="VENTA" fill="#F40009" radius={0} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* AUDITORÍA DE PREVENTISTAS */}
               <div className="dash-chart-box mb-4">
                 <div className="dash-chart-header"><FaUserTie className="me-2 text-danger" /> RENDIMIENTO POR PREVENTISTA</div>
                 <GenericTable 
                   data={stats.preventistas} 
                   columns={[
-                    { accessorKey: 'nombre', header: 'PREVENTISTA' },
                     { accessorKey: 'sede', header: 'SEDE' },
-                    { accessorKey: 'ordenes', header: 'ÓRDENES' },
-                    { accessorKey: 'preventa', header: 'DEMANDA (U)' },
-                    { header: 'LOGRO (VENTA)', render: (p) => <span className="fw-bold text-success">{p.ventaNeta} U</span> }
+                    { accessorKey: 'nombre', header: 'PREVENTISTA' },
+                    { accessorKey: 'prevHoy', header: 'PREVENTA (U)' },
+                    { 
+                      header: 'UNIDADES', 
+                      render: (p: any) => <span className="fw-bold text-success">{p.ventaReal} U</span> 
+                    },
+                    { 
+                      header: 'INGRESOS', 
+                      render: (p: any) => <span className="fw-bold">S/ {p.ventaRealMoney.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> 
+                    }
                   ]} 
                 />
               </div>
 
-              {/* DETALLE GRANULAR */}
               <div className="dash-chart-box">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                  <div className="dash-chart-header mb-0"><FaBox className="me-2 text-danger" /> DETALLE GRANULAR POR PRODUCTO</div>
+                  <div className="dash-chart-header mb-0"><FaBox className="me-2 text-danger" /> AUDITORÍA DETALLADA (FILTRABLE)</div>
                   <div className="d-flex align-items-center gap-2 px-2" style={{ background: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', height: '32px' }}>
                     <FaSearch size={12} opacity={0.5} />
-                    <Form.Control size="sm" placeholder="Buscar..." className="border-0 bg-transparent p-0 shadow-none" style={{ fontSize: '0.75rem', width: '150px' }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    <Form.Control size="sm" placeholder="Buscar..." className="border-0 bg-transparent p-0 shadow-none" style={{ fontSize: '0.75rem', width: '180px' }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                   </div>
                 </div>
                 <GenericTable 
-                  data={filteredMaster} 
+                  data={filteredLog} 
                   columns={[
+                    { accessorKey: 'sede', header: 'SEDE' },
                     { accessorKey: 'sap', header: 'SAP' },
                     { accessorKey: 'producto', header: 'PRODUCTO' },
-                    { accessorKey: 'sede', header: 'SEDE' },
-                    { accessorKey: 'preventa', header: 'PREV.' },
-                    { accessorKey: 'transito', header: 'TRANS.' },
-                    { accessorKey: 'rechazo', header: 'RECH.' },
-                    { accessorKey: 'ventaNeta', header: 'NETA' },
-                    { header: '% EFECT.', render: (p) => <Badge bg={p.efectividad > 90 ? 'success' : p.efectividad > 70 ? 'warning' : 'danger'}>{p.efectividad.toFixed(1)}%</Badge> }
+                    { accessorKey: 'preventista', header: 'PREVENTISTA' },
+                    { 
+                      header: 'TIPO', 
+                      render: (l: any) => <Badge bg={l.tipo.includes('VENTA') ? 'success' : 'secondary'} size="sm">{l.tipo}</Badge> 
+                    },
+                    { accessorKey: 'cant', header: 'CANTIDAD (U)' }
                   ]} 
                 />
               </div>
@@ -270,12 +283,20 @@ const SupervisorPage: FC = () => {
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); padding: 0 10px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
         .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; }
         .pill-label { font-size: 0.45rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; color: var(--theme-text-primary); }
-        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 2px 0 !important; margin-top: -2px; }
+        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 2px 0 !important; margin-top: -2px; width: 100% !important; }
         
+        .pill-date-input-v2::-webkit-calendar-picker-indicator { 
+          filter: invert(var(--theme-calendar-invert, 1)); 
+          cursor: pointer;
+          transform: scale(1.5);
+          margin-right: 10px;
+          opacity: 0.8;
+        }
+
         .dash-kpi-card { background: var(--theme-background-secondary); padding: 10px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 8px; height: 100%; }
         .dash-kpi-icon { font-size: 1rem; opacity: 0.8; }
         .dash-kpi-value { font-size: 1.1rem; font-weight: 900; color: var(--theme-text-primary); line-height: 1; }
-        .dash-kpi-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; margin-top: 2px; color: var(--theme-text-primary); }
+        .dash-kpi-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; margin-top: 2px; color: var(--theme-text-primary); }
         
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
         .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); margin-bottom: 10px; text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; }
