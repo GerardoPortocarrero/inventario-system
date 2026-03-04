@@ -330,7 +330,7 @@ const Dashboard: FC = () => {
                 </Col>
                 <Col xs={12} lg={6}>
                   <div className="dash-chart-box">
-                    <div className="dash-chart-header">ESTADO GLOBAL DEL INVENTARIO (TOTAL CJ)</div>
+                    <div className="dash-chart-header">ESTADO GLOBAL DEL INVENTARIO</div>
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                         <BarChart data={stats.chartOps}>
@@ -341,7 +341,7 @@ const Dashboard: FC = () => {
                             cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                             contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '4px' }} 
                             itemStyle={{ color: TOOLTIP_TEXT, fontSize: '12px', fontWeight: 'bold' }}
-                            formatter={(val: any) => [`${val} CJ`, 'VALOR']}
+                            formatter={(val: any) => [`${val} CJ`]}
                           />
                           <Bar dataKey="value" radius={0}>
                             {stats.chartOps.map((entry, i) => <Cell key={i} fill={entry.color} />)}
