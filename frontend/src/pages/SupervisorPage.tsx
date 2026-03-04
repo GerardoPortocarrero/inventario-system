@@ -26,7 +26,6 @@ const SupervisorPage: FC = () => {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [ordersToday, setOrdersToday] = useState<Order[]>([]);
-  const [ordersYesterday, setOrdersYesterday] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [allInventory, setAllInventory] = useState<Record<string, DailyInventory>>({});
   const [yesterdayInventory, setYesterdayInventory] = useState<Record<string, DailyInventory>>({});
@@ -54,7 +53,6 @@ const SupervisorPage: FC = () => {
     const unsubUsers = onSnapshot(collection(db, 'usuarios'), s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User))));
     
     const unsubOrdersToday = onSnapshot(query(collection(db, 'ordenes'), where('fechaCreacion', '==', selectedDate)), s => setOrdersToday(s.docs.map(d => ({ id: d.id, ...d.data() } as Order))));
-    const unsubOrdersYesterday = onSnapshot(query(collection(db, 'ordenes'), where('fechaCreacion', '==', yesterdayStr)), s => setOrdersYesterday(s.docs.map(d => ({ id: d.id, ...d.data() } as Order))));
 
     const fetchInventories = async () => {
       const qToday = query(collection(db, 'inventario_diario'), where('fecha', '==', selectedDate));
@@ -72,7 +70,11 @@ const SupervisorPage: FC = () => {
     };
 
     fetchInventories();
-    return () => { unsubProducts(); unsubUsers(); unsubOrdersToday(); unsubOrdersYesterday(); };
+    return () => { 
+      unsubProducts(); 
+      unsubUsers(); 
+      unsubOrdersToday(); 
+    };
   }, [selectedDate, yesterdayStr]);
 
   const stats = useMemo(() => {
@@ -83,10 +85,8 @@ const SupervisorPage: FC = () => {
 
     beverageTypes.forEach(t => { catStats[t.id] = { name: t.nombre, PREVENTA: 0, VENTA: 0 }; });
 
-    // 1. Mapear productos para acceso rápido
     const productMap = products.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, Product>);
 
-    // 2. Procesar Órdenes de HOY (Preventa e Ingresos)
     ordersToday.forEach(order => {
       if (selectedSedeId !== 'GLOBAL' && order.sedeId !== selectedSedeId) return;
       
@@ -104,7 +104,6 @@ const SupervisorPage: FC = () => {
         catStats[prod.tipoBebidaId].PREVENTA += det.cantidad;
         prevStats[order.preventistaId].prevHoy += det.cantidad;
         
-        // Unidades e Ingresos se basan en Preventa Hoy para visualización inmediata
         prevStats[order.preventistaId].ventaReal += det.cantidad;
         const subtotal = (det.cantidad / (prod.unidades || 1)) * (prod.precio || 0);
         prevStats[order.preventistaId].ventaRealMoney += subtotal;
@@ -113,7 +112,6 @@ const SupervisorPage: FC = () => {
       });
     });
 
-    // 3. Procesar Auditoría (Tránsito, Rechazo y Logro de Ayer)
     sedes.forEach(sede => {
       if (selectedSedeId !== 'GLOBAL' && sede.id !== selectedSedeId) return;
       
@@ -130,8 +128,6 @@ const SupervisorPage: FC = () => {
 
         tTrans += pTransito; tRech += pRechazo; tVenta += pVenta;
         catStats[prod.tipoBebidaId].VENTA += pVenta;
-
-        // Aquí podríamos añadir auditoría extra si se requiere comparar contra pedidos específicos de ayer
       });
     });
 
@@ -267,7 +263,7 @@ const SupervisorPage: FC = () => {
                     { accessorKey: 'preventista', header: 'PREVENTISTA' },
                     { 
                       header: 'TIPO', 
-                      render: (l: any) => <Badge bg={l.tipo.includes('VENTA') ? 'success' : 'secondary'} size="sm">{l.tipo}</Badge> 
+                      render: (l: any) => <Badge bg={l.tipo.includes('VENTA') ? 'success' : 'secondary'}>{l.tipo}</Badge> 
                     },
                     { accessorKey: 'cant', header: 'CANTIDAD (U)' }
                   ]} 
