@@ -79,21 +79,25 @@ const Dashboard: FC = () => {
         const snap = await getDocs(q);
         const hist = snap.docs.map(d => {
           const data = d.data();
-          let total = 0;
-          Object.values(data.productos || {}).forEach((p: any) => total += (p.almacen + p.consignacion + p.rechazo));
-          return { fecha: data.fecha.substring(5), stock: total };
+          let totalCajas = 0;
+          Object.entries(data.productos || {}).forEach(([pId, pData]: [string, any]) => {
+            const prod = products.find(p => p.id === pId);
+            const factor = prod?.unidades || 1;
+            totalCajas += (pData.almacen + pData.consignacion + pData.rechazo) / factor;
+          });
+          return { fecha: data.fecha.substring(5), stock: Number(totalCajas.toFixed(2)) };
         }).reverse();
         setHistoryData(hist);
       } catch (e) { console.warn("Histórico pendiente."); }
     };
 
-    loadHistory();
+    if (products.length > 0) loadHistory();
     return () => { unsubProducts(); unsubToday(); unsubYesterday(); unsubOrders(); };
-  }, [userSedeId, selectedDate, yesterdayStr]);
+  }, [userSedeId, selectedDate, yesterdayStr, products]);
 
   const stats = useMemo(() => {
-    let tStock = 0, tInventario = 0, tTransito = 0, tPreventa = 0, tVentas = 0, tRechazo = 0;
-    let totalAlm = 0, totalCon = 0, totalRech = 0;
+    let tStockCJ = 0, tInventarioCJ = 0, tTransitoCJ = 0, tPreventaCJ = 0, tVentasCJ = 0, tRechazoCJ = 0;
+    let totalAlmCJ = 0, totalConCJ = 0, totalRechCJ = 0;
     
     const catMetrics: Record<string, { name: string, Stock: number, Preventa: number, Ventas: number }> = {};
     const typeDistribution: Record<string, number> = {};
@@ -105,49 +109,68 @@ const Dashboard: FC = () => {
 
     products.forEach(p => {
       if (selectedType && p.tipoBebidaId !== selectedType) return;
+      const factor = p.unidades || 1;
+
       const hoy = todayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
       const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
       
-      let pPreventa = 0;
+      let uPreventa = 0;
       orders.forEach(o => {
         const item = o.detalles.find(d => d.productoId === p.id);
-        if (item) pPreventa += item.cantidad;
+        if (item) uPreventa += item.cantidad;
       });
 
-      const totalAyer = ayer.almacen + ayer.consignacion + ayer.rechazo;
-      const pTransito = todayInventory.hasOwnProperty(p.id) ? Math.max(0, totalAyer - hoy.almacen) : 0;
-      const pVentaReal = Math.max(0, pTransito - hoy.rechazo); 
-      const pInventario = hoy.almacen + hoy.consignacion + hoy.rechazo;
-      const pStock = pInventario - pPreventa;
+      const totalAyerU = ayer.almacen + ayer.consignacion + ayer.rechazo;
+      const uTransito = todayInventory.hasOwnProperty(p.id) ? Math.max(0, totalAyerU - hoy.almacen) : 0;
+      const uVentaReal = Math.max(0, uTransito - hoy.rechazo); 
+      const uInventario = hoy.almacen + hoy.consignacion + hoy.rechazo;
+      const uStock = uInventario - uPreventa;
 
-      tStock += pStock; tInventario += pInventario; tTransito += pTransito;
-      tPreventa += pPreventa; tVentas += pVentaReal; tRechazo += hoy.rechazo;
+      // Conversión a CAJAS (CJ)
+      const cStock = uStock / factor;
+      const cInventario = uInventario / factor;
+      const cTransito = uTransito / factor;
+      const cPreventa = uPreventa / factor;
+      const cVentaReal = uVentaReal / factor;
+      const cRechazo = hoy.rechazo / factor;
 
-      totalAlm += hoy.almacen; totalCon += hoy.consignacion; totalRech += hoy.rechazo;
+      tStockCJ += cStock; tInventarioCJ += cInventario; tTransitoCJ += cTransito;
+      tPreventaCJ += cPreventa; tVentasCJ += cVentaReal; tRechazoCJ += cRechazo;
+
+      totalAlmCJ += hoy.almacen / factor; 
+      totalConCJ += hoy.consignacion / factor; 
+      totalRechCJ += hoy.rechazo / factor;
 
       if (catMetrics[p.tipoBebidaId]) {
-        catMetrics[p.tipoBebidaId].Stock += pStock;
-        catMetrics[p.tipoBebidaId].Preventa += pPreventa;
-        catMetrics[p.tipoBebidaId].Ventas += pVentaReal;
+        catMetrics[p.tipoBebidaId].Stock += cStock;
+        catMetrics[p.tipoBebidaId].Preventa += cPreventa;
+        catMetrics[p.tipoBebidaId].Ventas += cVentaReal;
       }
 
-      productMetrics.push({ id: p.id, name: p.nombre, sap: p.sap, stock: pStock, transito: pTransito, ventas: pVentaReal, inventario: pInventario, rechazo: hoy.rechazo });
+      productMetrics.push({ id: p.id, name: p.nombre, sap: p.sap, stock: Number(cStock.toFixed(2)), transito: Number(cTransito.toFixed(2)), ventas: Number(cVentaReal.toFixed(2)), inventario: Number(cInventario.toFixed(2)), preventa: Number(cPreventa.toFixed(2)), rechazo: Number(cRechazo.toFixed(2)) });
 
-      if (pInventario > 0) {
-        const typeName = beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'OTROS';
-        typeDistribution[typeName] = (typeDistribution[typeName] || 0) + pInventario;
+      if (uInventario > 0) {
+        const typeName = beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros';
+        typeDistribution[typeName] = (typeDistribution[typeName] || 0) + cInventario;
       }
     });
 
     return { 
-      tStock, tInventario, tTransito, tPreventa, tVentas, tRechazo, 
-      chartMain: Object.values(catMetrics).filter(c => c.Stock > 0 || c.Preventa > 0 || c.Ventas > 0),
+      tStock: Number(tStockCJ.toFixed(2)), 
+      tInventario: Number(tInventarioCJ.toFixed(2)), 
+      tTransito: Number(tTransitoCJ.toFixed(2)), 
+      tPreventa: Number(tPreventaCJ.toFixed(2)), 
+      tVentas: Number(tVentasCJ.toFixed(2)), 
+      tRechazo: Number(tRechazoCJ.toFixed(2)), 
+      chartMain: Object.values(catMetrics).filter(c => c.Stock > 0 || c.Preventa > 0 || c.Ventas > 0).map(c => ({
+        ...c, Stock: Number(c.Stock.toFixed(2)), Preventa: Number(c.Preventa.toFixed(2)), Ventas: Number(c.Ventas.toFixed(2))
+      })),
       chartOps: [
-        { name: 'ALMACÉN', value: totalAlm, color: '#6c757d' },
-        { name: 'CONSIGNACIÓN', value: totalCon, color: '#adb5bd' },
-        { name: 'RECHAZO', value: totalRech, color: '#F40009' }
+        { name: 'ALMACÉN', value: Number(totalAlmCJ.toFixed(2)), color: '#6c757d' },
+        { name: 'CONSIGNACIÓN', value: Number(totalConCJ.toFixed(2)), color: '#adb5bd' },
+        { name: 'RECHAZO', value: Number(totalRechCJ.toFixed(2)), color: '#F40009' }
       ],
-      pieData: Object.keys(typeDistribution).map(name => ({ name, value: typeDistribution[name] })).filter(d => d.value > 0),
+      pieData: Object.keys(typeDistribution).map(name => ({ name, value: Number(typeDistribution[name].toFixed(2)) })).filter(d => d.value > 0),
       tops: {
         ventas: [...productMetrics].sort((a, b) => b.ventas - a.ventas).slice(0, 5),
         transito: [...productMetrics].sort((a, b) => b.transito - a.transito).slice(0, 5),
@@ -170,6 +193,8 @@ const Dashboard: FC = () => {
 
   return (
     <div className="admin-layout-container flex-column overflow-hidden gap-3">
+      
+      {/* 1. FILTROS */}
       <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto' }}>
         <Row className="g-2 align-items-center">
           <Col xs={6} md={4}>
@@ -207,8 +232,10 @@ const Dashboard: FC = () => {
         </Row>
       </div>
 
+      {/* 2. CONTENIDO */}
       <div className="admin-section-table flex-grow-1 overflow-hidden p-0">
         <div className="h-100 overflow-auto custom-scrollbar p-3">
+          
           {loading ? ( <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> ) : (
             <>
               {!loading && Object.keys(todayInventory).length === 0 && (
@@ -217,6 +244,7 @@ const Dashboard: FC = () => {
                 </Alert>
               )}
 
+              {/* KPIs (MOSTRANDO CAJAS) */}
               <Row className="g-2 mb-3">
                 {[
                   { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
@@ -230,7 +258,7 @@ const Dashboard: FC = () => {
                     <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
                       <div className="dash-kpi-icon" style={{ color: kpi.color }}>{kpi.icon}</div>
                       <div className="dash-kpi-data">
-                        <div className="dash-kpi-value">{kpi.value}</div>
+                        <div className="dash-kpi-value">{kpi.value} CJ</div>
                         <div className="dash-kpi-label">{kpi.label}</div>
                       </div>
                     </div>
@@ -238,10 +266,11 @@ const Dashboard: FC = () => {
                 ))}
               </Row>
 
+              {/* GRÁFICAS */}
               <Row className="g-3 mb-3">
                 <Col xs={12} lg={8}>
                   <div className="dash-chart-box">
-                    <div className="dash-chart-header"><FaChartArea className="me-2 text-danger" /> TENDENCIA SEMANAL</div>
+                    <div className="dash-chart-header"><FaChartArea className="me-2 text-danger" /> TENDENCIA SEMANAL (CAJAS)</div>
                     <div style={{ height: 280 }}>
                       {historyData.length > 0 ? (
                         <ResponsiveContainer>
@@ -250,7 +279,7 @@ const Dashboard: FC = () => {
                             <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                             <XAxis dataKey="fecha" stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
                             <YAxis stroke={AXIS_COLOR} fontSize={10} tickLine={false} axisLine={false} />
-                            <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
+                            <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`, 'STOCK']} />
                             <Area type="monotone" dataKey="stock" stroke="#F40009" strokeWidth={2} fillOpacity={1} fill="url(#c)" />
                           </AreaChart>
                         </ResponsiveContainer>
@@ -267,7 +296,7 @@ const Dashboard: FC = () => {
                           <Pie data={stats.pieData} innerRadius={65} outerRadius={90} dataKey="value" stroke="none">
                             {stats.pieData.map((_, i) => <Cell key={i} fill={SYSTEM_COLORS[i % SYSTEM_COLORS.length]} />)}
                           </Pie>
-                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
+                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`, 'INV.']} />
                           <Legend iconType="circle" />
                         </PieChart>
                       </ResponsiveContainer>
@@ -286,7 +315,7 @@ const Dashboard: FC = () => {
                           <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                           <XAxis dataKey="name" fontSize={9} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                           <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} itemStyle={{ color: TOOLTIP_TEXT }} />
+                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '0', color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`]} />
                           <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                           <Bar name="STOCK DISP." dataKey="Stock" fill="#F40009" radius={0} />
                           <Bar name="PREVENTA" dataKey="Preventa" fill="#adb5bd" radius={0} />
@@ -298,14 +327,14 @@ const Dashboard: FC = () => {
                 </Col>
                 <Col xs={12} lg={6}>
                   <div className="dash-chart-box">
-                    <div className="dash-chart-header">ESTADO GLOBAL DEL INVENTARIO (TOTAL U)</div>
+                    <div className="dash-chart-header">ESTADO GLOBAL DEL INVENTARIO (TOTAL CJ)</div>
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                         <BarChart data={stats.chartOps}>
                           <CartesianGrid stroke={GRID_COLOR} vertical={false} horizontal={true} />
                           <XAxis dataKey="name" fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
                           <YAxis fontSize={10} stroke={AXIS_COLOR} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} />
+                          <Tooltip contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, color: TOOLTIP_TEXT }} formatter={(val: any) => [`${val} CJ`]} />
                           <Bar dataKey="value" radius={0}>
                             {stats.chartOps.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                           </Bar>
@@ -329,7 +358,7 @@ const Dashboard: FC = () => {
                         <div key={idx} className="dash-top-item">
                           <span className="dash-top-idx">{idx + 1}</span>
                           <div className="dash-top-info"><div className="dash-top-name">{p.name}</div><div className="dash-top-sap">{p.sap}</div></div>
-                          <div className={`dash-top-val ${top.color}`}>{p[top.key]} U</div>
+                          <div className={`dash-top-val ${top.color}`}>{p[top.key]} CJ</div>
                         </div>
                       ))}
                     </div>
