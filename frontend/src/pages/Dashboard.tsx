@@ -317,10 +317,10 @@ const Dashboard: FC = () => {
                             contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '4px' }} 
                             itemStyle={{ color: TOOLTIP_TEXT, fontSize: '11px' }}
                             labelStyle={{ color: '#F40009', fontWeight: 'bold', marginBottom: '5px', fontSize: '12px' }}
-                            formatter={(val: any) => [`${val} CJ`]} 
+                            formatter={(val: any, name: string) => [`${val} CJ`, name]} 
                           />
                           <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
-                          <Bar name="STOCK DISP." dataKey="Stock" fill="#F40009" radius={0} />
+                          <Bar name="STOCK VENTA" dataKey="Stock" fill="#F40009" radius={0} />
                           <Bar name="PREVENTA" dataKey="Preventa" fill="#adb5bd" radius={0} />
                           <Bar name="VENTA REAL" dataKey="Ventas" fill={CHART_TEXT_COLOR} radius={0} />
                         </BarChart>
