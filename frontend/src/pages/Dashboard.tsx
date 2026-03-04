@@ -292,7 +292,7 @@ const Dashboard: FC = () => {
                           <Tooltip 
                             contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '4px' }} 
                             itemStyle={{ color: TOOLTIP_TEXT, fontSize: '12px', fontWeight: 'bold' }}
-                            formatter={(val: any) => [`${val} CJ`, 'INVENTARIO']} 
+                            formatter={(val: any) => [`${val} CJ`]} 
                           />
                           <Legend iconType="circle" />
                         </PieChart>
@@ -305,7 +305,7 @@ const Dashboard: FC = () => {
               <Row className="g-3 mb-3">
                 <Col xs={12} lg={6}>
                   <div className="dash-chart-box">
-                    <div className="dash-chart-header">BALANCE COMERCIAL (POR CATEGORÍA)</div>
+                    <div className="dash-chart-header">BALANCE COMERCIAL</div>
                     <div style={{ height: 280 }}>
                       <ResponsiveContainer>
                         <BarChart data={stats.chartMain}>
@@ -316,6 +316,7 @@ const Dashboard: FC = () => {
                             cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                             contentStyle={{ backgroundColor: TOOLTIP_BG, border: `1px solid ${TOOLTIP_BORDER}`, borderRadius: '4px' }} 
                             itemStyle={{ color: TOOLTIP_TEXT, fontSize: '11px' }}
+                            labelStyle={{ color: '#F40009', fontWeight: 'bold', marginBottom: '5px', fontSize: '12px' }}
                             formatter={(val: any) => [`${val} CJ`]} 
                           />
                           <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
