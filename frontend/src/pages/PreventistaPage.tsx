@@ -322,7 +322,7 @@ const PreventistaPage: FC = () => {
                           <div className="product-name">{product.nombre}</div>
                           <div className="d-flex gap-1 flex-wrap">
                             {( (product.myTotal || 0) > 0 || isDirty ) && (
-                              <span className={`badge ${isDirty ? 'bg-primary' : 'bg-success'}`} style={{ fontSize: '0.6rem' }}>
+                              <span className={`badge ${isDirty ? 'bg-warning text-dark' : 'bg-success'}`} style={{ fontSize: '0.6rem' }}>
                                 MI TOTAL: {formatQty(isDirty ? cart[product.id] : (product.myTotal || 0), product.unidades)}
                               </span>
                             )}
@@ -398,7 +398,7 @@ const PreventistaPage: FC = () => {
               <div className="field-group-v3 mb-4">
                 <div className="group-title-v3 d-flex justify-content-between align-items-center mb-2">
                   <span className="text-uppercase small fw-bold">Cantidad a Vender</span>
-                  <Badge bg="primary" className="fs-6 px-3 border-radius-0">
+                  <Badge bg="danger" className="fs-6 px-3 border-radius-0">
                     {tempBoxes} C / {tempUnits} U
                   </Badge>
                 </div>
