@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCheck, FaExclamationTriangle, FaCalendarAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCheck, FaExclamationTriangle, FaCalendarAlt, FaTrash, FaEdit } from 'react-icons/fa';
 import SearchInput from '../components/SearchInput';
 import { toast } from 'react-hot-toast';
 
@@ -44,7 +44,9 @@ const PreventistaPage: FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [dailyInventory, setDailyInventory] = useState<Record<string, InventoryEntry>>({});
   const [userOrdersToday, setUserOrdersToday] = useState<Record<string, number>>({});
+  const [detailedOrders, setDetailedOrders] = useState<any[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({}); 
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBeverageType, setSelectedBeverageType] = useState<string>('');
@@ -79,13 +81,16 @@ const PreventistaPage: FC = () => {
 
     const unsubOrders = onSnapshot(q, (s) => {
       const totals: Record<string, number> = {};
+      const orders: any[] = [];
       s.docs.forEach(doc => {
         const data = doc.data();
+        orders.push({ id: doc.id, ...data });
         data.detalles.forEach((det: any) => {
           totals[det.productoId] = (totals[det.productoId] || 0) + det.cantidad;
         });
       });
       setUserOrdersToday(totals);
+      setDetailedOrders(orders);
     });
     
     return () => unsubOrders();
@@ -107,7 +112,8 @@ const PreventistaPage: FC = () => {
       const físicoTotal = inv.almacen + inv.consignacion + inv.rechazo;
       const stockDisponible = físicoTotal - (inv.preventa || 0);
       const myTotal = userOrdersToday[p.id] || 0;
-      return { ...p, stockDisponible, inCart: cart[p.id] !== undefined ? cart[p.id] : myTotal, myTotal };
+      const inCart = cart[p.id] || 0;
+      return { ...p, stockDisponible, inCart, myTotal };
     });
   }, [products, dailyInventory, cart, userOrdersToday]);
 
@@ -146,22 +152,77 @@ const PreventistaPage: FC = () => {
   };
 
   const handleOpenModal = (product: any) => {
-    // Al abrir, mostramos lo que el usuario ya tiene en el carrito O lo que ya envió (myTotal)
-    const currentQty = product.inCart || 0;
-    setTempBoxes(Math.floor(currentQty / product.unidades));
-    setTempUnits(currentQty % product.unidades);
+    // Siempre abrimos en 0 para un pedido NUEVO
+    setTempBoxes(0);
+    setTempUnits(0);
+    setEditingOrderId(null);
     setSelectedProduct(product);
   };
 
-  const handleConfirmAddToCart = () => {
+  const handleConfirmAddToCart = async () => {
     if (!selectedProduct) return;
     const totalUnitsRequested = (tempBoxes * selectedProduct.unidades) + tempUnits;
     
-    // Validar contra el stock físico real (almacen + consignacion + rechazo)
-    // No contra el stock disponible calculado, ya que estamos editando el total del día
+    // Validar contra el stock físico real
     const inv = dailyInventory[selectedProduct.id] || { almacen: 0, consignacion: 0, rechazo: 0, preventa: 0 };
     const maxFisico = inv.almacen + inv.consignacion + inv.rechazo;
-    
+
+    // Si estamos editando una orden existente
+    if (editingOrderId) {
+      const orderToEdit = detailedOrders.find(o => o.id === editingOrderId);
+      const originalDetail = orderToEdit?.detalles.find((d: any) => d.productoId === selectedProduct.id);
+      const originalQty = originalDetail?.cantidad || 0;
+      const delta = totalUnitsRequested - originalQty;
+
+      if (delta === 0) {
+        setEditingOrderId(null);
+        setSelectedProduct(null);
+        return;
+      }
+
+      // Validar stock global para el incremento
+      const stockDispGlobal = maxFisico - (inv.preventa || 0);
+      if (delta > stockDispGlobal) {
+        toast.error(`Stock insuficiente (${formatQty(stockDispGlobal, selectedProduct.unidades)} disponibles).`);
+        return;
+      }
+
+      setIsSaving(true);
+      try {
+        await runTransaction(db, async (transaction) => {
+          const orderRef = doc(db, 'ordenes', editingOrderId);
+          const invDocRef = doc(db, 'inventario_diario', `${userSedeId}_${selectedDate}`);
+          
+          const orderSnap = await transaction.get(orderRef);
+          const invSnap = await transaction.get(invDocRef);
+
+          if (!orderSnap.exists() || !invSnap.exists()) throw new Error("Documentos no encontrados");
+
+          // 1. Actualizar Orden
+          const currentDetails = orderSnap.data().detalles || [];
+          const updatedDetails = currentDetails.map((d: any) => {
+            if (d.productoId === selectedProduct.id) {
+              const subtotal = (totalUnitsRequested / selectedProduct.unidades) * (selectedProduct.precio || 0);
+              return { ...d, cantidad: totalUnitsRequested, subtotal };
+            }
+            return d;
+          });
+          const newTotal = updatedDetails.reduce((acc: number, curr: any) => acc + curr.subtotal, 0);
+          transaction.update(orderRef, { detalles: updatedDetails, total: newTotal });
+
+          // 2. Actualizar Inventario Diario
+          const invData = invSnap.data().productos || {};
+          const prodInv = invData[selectedProduct.id] || { almacen: 0, consignacion: 0, rechazo: 0, preventa: 0 };
+          invData[selectedProduct.id] = { ...prodInv, preventa: (prodInv.preventa || 0) + delta };
+          transaction.update(invDocRef, { productos: invData });
+        });
+        toast.success("Pedido actualizado");
+      } catch (e: any) { toast.error(e.message); }
+      finally { setIsSaving(false); setEditingOrderId(null); setSelectedProduct(null); }
+      return;
+    }
+
+    // Lógica normal de carrito para nuevas ventas (Acumulativa)
     if (totalUnitsRequested > maxFisico) {
       toast.error(`Stock físico insuficiente (${formatQty(maxFisico, selectedProduct.unidades)} disponibles).`);
       return;
@@ -169,9 +230,47 @@ const PreventistaPage: FC = () => {
 
     setCart(prev => ({
       ...prev,
-      [selectedProduct.id]: totalUnitsRequested
+      [selectedProduct.id]: (prev[selectedProduct.id] || 0) + totalUnitsRequested
     }));
     setSelectedProduct(null);
+  };
+
+  const handleDeleteOrderLine = async (orderId: string, productId: string) => {
+    if (!window.confirm("¿Eliminar este producto del pedido?")) return;
+    setIsSaving(true);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const orderRef = doc(db, 'ordenes', orderId);
+        const invDocRef = doc(db, 'inventario_diario', `${userSedeId}_${selectedDate}`);
+        
+        const orderSnap = await transaction.get(orderRef);
+        const invSnap = await transaction.get(invDocRef);
+
+        if (!orderSnap.exists() || !invSnap.exists()) throw new Error("Documentos no encontrados");
+
+        const details = orderSnap.data().detalles || [];
+        const itemToRemove = details.find((d: any) => d.productoId === productId);
+        if (!itemToRemove) return;
+
+        const updatedDetails = details.filter((d: any) => d.productoId !== productId);
+        
+        // Si no quedan productos, borrar la orden. Si quedan, actualizarla.
+        if (updatedDetails.length === 0) {
+          transaction.delete(orderRef);
+        } else {
+          const newTotal = updatedDetails.reduce((acc: number, curr: any) => acc + curr.subtotal, 0);
+          transaction.update(orderRef, { detalles: updatedDetails, total: newTotal });
+        }
+
+        // Actualizar Inventario (devolver stock)
+        const invData = invSnap.data().productos || {};
+        const prodInv = invData[productId] || { almacen: 0, consignacion: 0, rechazo: 0, preventa: 0 };
+        invData[productId] = { ...prodInv, preventa: Math.max(0, (prodInv.preventa || 0) - itemToRemove.cantidad) };
+        transaction.update(invDocRef, { productos: invData });
+      });
+      toast.success("Producto eliminado del pedido");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setIsSaving(false); }
   };
 
   const handleSaveOrder = async () => {
@@ -193,34 +292,33 @@ const PreventistaPage: FC = () => {
           if (!p) continue;
 
           const inv = currentInvData[pid] || { almacen: 0, consignacion: 0, rechazo: 0, preventa: 0 };
-          const myCurrentTotal = userOrdersToday[pid] || 0;
-          const delta = (qty as number) - myCurrentTotal;
+          const qtyToAdd = qty as number;
 
-          if (delta === 0) continue; 
+          if (qtyToAdd <= 0) continue; 
 
-          // Verificar si el delta (incremento) no excede el stock disponible global
+          // Verificar si hay stock disponible global
           const fisicoGlobal = inv.almacen + inv.consignacion + inv.rechazo;
           const globalPreventaActual = inv.preventa || 0;
           const stockDispGlobal = fisicoGlobal - globalPreventaActual;
 
-          if (delta > stockDispGlobal) {
+          if (qtyToAdd > stockDispGlobal) {
             throw new Error(`Stock insuficiente para ${p.nombre}. Solo quedan ${formatQty(stockDispGlobal, p.unidades)}`);
           }
 
-          const subtotal = (delta / p.unidades) * (p.precio || 0);
+          const subtotal = (qtyToAdd / p.unidades) * (p.precio || 0);
           orderDetails.push({ 
             productoId: pid, 
             nombreProducto: p.nombre, 
-            cantidad: delta, 
+            cantidad: qtyToAdd, 
             precioCaja: p.precio || 0, 
             subtotal 
           });
 
           orderTotalDelta += subtotal;
-          updatedInvProducts[pid] = { ...inv, preventa: (inv.preventa || 0) + delta };
+          updatedInvProducts[pid] = { ...inv, preventa: (inv.preventa || 0) + qtyToAdd };
         }
 
-        if (orderDetails.length === 0) throw new Error("No hay cambios que guardar.");
+        if (orderDetails.length === 0) throw new Error("No hay nada que guardar.");
 
         const orderRef = doc(collection(db, 'ordenes'));
         transaction.set(orderRef, { 
@@ -232,7 +330,7 @@ const PreventistaPage: FC = () => {
           total: orderTotalDelta, 
           detalles: orderDetails, 
           timestamp: serverTimestamp(),
-          esAjuste: true 
+          esAjuste: false 
         });
         
         transaction.update(invDocRef, { productos: updatedInvProducts });
@@ -326,10 +424,15 @@ const PreventistaPage: FC = () => {
                         <div className="product-card-info">
                           <span className="product-sap">{product.sap}</span>
                           <div className="product-name">{product.nombre}</div>
-                          <div className="d-flex gap-1 flex-wrap">
-                            {( (product.myTotal || 0) > 0 || isDirty ) && (
-                              <span className={`badge ${isDirty ? 'bg-warning text-dark' : 'bg-success'}`} style={{ fontSize: '0.6rem' }}>
-                                MI TOTAL: {formatQty(isDirty ? cart[product.id] : (product.myTotal || 0), product.unidades)}
+                          <div className="d-flex gap-1 flex-wrap mt-1">
+                            {(product.myTotal || 0) > 0 && (
+                              <span className="badge bg-success" style={{ fontSize: '0.6rem' }}>
+                                CONFIRMADO: {formatQty(product.myTotal, product.unidades)}
+                              </span>
+                            )}
+                            {(product.inCart || 0) > 0 && (
+                              <span className="badge bg-warning text-dark" style={{ fontSize: '0.6rem' }}>
+                                POR CONFIRMAR: {formatQty(product.inCart, product.unidades)}
                               </span>
                             )}
                           </div>
@@ -441,13 +544,59 @@ const PreventistaPage: FC = () => {
                 </div>
               </div>
 
-              <Button variant="primary" className="w-100 py-3 fw-bold text-uppercase" onClick={handleConfirmAddToCart}>Actualizar Pedido</Button>
+              <Button variant="primary" className="w-100 py-3 fw-bold text-uppercase mb-4 d-flex align-items-center justify-content-center gap-2" onClick={handleConfirmAddToCart}>
+                {editingOrderId ? <><FaCheck /> Guardar Cambios en Ticket</> : <><FaShoppingCart /> Añadir al Carrito</>}
+              </Button>
+
+              {/* Listado de órdenes existentes para este producto */}
+              {detailedOrders.some(o => o.detalles.some((d: any) => d.productoId === selectedProduct.id)) && (
+                <div className="mt-2 pt-3 border-top">
+                  <div className="text-uppercase small fw-bold mb-3 opacity-75">Tickets de hoy (Confirmados)</div>
+                  <div className="existing-orders-section">
+                    <div className="d-flex flex-column gap-2">
+                      {detailedOrders.map(order => {
+                        const detail = order.detalles.find((d: any) => d.productoId === selectedProduct.id);
+                        if (!detail) return null;
+                        return (
+                          <div key={order.id} className={`order-line-item p-2 d-flex justify-content-between align-items-center ${editingOrderId === order.id ? 'editing' : ''}`}>
+                            <div className="d-flex flex-column">
+                              <span className="small opacity-75 fw-bold" style={{ fontSize: '0.6rem' }}>
+                                TICKET #{order.id.slice(-5).toUpperCase()} - {order.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              <span className="fw-bold">{formatQty(detail.cantidad, selectedProduct.unidades)}</span>
+                            </div>
+                            <div className="d-flex gap-2">
+                              <Button variant="outline-primary" size="sm" className="p-1 px-2 border-0" onClick={() => {
+                                setEditingOrderId(order.id);
+                                setTempBoxes(Math.floor(detail.cantidad / selectedProduct.unidades));
+                                setTempUnits(detail.cantidad % selectedProduct.unidades);
+                                // Scroll hacia arriba al editar para ver los inputs
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}>
+                                <FaEdit />
+                              </Button>
+                              <Button variant="outline-danger" size="sm" className="p-1 px-2 border-0" onClick={() => handleDeleteOrderLine(order.id, selectedProduct.id)}>
+                                <FaTrash />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Modal.Body>
         )}
       </Modal>
 
       <style>{`
+        .existing-orders-section { max-height: 200px; overflow-y: auto; padding-right: 5px; }
+        .existing-orders-section::-webkit-scrollbar { width: 4px; }
+        .existing-orders-section::-webkit-scrollbar-thumb { background: var(--theme-border-default); border-radius: 10px; }
+        .order-line-item { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 4px; }
+        .order-line-item.editing { border-color: var(--color-red-primary); background: rgba(220, 53, 69, 0.05); }
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); overflow: hidden; border-radius: 4px; height: 100%; }
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); padding: 12px; border-right: 1px solid var(--theme-border-default); height: 100%; display: flex; align-items: center; }
         .pill-icon-sober.highlight-system { color: var(--color-red-primary); }
