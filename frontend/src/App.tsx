@@ -27,6 +27,8 @@ import AdminTipoBebidaPage from './pages/AdminTipoBebidaPage';
 import './App.css';
 import './components/layout/Sidebar.css';
 
+import { Toaster } from 'react-hot-toast';
+
 const App: FC = () => {
   const { currentUser, loading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -49,6 +51,7 @@ const App: FC = () => {
 
   return (
     <Router>
+      <Toaster position="top-right" reverseOrder={false} />
       {!currentUser ? (
         <Routes>
           <Route path="/login" element={<LoginPage />} />

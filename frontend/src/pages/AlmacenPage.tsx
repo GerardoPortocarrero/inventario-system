@@ -10,6 +10,7 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle, FaWarehouse, FaGlassMartiniAlt } from 'react-icons/fa';
 import GenericTable, { type Column } from '../components/GenericTable';
 import SearchInput from '../components/SearchInput';
+import { toast } from 'react-hot-toast';
 
 interface Product {
   id: string;
@@ -173,9 +174,15 @@ const AlmacenPage: FC = () => {
       await setDoc(doc(db, 'inventario_diario', docId), {
         sedeId: userSedeId, fecha: selectedDate, productos: finalData, actualizadoPor: userName, timestamp: serverTimestamp()
       }, { merge: true });
+      toast.success("Inventario guardado exitosamente");
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1500);
-    } catch (e) { console.error(e); } finally { setIsSaving(false); }
+    } catch (e) { 
+      console.error(e); 
+      toast.error("Error al guardar el inventario");
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   const handleNumberInputChange = (field: string, subField: 'boxes' | 'units', value: string) => {

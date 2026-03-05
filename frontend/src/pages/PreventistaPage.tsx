@@ -9,6 +9,7 @@ import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCheck, FaExclamationTriangle, FaCalendarAlt } from 'react-icons/fa';
 import SearchInput from '../components/SearchInput';
+import { toast } from 'react-hot-toast';
 
 interface Product {
   id: string;
@@ -162,7 +163,7 @@ const PreventistaPage: FC = () => {
     const maxFisico = inv.almacen + inv.consignacion + inv.rechazo;
     
     if (totalUnitsRequested > maxFisico) {
-      alert(`No puedes exceder el stock físico total (${formatQty(maxFisico, selectedProduct.unidades)}).`);
+      toast.error(`Stock físico insuficiente (${formatQty(maxFisico, selectedProduct.unidades)} disponibles).`);
       return;
     }
 
@@ -236,10 +237,15 @@ const PreventistaPage: FC = () => {
         
         transaction.update(invDocRef, { productos: updatedInvProducts });
       });
+      toast.success("Pedido guardado exitosamente");
       setSaveSuccess(true);
       setCart({});
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (e: any) { alert(e.message); } finally { setIsSaving(false); }
+    } catch (e: any) { 
+      toast.error(e.message || "Error al guardar el pedido");
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
