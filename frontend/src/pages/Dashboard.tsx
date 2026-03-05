@@ -50,11 +50,15 @@ const Dashboard: FC = () => {
 
   useEffect(() => {
     if (!userSedeId) return;
-    setLoading(true);
-
     const unsubProducts = onSnapshot(collection(db, 'productos'), (s) => {
       setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
     });
+    return () => unsubProducts();
+  }, [userSedeId]);
+
+  useEffect(() => {
+    if (!userSedeId) return;
+    setLoading(true);
 
     const unsubToday = onSnapshot(doc(db, 'inventario_diario', `${userSedeId}_${selectedDate}`), (s) => {
       setTodayInventory(s.exists() ? s.data().productos || {} : {});
@@ -72,6 +76,12 @@ const Dashboard: FC = () => {
       console.error("Error en órdenes:", err);
       setLoading(false); 
     });
+
+    return () => { unsubToday(); unsubYesterday(); unsubOrders(); };
+  }, [userSedeId, selectedDate, yesterdayStr]);
+
+  useEffect(() => {
+    if (!userSedeId || products.length === 0) return;
 
     const loadHistory = async () => {
       try {
@@ -91,9 +101,8 @@ const Dashboard: FC = () => {
       } catch (e) { console.warn("Histórico pendiente."); }
     };
 
-    if (products.length > 0) loadHistory();
-    return () => { unsubProducts(); unsubToday(); unsubYesterday(); unsubOrders(); };
-  }, [userSedeId, selectedDate, yesterdayStr, products]);
+    loadHistory();
+  }, [userSedeId, products]);
 
   const stats = useMemo(() => {
     let tStockCJ = 0, tInventarioCJ = 0, tTransitoCJ = 0, tPreventaCJ = 0, tVentasCJ = 0, tRechazoCJ = 0;
