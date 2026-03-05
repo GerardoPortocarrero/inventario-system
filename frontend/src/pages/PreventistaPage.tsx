@@ -545,13 +545,13 @@ const PreventistaPage: FC = () => {
               </div>
 
               <Button variant="primary" className="w-100 py-3 fw-bold text-uppercase mb-4 d-flex align-items-center justify-content-center gap-2" onClick={handleConfirmAddToCart}>
-                {editingOrderId ? <><FaCheck /> Guardar Cambios en Ticket</> : <><FaShoppingCart /> Añadir al Carrito</>}
+                {editingOrderId ? <><FaCheck /> Guardar Cambios en Pedido</> : <><FaShoppingCart /> Añadir al Carrito</>}
               </Button>
 
               {/* Listado de órdenes existentes para este producto */}
               {detailedOrders.some(o => o.detalles.some((d: any) => d.productoId === selectedProduct.id)) && (
                 <div className="mt-2 pt-3 border-top">
-                  <div className="text-uppercase small fw-bold mb-3 opacity-75">Tickets de hoy (Confirmados)</div>
+                  <div className="text-uppercase small fw-bold mb-3 opacity-75">Pedidos de hoy (Confirmados)</div>
                   <div className="existing-orders-section">
                     <div className="d-flex flex-column gap-2">
                       {detailedOrders.map(order => {
@@ -561,7 +561,7 @@ const PreventistaPage: FC = () => {
                           <div key={order.id} className={`order-line-item p-2 d-flex justify-content-between align-items-center ${editingOrderId === order.id ? 'editing' : ''}`}>
                             <div className="d-flex flex-column">
                               <span className="small opacity-75 fw-bold" style={{ fontSize: '0.6rem' }}>
-                                TICKET #{order.id.slice(-5).toUpperCase()} - {order.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                PEDIDO #{order.id.slice(-5).toUpperCase()} - {order.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                               <span className="fw-bold">{formatQty(detail.cantidad, selectedProduct.unidades)}</span>
                             </div>
