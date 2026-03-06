@@ -131,10 +131,21 @@ const PreventistaPage: FC = () => {
   }, [processedData]);
 
   const filteredProducts = useMemo(() => {
-    let list = processedData.filter(p => 
-      (p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.includes(searchTerm)) &&
-      (selectedBeverageType === '' || p.tipoBebidaId === selectedBeverageType)
-    );
+    const term = searchTerm.toLowerCase().trim();
+    const searchWords = term.split(/\s+/).filter(word => word.length > 0);
+
+    let list = processedData.filter(p => {
+      const matchesType = selectedBeverageType === '' || p.tipoBebidaId === selectedBeverageType;
+      if (!matchesType) return false;
+      if (searchWords.length === 0) return true;
+
+      // Cada palabra de la búsqueda debe estar en el nombre o el SAP
+      return searchWords.every(word => 
+        p.nombre.toLowerCase().includes(word) || 
+        (p.sap && p.sap.toLowerCase().includes(word))
+      );
+    });
+
     // Ordenar: primero los que están en el carrito (cambios pendientes), luego alfabéticamente
     return [...list].sort((a, b) => {
       const aInCart = cart[a.id] !== undefined;
@@ -404,7 +415,7 @@ const PreventistaPage: FC = () => {
           ) : viewMode === 'sell' ? (
             <>
               <div className="mb-3 px-1">
-                <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Buscar producto..." />
+                <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Buscar por nombre o SAP..." />
               </div>
               
               {!loading && Object.keys(dailyInventory).length === 0 && (
