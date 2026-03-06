@@ -112,14 +112,18 @@ const AlmacenPage: FC = () => {
   }, [processedData]);
 
   const sortedProducts = useMemo(() => {
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase().trim();
+    const searchWords = term.split(/\s+/).filter(word => word.length > 0);
+    
     let list = processedData.filter(p => {
-      const matchesSearch = 
-        p.nombre.toLowerCase().includes(term) || 
-        (p.sap && p.sap.toLowerCase().includes(term)) ||
-        (p.basis && p.basis.toLowerCase().includes(term));
-      const matchesType = selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType;
-      return matchesSearch && matchesType;
+      if (searchWords.length === 0) return true;
+      
+      // Cada palabra de la búsqueda debe estar en al menos uno de los campos
+      return searchWords.every(word => 
+        p.nombre.toLowerCase().includes(word) || 
+        (p.sap && p.sap.toLowerCase().includes(word)) ||
+        (p.basis && p.basis.toLowerCase().includes(word))
+      );
     });
     return [...list].sort((a, b) => {
       const aDirty = draftInventory.hasOwnProperty(a.id);
@@ -131,14 +135,20 @@ const AlmacenPage: FC = () => {
   }, [processedData, searchTerm, draftInventory, selectedBeverageType]);
 
   const summaryData = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return processedData.filter(p => 
-      p.hasData && 
-      (selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType) &&
-      (p.nombre.toLowerCase().includes(term) || 
-       (p.sap && p.sap.toLowerCase().includes(term)) ||
-       (p.basis && p.basis.toLowerCase().includes(term)))
-    );
+    const term = searchTerm.toLowerCase().trim();
+    const searchWords = term.split(/\s+/).filter(word => word.length > 0);
+
+    return processedData.filter(p => {
+      const matchesType = selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType;
+      if (!p.hasData || !matchesType) return false;
+      if (searchWords.length === 0) return true;
+
+      return searchWords.every(word => 
+        p.nombre.toLowerCase().includes(word) || 
+        (p.sap && p.sap.toLowerCase().includes(word)) ||
+        (p.basis && p.basis.toLowerCase().includes(word))
+      );
+    });
   }, [processedData, selectedBeverageType, searchTerm]);
 
   const formatQty = (totalUnits: number, unitsPerBox: number) => {
