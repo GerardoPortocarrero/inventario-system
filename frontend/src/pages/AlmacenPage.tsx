@@ -112,10 +112,15 @@ const AlmacenPage: FC = () => {
   }, [processedData]);
 
   const sortedProducts = useMemo(() => {
-    let list = processedData.filter(p => 
-      (p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || p.sap.includes(searchTerm)) &&
-      (selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType)
-    );
+    const term = searchTerm.toLowerCase();
+    let list = processedData.filter(p => {
+      const matchesSearch = 
+        p.nombre.toLowerCase().includes(term) || 
+        (p.sap && p.sap.toLowerCase().includes(term)) ||
+        (p.basis && p.basis.toLowerCase().includes(term));
+      const matchesType = selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType;
+      return matchesSearch && matchesType;
+    });
     return [...list].sort((a, b) => {
       const aDirty = draftInventory.hasOwnProperty(a.id);
       const bDirty = draftInventory.hasOwnProperty(b.id);
@@ -126,11 +131,15 @@ const AlmacenPage: FC = () => {
   }, [processedData, searchTerm, draftInventory, selectedBeverageType]);
 
   const summaryData = useMemo(() => {
+    const term = searchTerm.toLowerCase();
     return processedData.filter(p => 
       p.hasData && 
-      (selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType)
+      (selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType) &&
+      (p.nombre.toLowerCase().includes(term) || 
+       (p.sap && p.sap.toLowerCase().includes(term)) ||
+       (p.basis && p.basis.toLowerCase().includes(term)))
     );
-  }, [processedData, selectedBeverageType]);
+  }, [processedData, selectedBeverageType, searchTerm]);
 
   const formatQty = (totalUnits: number, unitsPerBox: number) => {
     const boxes = Math.floor(totalUnits / unitsPerBox);
@@ -293,7 +302,7 @@ const AlmacenPage: FC = () => {
             <SearchInput 
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
-              placeholder="Buscar producto..." 
+              placeholder="Buscar por nombre, SAP o Basis..." 
             />
           </Col>
           <Col xs={5} md={4}>
