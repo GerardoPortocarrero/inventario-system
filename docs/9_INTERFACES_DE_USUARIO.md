@@ -29,6 +29,9 @@ Esta es la interfaz principal de ventas, diseñada para ser rápida y eficiente.
 Esta interfaz está diseñada para la gestión funcional y eficiente del inventario físico.
 
 *   **Pantalla Principal (Gestión de Almacén):**
+    *   **Buscador e Identificación Rápida:**
+        *   **Barra de Búsqueda Inteligente:** Permite filtrar por nombre, SAP o Basis utilizando múltiples términos.
+        *   **Escáner de QR/Barras:** Un botón de acceso rápido (icono de cámara) que activa la cámara del dispositivo para identificar productos mediante el escaneo de etiquetas QR estáticas en estantes o códigos de barras de fábrica.
     *   **Lista de Inventario Físico (`PhysicalInventoryList`):**
         *   Una tabla que muestra los productos y sus cantidades en la colección `almacen`.
         *   Incluye funcionalidad de búsqueda/filtrado.

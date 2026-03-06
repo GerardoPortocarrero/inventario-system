@@ -13,3 +13,4 @@ Este documento lista las capacidades y funciones que el sistema debe realizar.
 *   **RF-9: Validación de Stock Transaccional:** El sistema debe impedir la creación de órdenes si el stock disponible (Físico - Preventa Acumulada) es insuficiente, utilizando transacciones de base de datos para asegurar la consistencia.
 *   **RF-10: Sincronización Automática de Preventa:** Al registrar una orden, el sistema debe actualizar automáticamente el contador de preventa del producto en el inventario diario de la sede.
 *   **RF-11: Bloqueo de Venta sin Inventario:** El sistema debe bloquear la creación de órdenes de preventa si el Almacenero no ha registrado el conteo físico inicial del día.
+*   **RF-12: Identificación Ágil por QR Estático:** El sistema debe permitir la identificación instantánea de productos mediante el escaneo de códigos QR estáticos ubicados en estantes, racks o tableros de conteo, eliminando la necesidad de búsqueda manual por texto.
