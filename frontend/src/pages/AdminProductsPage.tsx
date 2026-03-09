@@ -86,8 +86,7 @@ const ProductQRModal: FC<{
 
   return (
     <Modal show={show} onHide={onHide} centered className="qr-modal-v2">
-      <Modal.Header closeButton className={isDarkMode ? 'bg-dark text-white border-0 pb-0' : 'border-0 pb-0'} />
-      <Modal.Body className={isDarkMode ? 'bg-dark text-white' : ''}>
+      <Modal.Body className={isDarkMode ? 'bg-dark text-white pt-4' : 'pt-4'}>
         <div className="text-center">
           <Tab.Container activeKey={activeTab} onSelect={(k: any) => setActiveTab(k)}>
             <Nav variant="pills" className="justify-content-center mb-4 qr-tabs-pills">
@@ -130,17 +129,19 @@ const ProductQRModal: FC<{
             </div>
           </div>
 
-          <div className="px-4">
+          <div className="px-4 pb-3">
             <Button 
               variant="primary" 
-              className="w-100 py-3 fw-black text-uppercase shadow-sm d-flex align-items-center justify-content-center gap-2" 
+              className="w-100 py-3 fw-black text-uppercase shadow-sm d-flex align-items-center justify-content-center gap-2 mb-2" 
               onClick={handleCopy}
               disabled={isCopying}
             >
               {isCopying ? <Spinner size="sm" /> : <FaCopy />}
               Copiar Ficha Completa
             </Button>
-            <p className="mt-2 mb-0 small text-muted opacity-75">Copia Nombre, Código y QR para imprimir o compartir.</p>
+            <Button variant="link" className="text-muted small fw-bold text-decoration-none" onClick={onHide}>
+              CERRAR VENTANA
+            </Button>
           </div>
         </div>
       </Modal.Body>

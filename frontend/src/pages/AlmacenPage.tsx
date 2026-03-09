@@ -38,7 +38,6 @@ const ScannerModal: FC<{
 
   return (
     <Modal show={show} onHide={onHide} centered className="scanner-modal-qr">
-      <Modal.Header closeButton className={isDarkMode ? 'bg-dark text-white border-0' : 'border-0'} />
       <Modal.Body className={isDarkMode ? 'bg-dark text-white p-0 overflow-hidden' : 'p-0 overflow-hidden'}>
         <div className="p-3 text-center border-bottom border-secondary border-opacity-25">
           <Tab.Container activeKey={scanMode} onSelect={(k: any) => setScanMode(k)}>
@@ -73,8 +72,19 @@ const ScannerModal: FC<{
           <div className="scanner-overlay-box"></div>
         </div>
         
-        <div className="p-3 text-center bg-dark text-white-50 small fw-bold">
-          Encuadra el código {scanMode.toUpperCase()} dentro del área central.
+        <div className="p-3 text-center bg-dark border-top border-secondary border-opacity-25">
+          <div className="text-white-50 small fw-bold mb-3">
+            Encuadra el código {scanMode.toUpperCase()} dentro del área central.
+          </div>
+          <Button 
+            variant="outline-light" 
+            size="sm" 
+            className="fw-black text-uppercase px-4 py-2" 
+            style={{ fontSize: '0.7rem', letterSpacing: '1px' }}
+            onClick={onHide}
+          >
+            CERRAR ESCÁNER
+          </Button>
         </div>
       </Modal.Body>
       <style>{`
