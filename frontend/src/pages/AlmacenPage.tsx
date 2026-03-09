@@ -53,7 +53,7 @@ const ScannerModal: FC<{
           </Tab.Container>
         </div>
         
-        <div className="scanner-container-wrapper" style={{ minHeight: '300px', background: '#000' }}>
+        <div className="scanner-container-wrapper" style={{ minHeight: '350px', background: '#000' }}>
           {show && (
             <Scanner
               onScan={(result) => {
@@ -65,13 +65,16 @@ const ScannerModal: FC<{
               allowMultiple={false}
               scanDelay={2000}
               constraints={{ facingMode: 'environment' }}
+              components={{
+                tracker: false, // Quita el cuadro interno (tracker) de la librería
+              }}
             />
           )}
           <div className="scanner-overlay-box"></div>
         </div>
         
         <div className="p-3 text-center bg-dark text-white-50 small fw-bold">
-          Encuadra el código {scanMode.toUpperCase()} del producto dentro del recuadro.
+          Encuadra el código {scanMode.toUpperCase()} dentro del área central.
         </div>
       </Modal.Body>
       <style>{`
@@ -93,17 +96,18 @@ const ScannerModal: FC<{
           box-shadow: 0 4px 10px rgba(244, 0, 9, 0.3);
         }
 
-        .scanner-container-wrapper { position: relative; width: 100%; }
+        .scanner-container-wrapper { position: relative; width: 100%; overflow: hidden; }
         .scanner-overlay-box {
           position: absolute;
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 200px;
-          height: 200px;
-          border: 2px solid var(--color-red-primary);
-          border-radius: 10px;
-          box-shadow: 0 0 0 4000px rgba(0,0,0,0.5);
+          /* Área clara mucho más grande, tamaño del contenedor externo */
+          width: 65%; 
+          height: 65%;
+          border-radius: 4px;
+          /* Oscurece el resto con un degradado sutil */
+          box-shadow: 0 0 0 4000px rgba(0,0,0,0.7); 
           pointer-events: none;
           z-index: 10;
         }
