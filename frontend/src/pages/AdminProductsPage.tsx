@@ -1,10 +1,12 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
-import { Container, Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { Container, Form, Button, Alert, Spinner, Modal, Nav, Tab } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
-import { FaPencilAlt, FaTrash } from 'react-icons/fa';
+import { FaPencilAlt, FaTrash, FaQrcode, FaCopy } from 'react-icons/fa';
+import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'react-hot-toast';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 import SearchInput from '../components/SearchInput';
@@ -30,6 +32,81 @@ interface Product {
   precio: number;
   creadoEn?: any;
 }
+
+const ProductQRModal: FC<{
+  show: boolean;
+  onHide: () => void;
+  product: Product | null;
+  isDarkMode: boolean;
+}> = ({ show, onHide, product, isDarkMode }) => {
+  const [activeTab, setActiveTab] = useState<'sap' | 'basis'>('sap');
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${activeTab.toUpperCase()} copiado al portapapeles`);
+  };
+
+  if (!product) return null;
+
+  const qrValue = activeTab === 'sap' ? product.sap : product.basis;
+
+  return (
+    <Modal show={show} onHide={onHide} centered className="qr-modal">
+      <Modal.Header closeButton className={isDarkMode ? 'bg-dark text-white border-secondary' : ''}>
+        <Modal.Title className="fs-6 fw-bold">QR DE PRODUCTO</Modal.Title>
+      </Modal.Header>
+      <Modal.Body className={isDarkMode ? 'bg-dark text-white' : ''}>
+        <div className="text-center mb-4">
+          <h6 className="fw-bold text-uppercase mb-1">{product.nombre}</h6>
+          <p className="text-muted small mb-3">{product.sap} / {product.basis}</p>
+          
+          <Tab.Container activeKey={activeTab} onSelect={(k: any) => setActiveTab(k)}>
+            <Nav variant="pills" className="justify-content-center mb-4 gap-2">
+              <Nav.Item>
+                <Nav.Link eventKey="sap" className="px-4 py-1 small fw-bold">SAP</Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="basis" className="px-4 py-1 small fw-bold">BASIS</Nav.Link>
+              </Nav.Item>
+            </Nav>
+          </Tab.Container>
+
+          <div className="p-3 bg-white d-inline-block rounded shadow-sm mb-4">
+            <QRCodeSVG 
+              value={qrValue || 'N/A'} 
+              size={200}
+              level="H"
+              includeMargin={true}
+            />
+          </div>
+
+          <div className="d-flex flex-column align-items-center gap-2">
+            <div className="d-flex align-items-center gap-2 p-2 px-3 rounded w-100 justify-content-center" style={{ background: isDarkMode ? '#2b2b2b' : '#f8f9fa', border: '1px solid ' + (isDarkMode ? '#333' : '#eee') }}>
+              <span className="fw-bold text-danger fs-5">{qrValue || 'N/A'}</span>
+              <Button variant="link" className="p-0 text-secondary" onClick={() => handleCopy(qrValue || '')}>
+                <FaCopy />
+              </Button>
+            </div>
+            <p className="small text-muted mb-0">Escanea este código para identificar el producto.</p>
+          </div>
+        </div>
+      </Modal.Body>
+      <style>{`
+        .qr-modal .nav-pills .nav-link { 
+          background: transparent; 
+          color: var(--theme-text-secondary);
+          border: 1px solid var(--theme-border-default);
+          border-radius: 4px;
+        }
+        .qr-modal .nav-pills .nav-link.active { 
+          background: var(--color-red-primary); 
+          color: white;
+          border-color: var(--color-red-primary);
+        }
+      `}</style>
+    </Modal>
+  );
+};
 
 const ProductForm: React.FC<{
   initialData: Product | null;
@@ -235,6 +312,7 @@ const AdminProductsPage: FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [qrProduct, setQrProduct] = useState<Product | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
@@ -290,6 +368,9 @@ const AdminProductsPage: FC = () => {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (p) => (
         <div className="d-flex gap-2 action-buttons-container">
+          <Button variant="link" size="sm" className="p-0 action-btn qr-btn text-info" onClick={() => setQrProduct(p)}>
+            <FaQrcode className="icon-desktop" /> <span className="text-mobile">QR</span>
+          </Button>
           <Button variant="link" size="sm" className="p-0 action-btn edit-btn" onClick={() => { setEditingProduct(p); setShowModal(true); }}>
             <FaPencilAlt className="icon-desktop" /> <span className="text-mobile">Editar</span>
           </Button>
@@ -364,6 +445,12 @@ const AdminProductsPage: FC = () => {
           }}>{UI_TEXTS.DELETE}</Button>
         </div>
       </GenericCreationModal>
+      <ProductQRModal 
+        show={!!qrProduct} 
+        onHide={() => setQrProduct(null)} 
+        product={qrProduct}
+        isDarkMode={isDarkMode}
+      />
     </Fragment>
   );
 };

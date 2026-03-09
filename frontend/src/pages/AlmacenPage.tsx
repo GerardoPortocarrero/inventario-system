@@ -1,17 +1,18 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Button, Form, Modal, Badge, Spinner, Alert } from 'react-bootstrap';
+import { Row, Col, Button, Form, Modal, Badge, Spinner, Alert, Nav } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle, FaWarehouse, FaGlassMartiniAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangle, FaWarehouse, FaGlassMartiniAlt, FaQrcode } from 'react-icons/fa';
 import GenericTable, { type Column } from '../components/GenericTable';
 import SearchInput from '../components/SearchInput';
 import { toast } from 'react-hot-toast';
 import { matchSearchTerms } from '../utils/searchUtils';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 interface Product {
   id: string;
@@ -26,6 +27,95 @@ interface InventoryEntry {
   consignacion: number;
   rechazo: number;
 }
+
+const ScannerModal: FC<{
+  show: boolean;
+  onHide: () => void;
+  onScan: (detectedCode: string, mode: 'sap' | 'basis') => void;
+  isDarkMode: boolean;
+}> = ({ show, onHide, onScan, isDarkMode }) => {
+  const [scanMode, setScanMode] = useState<'sap' | 'basis'>('sap');
+
+  return (
+    <Modal show={show} onHide={onHide} centered className="scanner-modal-qr">
+      <Modal.Header closeButton className={isDarkMode ? 'bg-dark text-white border-secondary' : ''}>
+        <Modal.Title className="fs-6 fw-bold">ESCÁNER DE PRODUCTO</Modal.Title>
+      </Modal.Header>
+      <Modal.Body className={isDarkMode ? 'bg-dark text-white p-0 overflow-hidden' : 'p-0 overflow-hidden'}>
+        <div className="p-3 text-center border-bottom border-secondary border-opacity-25">
+          <Nav variant="pills" className="justify-content-center gap-2">
+            <Nav.Item>
+              <Nav.Link 
+                active={scanMode === 'sap'} 
+                onClick={() => setScanMode('sap')}
+                className="px-4 py-1 small fw-bold"
+              >
+                MODO SAP
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link 
+                active={scanMode === 'basis'} 
+                onClick={() => setScanMode('basis')}
+                className="px-4 py-1 small fw-bold"
+              >
+                MODO BASIS
+              </Nav.Link>
+            </Nav.Item>
+          </Nav>
+        </div>
+        
+        <div className="scanner-container-wrapper" style={{ minHeight: '300px', background: '#000' }}>
+          {show && (
+            <Scanner
+              onScan={(result) => {
+                if (result && result.length > 0) {
+                  onScan(result[0].rawValue, scanMode);
+                }
+              }}
+              onError={(error) => console.error(error)}
+              allowMultiple={false}
+              scanDelay={2000}
+              constraints={{ facingMode: 'environment' }}
+            />
+          )}
+          <div className="scanner-overlay-box"></div>
+        </div>
+        
+        <div className="p-3 text-center bg-dark text-white-50 small">
+          Encuadra el código {scanMode.toUpperCase()} del producto dentro del recuadro.
+        </div>
+      </Modal.Body>
+      <style>{`
+        .scanner-modal-qr .nav-pills .nav-link { 
+          background: transparent; 
+          color: var(--theme-text-secondary);
+          border: 1px solid var(--theme-border-default);
+          border-radius: 4px;
+        }
+        .scanner-modal-qr .nav-pills .nav-link.active { 
+          background: var(--color-red-primary); 
+          color: white;
+          border-color: var(--color-red-primary);
+        }
+        .scanner-container-wrapper { position: relative; width: 100%; }
+        .scanner-overlay-box {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 200px;
+          height: 200px;
+          border: 2px solid var(--color-red-primary);
+          border-radius: 10px;
+          box-shadow: 0 0 0 4000px rgba(0,0,0,0.5);
+          pointer-events: none;
+          z-index: 10;
+        }
+      `}</style>
+    </Modal>
+  );
+};
 
 const AlmacenPage: FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
@@ -53,6 +143,7 @@ const AlmacenPage: FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'summary'>('edit');
+  const [showScanner, setShowScanner] = useState(false);
 
   const [tempBoxes, setTempBoxes] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
   const [tempUnits, setTempUnits] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
@@ -152,6 +243,20 @@ const AlmacenPage: FC = () => {
       rechazo: product.rechazo % product.unidades
     });
     setSelectedProduct(product);
+  };
+
+  const handleScanDetected = (code: string, mode: 'sap' | 'basis') => {
+    const foundProduct = processedData.find(p => 
+      mode === 'sap' ? p.sap === code : p.basis === code
+    );
+
+    if (foundProduct) {
+      setShowScanner(false);
+      handleOpenModal(foundProduct);
+      toast.success(`Producto detectado: ${foundProduct.nombre}`);
+    } else {
+      toast.error(`Código ${mode.toUpperCase()} "${code}" no reconocido.`);
+    }
   };
 
   const handleConfirmEntry = () => {
@@ -291,14 +396,14 @@ const AlmacenPage: FC = () => {
         )}
 
         <Row className="mb-3 px-1 g-2">
-          <Col xs={7} md={8}>
+          <Col xs={12} md={6} lg={7}>
             <SearchInput 
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
               placeholder="Buscar por nombre, SAP o Basis..." 
             />
           </Col>
-          <Col xs={5} md={4}>
+          <Col xs={9} md={4} lg={4}>
             <div className="info-pill-new w-100">
               <span className="pill-icon pill-icon-sober"><FaGlassMartiniAlt /></span>
               <div className="pill-content w-100">
@@ -315,6 +420,16 @@ const AlmacenPage: FC = () => {
                 </Form.Select>
               </div>
             </div>
+          </Col>
+          <Col xs={3} md={2} lg={1}>
+            <Button 
+              variant="danger" 
+              className="w-100 h-100 d-flex align-items-center justify-content-center p-0"
+              onClick={() => setShowScanner(true)}
+              title="Escanear QR"
+            >
+              <FaQrcode size={20} />
+            </Button>
           </Col>
         </Row>
 
@@ -407,6 +522,13 @@ const AlmacenPage: FC = () => {
           </Modal.Body>
         )}
       </Modal>
+
+      <ScannerModal 
+        show={showScanner} 
+        onHide={() => setShowScanner(false)} 
+        onScan={handleScanDetected}
+        isDarkMode={isDarkMode}
+      />
 
       <style>{`
         .admin-layout-container { max-height: calc(100vh - 70px); }
