@@ -14,6 +14,7 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 import { useData } from '../context/DataContext';
+import { matchSearchTerms } from '../utils/searchUtils';
 
 interface Role {
   id: string;
@@ -136,7 +137,7 @@ const AdminRolesPage: FC = () => {
     }
   };
 
-  const filteredRoles = useMemo(() => roles.filter(r => r.nombre.toLowerCase().includes(searchTerm.toLowerCase())), [roles, searchTerm]);
+  const filteredRoles = useMemo(() => roles.filter(r => matchSearchTerms(r, searchTerm, ['nombre', 'id'])), [roles, searchTerm]);
 
   const columns: Column<Role>[] = [
     { accessorKey: 'id', header: 'ID' },

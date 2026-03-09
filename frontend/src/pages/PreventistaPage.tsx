@@ -10,6 +10,7 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import { FaShoppingCart, FaClipboardList, FaGlassMartiniAlt, FaCheck, FaExclamationTriangle, FaCalendarAlt, FaTrash, FaEdit } from 'react-icons/fa';
 import SearchInput from '../components/SearchInput';
 import { toast } from 'react-hot-toast';
+import { matchSearchTerms } from '../utils/searchUtils';
 
 interface Product {
   id: string;
@@ -131,19 +132,10 @@ const PreventistaPage: FC = () => {
   }, [processedData]);
 
   const filteredProducts = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
-    const searchWords = term.split(/\s+/).filter(word => word.length > 0);
-
     let list = processedData.filter(p => {
       const matchesType = selectedBeverageType === '' || p.tipoBebidaId === selectedBeverageType;
       if (!matchesType) return false;
-      if (searchWords.length === 0) return true;
-
-      // Cada palabra de la búsqueda debe estar en el nombre o el SAP
-      return searchWords.every(word => 
-        p.nombre.toLowerCase().includes(word) || 
-        (p.sap && p.sap.toLowerCase().includes(word))
-      );
+      return matchSearchTerms(p, searchTerm, ['nombre', 'sap']);
     });
 
     // Ordenar: primero los que están en el carrito (cambios pendientes), luego alfabéticamente

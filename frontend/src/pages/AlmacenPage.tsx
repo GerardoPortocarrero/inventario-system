@@ -11,6 +11,7 @@ import { FaCalendarAlt, FaSync, FaCheck, FaListAlt, FaEdit, FaExclamationTriangl
 import GenericTable, { type Column } from '../components/GenericTable';
 import SearchInput from '../components/SearchInput';
 import { toast } from 'react-hot-toast';
+import { matchSearchTerms } from '../utils/searchUtils';
 
 interface Product {
   id: string;
@@ -112,18 +113,10 @@ const AlmacenPage: FC = () => {
   }, [processedData]);
 
   const sortedProducts = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
-    const searchWords = term.split(/\s+/).filter(word => word.length > 0);
-    
     let list = processedData.filter(p => {
-      if (searchWords.length === 0) return true;
-      
-      // Cada palabra de la búsqueda debe estar en al menos uno de los campos
-      return searchWords.every(word => 
-        p.nombre.toLowerCase().includes(word) || 
-        (p.sap && p.sap.toLowerCase().includes(word)) ||
-        (p.basis && p.basis.toLowerCase().includes(word))
-      );
+      const matchesSearch = matchSearchTerms(p, searchTerm, ['nombre', 'sap', 'basis']);
+      const matchesType = selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType;
+      return matchesSearch && matchesType;
     });
     return [...list].sort((a, b) => {
       const aDirty = draftInventory.hasOwnProperty(a.id);
@@ -135,19 +128,9 @@ const AlmacenPage: FC = () => {
   }, [processedData, searchTerm, draftInventory, selectedBeverageType]);
 
   const summaryData = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
-    const searchWords = term.split(/\s+/).filter(word => word.length > 0);
-
     return processedData.filter(p => {
       const matchesType = selectedBeverageType === '' || (p as any).tipoBebidaId === selectedBeverageType;
-      if (!p.hasData || !matchesType) return false;
-      if (searchWords.length === 0) return true;
-
-      return searchWords.every(word => 
-        p.nombre.toLowerCase().includes(word) || 
-        (p.sap && p.sap.toLowerCase().includes(word)) ||
-        (p.basis && p.basis.toLowerCase().includes(word))
-      );
+      return p.hasData && matchesType && matchSearchTerms(p, searchTerm, ['nombre', 'sap', 'basis']);
     });
   }, [processedData, selectedBeverageType, searchTerm]);
 

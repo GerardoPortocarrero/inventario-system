@@ -17,6 +17,7 @@ import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 import GenericFilter from '../components/GenericFilter';
 import { useData } from '../context/DataContext';
+import { matchSearchTerms } from '../utils/searchUtils';
 
 interface UserProfile {
   id: string;
@@ -208,8 +209,7 @@ const AdminUsersPage: FC = () => {
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
-      const matchesSearch = u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           u.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = matchSearchTerms(u, searchTerm, ['nombre', 'email']);
       const matchesRole = !selectedRole || u.rolId === selectedRole;
       const matchesSede = !selectedSede || u.sedeId === selectedSede;
       return matchesSearch && matchesRole && matchesSede;

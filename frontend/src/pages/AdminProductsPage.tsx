@@ -15,6 +15,7 @@ import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 import GenericFilter from '../components/GenericFilter';
 import { useData } from '../context/DataContext';
+import { matchSearchTerms } from '../utils/searchUtils';
 
 interface Product {
   id: string;
@@ -269,8 +270,7 @@ const AdminProductsPage: FC = () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           (p.sap && p.sap.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = matchSearchTerms(p, searchTerm, ['nombre', 'sap', 'basis', 'comercial', 'contaaya']);
       const matchesType = !selectedType || p.tipoBebidaId === selectedType;
       return matchesSearch && matchesType;
     });

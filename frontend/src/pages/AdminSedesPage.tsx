@@ -14,6 +14,7 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 import { useData } from '../context/DataContext';
+import { matchSearchTerms } from '../utils/searchUtils';
 
 interface Sede {
   id: string;
@@ -124,7 +125,7 @@ const AdminSedesPage: FC = () => {
     }
   };
 
-  const filteredSedes = useMemo(() => sedes.filter(s => s.nombre.toLowerCase().includes(searchTerm.toLowerCase())), [sedes, searchTerm]);
+  const filteredSedes = useMemo(() => sedes.filter(s => matchSearchTerms(s, searchTerm, ['nombre'])), [sedes, searchTerm]);
 
   const columns: Column<Sede>[] = [
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },

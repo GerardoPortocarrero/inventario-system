@@ -14,6 +14,7 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import FabButton from '../components/FabButton';
 import GenericCreationModal from '../components/GenericCreationModal';
 import { useData } from '../context/DataContext';
+import { matchSearchTerms } from '../utils/searchUtils';
 
 interface BeverageType {
   id: string;
@@ -125,7 +126,7 @@ const AdminTipoBebidaPage: FC = () => {
     }
   };
 
-  const filteredTypes = useMemo(() => beverageTypes.filter(s => s.nombre.toLowerCase().includes(searchTerm.toLowerCase())), [beverageTypes, searchTerm]);
+  const filteredTypes = useMemo(() => beverageTypes.filter(s => matchSearchTerms(s, searchTerm, ['nombre'])), [beverageTypes, searchTerm]);
 
   const columns: Column<BeverageType>[] = [
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
