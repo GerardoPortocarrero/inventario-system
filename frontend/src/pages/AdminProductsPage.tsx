@@ -48,34 +48,37 @@ const ProductQRModal: FC<{
     if (!qrRef.current) return;
     setIsCopying(true);
     try {
+      // Pequeña pausa para asegurar renderizado de imágenes
+      await new Promise(r => setTimeout(r, 300));
+      
       const canvas = await html2canvas(qrRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 3,
         logging: false,
-        useCORS: true
+        useCORS: true,
+        allowTaint: true
       });
       
       canvas.toBlob(async (blob) => {
         if (blob) {
           try {
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ]);
+            const data = [new ClipboardItem({ 'image/png': blob })];
+            await navigator.clipboard.write(data);
             toast.success(`Ficha completa copiada al portapapeles`);
           } catch (err) {
-            // Fallback for browsers that don't support ClipboardItem image writing
             const dataUrl = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.href = dataUrl;
-            link.download = `QR_${product?.nombre}_${activeTab}.png`;
+            link.download = `QR_${product?.nombre}.png`;
             link.click();
-            toast.success("Imagen descargada (navegador no soporta copiado directo)");
+            toast.success("Imagen descargada");
           }
         }
-      });
+        setIsCopying(false); // Desactivar spinner después de procesar el blob
+      }, 'image/png', 1.0);
     } catch (error) {
-      toast.error("Error al copiar el QR");
-    } finally {
+      console.error(error);
+      toast.error("Error al copiar");
       setIsCopying(false);
     }
   };
@@ -107,19 +110,27 @@ const ProductQRModal: FC<{
                   {activeTab.toUpperCase()}: <span className="fw-black">{qrValue || 'N/A'}</span>
                 </div>
               </div>
-              <div className="d-inline-block p-1 border border-light">
+              <div className="d-inline-block p-1 border border-light position-relative">
                 <QRCodeSVG 
                   value={qrValue || 'N/A'} 
                   size={280}
                   level="H"
                   includeMargin={false}
-                  imageSettings={{
-                    src: "/logo.png",
-                    x: undefined,
-                    y: undefined,
-                    height: 50,
-                    width: 50,
-                    excavate: true,
+                />
+                {/* Logo manual para asegurar captura por html2canvas */}
+                <img 
+                  src="/logo.png" 
+                  alt="Logo"
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '55px',
+                    height: '55px',
+                    backgroundColor: 'white',
+                    padding: '4px',
+                    border: '1px solid #eee'
                   }}
                 />
               </div>
@@ -136,8 +147,17 @@ const ProductQRModal: FC<{
               onClick={handleCopy}
               disabled={isCopying}
             >
-              {isCopying ? <Spinner size="sm" /> : <FaCopy />}
-              Copiar Ficha Completa
+              {isCopying ? (
+                <>
+                  <Spinner size="sm" animation="border" />
+                  PROCESANDO...
+                </>
+              ) : (
+                <>
+                  <FaCopy />
+                  Copiar Ficha Completa
+                </>
+              )}
             </Button>
             <Button variant="link" className="text-muted small fw-bold text-decoration-none" onClick={onHide}>
               CERRAR VENTANA
