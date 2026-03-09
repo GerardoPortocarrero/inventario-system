@@ -65,7 +65,7 @@ const ScannerModal: FC<{
               scanDelay={2000}
               constraints={{ facingMode: 'environment' }}
               components={{
-                tracker: false, // Quita el cuadro interno (tracker) de la librería
+                tracker: () => null, // Función vacía que no renderiza nada para ocultar el tracker nativo
               }}
             />
           )}
