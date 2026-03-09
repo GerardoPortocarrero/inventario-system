@@ -92,7 +92,7 @@ const ProductQRModal: FC<{
       <Modal.Body className={isDarkMode ? 'bg-dark text-white pt-4' : 'pt-4'}>
         <div className="text-center">
           <Tab.Container activeKey={activeTab} onSelect={(k: any) => setActiveTab(k)}>
-            <Nav variant="pills" className="justify-content-center mb-4 qr-tabs-pills">
+            <Nav variant="pills" className="justify-content-center mb-2 qr-tabs-pills">
               <Nav.Item>
                 <Nav.Link eventKey="sap" className="px-5 py-2 fw-black">MODO SAP</Nav.Link>
               </Nav.Item>
@@ -102,8 +102,8 @@ const ProductQRModal: FC<{
             </Nav>
           </Tab.Container>
 
-          <div className="qr-export-container-outer p-2 mb-3">
-            <div ref={qrRef} className="qr-export-container p-4 bg-white rounded shadow-sm text-center border">
+          <div className="qr-export-container-outer p-4 mb-2">
+            <div ref={qrRef} className="qr-export-container p-4 bg-white shadow-sm text-center border">
               <h5 className="fw-black text-dark text-uppercase mb-2" style={{ letterSpacing: '-0.5px' }}>{product.nombre}</h5>
               <div className="d-flex justify-content-center align-items-center mb-3">
                 <div className="badge bg-danger px-3 py-2 fs-6">
@@ -113,7 +113,7 @@ const ProductQRModal: FC<{
               <div className="d-inline-block p-1 border border-light position-relative">
                 <QRCodeSVG 
                   value={qrValue || 'N/A'} 
-                  size={280}
+                  size={300}
                   level="H"
                   includeMargin={false}
                 />
@@ -140,7 +140,7 @@ const ProductQRModal: FC<{
             </div>
           </div>
 
-          <div className="px-4 pb-3">
+          <div className="px-4">
             <Button 
               variant="primary" 
               className="w-100 py-3 fw-black text-uppercase shadow-sm d-flex align-items-center justify-content-center gap-2 mb-2" 
@@ -186,7 +186,7 @@ const ProductQRModal: FC<{
           box-shadow: 0 4px 10px rgba(244, 0, 9, 0.3);
         }
 
-        .qr-export-container { width: 100%; max-width: 360px; margin: 0 auto; color: #000 !important; }
+        .qr-export-container { width: 100%; margin: 0 auto; color: #000 !important; }
         .qr-export-container-outer { overflow: hidden; }
       `}</style>
     </Modal>
