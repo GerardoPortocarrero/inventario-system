@@ -77,7 +77,11 @@ Esta interfaz proporciona control total sobre el sistema, incluyendo la gestión
     *   **Gestión de Catálogo de Productos (`ProductManagement`):**
         *   Una tabla con todos los productos de la colección `productos`.
         *   Columnas: `sap`, `nombre`, `precio`, `mililitros`, `unidades`, `basis`, `comercial`, `contaaya`.
-        *   Acciones: Crear nuevo producto, editar información de producto existente.
+        *   Acciones: Crear nuevo producto, editar información de producto existente, **Generar QR**.
+        *   **Modal de Generación de QR:**
+            *   Permite alternar entre modos **SAP** y **BASIS** mediante pestañas de alto contraste.
+            *   Muestra una ficha completa con el logotipo de la empresa, nombre del producto y el QR.
+            *   Botón "Copiar Ficha Completa" que captura el área como imagen para facilitar su impresión.
 
 ---
 

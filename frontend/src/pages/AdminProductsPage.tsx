@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment, useRef } from 'react';
 import { Container, Form, Button, Alert, Spinner, Modal, Nav, Tab } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -7,6 +7,7 @@ import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc, serverTimest
 import { FaPencilAlt, FaTrash, FaQrcode, FaCopy } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-hot-toast';
+import html2canvas from 'html2canvas';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 import SearchInput from '../components/SearchInput';
@@ -40,10 +41,43 @@ const ProductQRModal: FC<{
   isDarkMode: boolean;
 }> = ({ show, onHide, product, isDarkMode }) => {
   const [activeTab, setActiveTab] = useState<'sap' | 'basis'>('sap');
+  const qrRef = useRef<HTMLDivElement>(null);
+  const [isCopying, setIsCopying] = useState(false);
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${activeTab.toUpperCase()} copiado al portapapeles`);
+  const handleCopy = async () => {
+    if (!qrRef.current) return;
+    setIsCopying(true);
+    try {
+      const canvas = await html2canvas(qrRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true
+      });
+      
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ]);
+            toast.success(`Ficha completa copiada al portapapeles`);
+          } catch (err) {
+            // Fallback for browsers that don't support ClipboardItem image writing
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = `QR_${product?.nombre}_${activeTab}.png`;
+            link.click();
+            toast.success("Imagen descargada (navegador no soporta copiado directo)");
+          }
+        }
+      });
+    } catch (error) {
+      toast.error("Error al copiar el QR");
+    } finally {
+      setIsCopying(false);
+    }
   };
 
   if (!product) return null;
@@ -51,58 +85,88 @@ const ProductQRModal: FC<{
   const qrValue = activeTab === 'sap' ? product.sap : product.basis;
 
   return (
-    <Modal show={show} onHide={onHide} centered className="qr-modal">
-      <Modal.Header closeButton className={isDarkMode ? 'bg-dark text-white border-secondary' : ''}>
-        <Modal.Title className="fs-6 fw-bold">QR DE PRODUCTO</Modal.Title>
-      </Modal.Header>
+    <Modal show={show} onHide={onHide} centered className="qr-modal-v2">
+      <Modal.Header closeButton className={isDarkMode ? 'bg-dark text-white border-0 pb-0' : 'border-0 pb-0'} />
       <Modal.Body className={isDarkMode ? 'bg-dark text-white' : ''}>
-        <div className="text-center mb-4">
-          <h6 className="fw-bold text-uppercase mb-1">{product.nombre}</h6>
-          <p className="text-muted small mb-3">{product.sap} / {product.basis}</p>
-          
+        <div className="text-center">
           <Tab.Container activeKey={activeTab} onSelect={(k: any) => setActiveTab(k)}>
-            <Nav variant="pills" className="justify-content-center mb-4 gap-2">
+            <Nav variant="pills" className="justify-content-center mb-4 qr-tabs-pills">
               <Nav.Item>
-                <Nav.Link eventKey="sap" className="px-4 py-1 small fw-bold">SAP</Nav.Link>
+                <Nav.Link eventKey="sap" className="px-5 py-2 fw-black">MODO SAP</Nav.Link>
               </Nav.Item>
               <Nav.Item>
-                <Nav.Link eventKey="basis" className="px-4 py-1 small fw-bold">BASIS</Nav.Link>
+                <Nav.Link eventKey="basis" className="px-5 py-2 fw-black">MODO BASIS</Nav.Link>
               </Nav.Item>
             </Nav>
           </Tab.Container>
 
-          <div className="p-3 bg-white d-inline-block rounded shadow-sm mb-4">
-            <QRCodeSVG 
-              value={qrValue || 'N/A'} 
-              size={200}
-              level="H"
-              includeMargin={true}
-            />
+          <div className="qr-export-container-outer p-2 mb-3">
+            <div ref={qrRef} className="qr-export-container p-4 bg-white rounded shadow-sm text-center border">
+              <h5 className="fw-black text-dark text-uppercase mb-2" style={{ letterSpacing: '-0.5px' }}>{product.nombre}</h5>
+              <div className="d-flex justify-content-center align-items-center mb-3">
+                <div className="badge bg-danger px-3 py-2 fs-6">
+                  {activeTab.toUpperCase()}: <span className="fw-black">{qrValue || 'N/A'}</span>
+                </div>
+              </div>
+              <div className="d-inline-block p-1 border border-light">
+                <QRCodeSVG 
+                  value={qrValue || 'N/A'} 
+                  size={280}
+                  level="H"
+                  includeMargin={false}
+                  imageSettings={{
+                    src: "/logo.png",
+                    x: undefined,
+                    y: undefined,
+                    height: 50,
+                    width: 50,
+                    excavate: true,
+                  }}
+                />
+              </div>
+              <div className="mt-3 pt-2 border-top text-muted small fw-bold text-uppercase" style={{ opacity: 0.5, fontSize: '0.6rem' }}>
+                Sistema de Inventario • Propiedad de la Empresa
+              </div>
+            </div>
           </div>
 
-          <div className="d-flex flex-column align-items-center gap-2">
-            <div className="d-flex align-items-center gap-2 p-2 px-3 rounded w-100 justify-content-center" style={{ background: isDarkMode ? '#2b2b2b' : '#f8f9fa', border: '1px solid ' + (isDarkMode ? '#333' : '#eee') }}>
-              <span className="fw-bold text-danger fs-5">{qrValue || 'N/A'}</span>
-              <Button variant="link" className="p-0 text-secondary" onClick={() => handleCopy(qrValue || '')}>
-                <FaCopy />
-              </Button>
-            </div>
-            <p className="small text-muted mb-0">Escanea este código para identificar el producto.</p>
+          <div className="px-4">
+            <Button 
+              variant="primary" 
+              className="w-100 py-3 fw-black text-uppercase shadow-sm d-flex align-items-center justify-content-center gap-2" 
+              onClick={handleCopy}
+              disabled={isCopying}
+            >
+              {isCopying ? <Spinner size="sm" /> : <FaCopy />}
+              Copiar Ficha Completa
+            </Button>
+            <p className="mt-2 mb-0 small text-muted opacity-75">Copia Nombre, Código y QR para imprimir o compartir.</p>
           </div>
         </div>
       </Modal.Body>
       <style>{`
-        .qr-modal .nav-pills .nav-link { 
-          background: transparent; 
+        .fw-black { font-weight: 900 !important; }
+        .qr-modal-v2 .modal-content { border-radius: 12px; overflow: hidden; border: none; }
+        
+        .qr-tabs-pills { background: rgba(0,0,0,0.05); padding: 5px; border-radius: 50px; display: inline-flex; margin: 0 auto; }
+        .theme-dark .qr-tabs-pills { background: rgba(255,255,255,0.05); }
+        
+        .qr-tabs-pills .nav-link { 
+          border-radius: 50px;
           color: var(--theme-text-secondary);
-          border: 1px solid var(--theme-border-default);
-          border-radius: 4px;
+          font-size: 0.75rem;
+          transition: all 0.2s ease;
+          border: none;
         }
-        .qr-modal .nav-pills .nav-link.active { 
-          background: var(--color-red-primary); 
-          color: white;
-          border-color: var(--color-red-primary);
+        
+        .qr-tabs-pills .nav-link.active { 
+          background: var(--color-red-primary) !important;
+          color: white !important;
+          box-shadow: 0 4px 10px rgba(244, 0, 9, 0.3);
         }
+
+        .qr-export-container { width: 100%; max-width: 360px; margin: 0 auto; color: #000 !important; }
+        .qr-export-container-outer { overflow: hidden; }
       `}</style>
     </Modal>
   );

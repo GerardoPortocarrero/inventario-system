@@ -38,31 +38,19 @@ const ScannerModal: FC<{
 
   return (
     <Modal show={show} onHide={onHide} centered className="scanner-modal-qr">
-      <Modal.Header closeButton className={isDarkMode ? 'bg-dark text-white border-secondary' : ''}>
-        <Modal.Title className="fs-6 fw-bold">ESCÁNER DE PRODUCTO</Modal.Title>
-      </Modal.Header>
+      <Modal.Header closeButton className={isDarkMode ? 'bg-dark text-white border-0' : 'border-0'} />
       <Modal.Body className={isDarkMode ? 'bg-dark text-white p-0 overflow-hidden' : 'p-0 overflow-hidden'}>
         <div className="p-3 text-center border-bottom border-secondary border-opacity-25">
-          <Nav variant="pills" className="justify-content-center gap-2">
-            <Nav.Item>
-              <Nav.Link 
-                active={scanMode === 'sap'} 
-                onClick={() => setScanMode('sap')}
-                className="px-4 py-1 small fw-bold"
-              >
-                MODO SAP
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link 
-                active={scanMode === 'basis'} 
-                onClick={() => setScanMode('basis')}
-                className="px-4 py-1 small fw-bold"
-              >
-                MODO BASIS
-              </Nav.Link>
-            </Nav.Item>
-          </Nav>
+          <Tab.Container activeKey={scanMode} onSelect={(k: any) => setScanMode(k)}>
+            <Nav variant="pills" className="justify-content-center qr-tabs-pills">
+              <Nav.Item>
+                <Nav.Link eventKey="sap" className="px-5 py-2 fw-black">MODO SAP</Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link eventKey="basis" className="px-5 py-2 fw-black">MODO BASIS</Nav.Link>
+              </Nav.Item>
+            </Nav>
+          </Tab.Container>
         </div>
         
         <div className="scanner-container-wrapper" style={{ minHeight: '300px', background: '#000' }}>
@@ -82,22 +70,29 @@ const ScannerModal: FC<{
           <div className="scanner-overlay-box"></div>
         </div>
         
-        <div className="p-3 text-center bg-dark text-white-50 small">
+        <div className="p-3 text-center bg-dark text-white-50 small fw-bold">
           Encuadra el código {scanMode.toUpperCase()} del producto dentro del recuadro.
         </div>
       </Modal.Body>
       <style>{`
-        .scanner-modal-qr .nav-pills .nav-link { 
-          background: transparent; 
+        .fw-black { font-weight: 900 !important; }
+        .scanner-modal-qr .qr-tabs-pills { background: rgba(0,0,0,0.05); padding: 5px; border-radius: 50px; display: inline-flex; margin: 0 auto; }
+        .theme-dark .scanner-modal-qr .qr-tabs-pills { background: rgba(255,255,255,0.05); }
+        
+        .scanner-modal-qr .qr-tabs-pills .nav-link { 
+          border-radius: 50px;
           color: var(--theme-text-secondary);
-          border: 1px solid var(--theme-border-default);
-          border-radius: 4px;
+          font-size: 0.75rem;
+          transition: all 0.2s ease;
+          border: none;
         }
-        .scanner-modal-qr .nav-pills .nav-link.active { 
-          background: var(--color-red-primary); 
-          color: white;
-          border-color: var(--color-red-primary);
+        
+        .scanner-modal-qr .qr-tabs-pills .nav-link.active { 
+          background: var(--color-red-primary) !important;
+          color: white !important;
+          box-shadow: 0 4px 10px rgba(244, 0, 9, 0.3);
         }
+
         .scanner-container-wrapper { position: relative; width: 100%; }
         .scanner-overlay-box {
           position: absolute;

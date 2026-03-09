@@ -14,3 +14,5 @@ Este documento lista las capacidades y funciones que el sistema debe realizar.
 *   **RF-10: Sincronización Automática de Preventa:** Al registrar una orden, el sistema debe actualizar automáticamente el contador de preventa del producto en el inventario diario de la sede.
 *   **RF-11: Bloqueo de Venta sin Inventario:** El sistema debe bloquear la creación de órdenes de preventa si el Almacenero no ha registrado el conteo físico inicial del día.
 *   **RF-12: Identificación Ágil por QR Estático:** El sistema debe permitir la identificación instantánea de productos mediante el escaneo de códigos QR estáticos ubicados en estantes, racks o tableros de conteo, eliminando la necesidad de búsqueda manual por texto.
+*   **RF-13: Generación de Fichas QR (SAP/Basis):** El sistema debe generar códigos QR basados en los códigos SAP o Basis del producto, permitiendo alternar entre ambos modos según la necesidad logística.
+*   **RF-14: Exportación de Identificadores:** Los administradores deben poder copiar al portapapeles una ficha visual completa (Imagen) que integre el nombre del producto, su código alfanumérico y su QR con el logo corporativo para su impresión.
