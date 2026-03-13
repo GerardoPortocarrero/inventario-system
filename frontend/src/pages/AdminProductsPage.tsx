@@ -446,6 +446,8 @@ const AdminProductsPage: FC = () => {
     },
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
     { accessorKey: 'sap', header: UI_TEXTS.SAP },
+    { accessorKey: 'unidades', header: UI_TEXTS.UNIDADES },
+    { accessorKey: 'mililitros', header: UI_TEXTS.MILILITROS },
     { accessorKey: 'basis', header: UI_TEXTS.BASIS },
     { accessorKey: 'comercial', header: UI_TEXTS.COMERCIAL },
     { accessorKey: 'contaaya', header: UI_TEXTS.CONTAAYA },
