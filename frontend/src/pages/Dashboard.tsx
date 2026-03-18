@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Alert, Form } from 'react-bootstrap';
+import { Row, Col, Alert, Form, Button } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, doc, onSnapshot, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
@@ -14,16 +14,17 @@ import {
   FaTruck, FaBox, FaShoppingCart, FaExclamationTriangle, 
   FaCalendarAlt, FaWarehouse, FaHandHoldingUsd, FaUndoAlt, FaFilter, FaTrophy, FaChartArea 
 } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 import GlobalSpinner from '../components/GlobalSpinner';
 
-interface Product { id: string; nombre: string; sap: string; tipoBebidaId: string; unidades: number; }
+interface Product { id: string; nombre: string; sap: string; basis: string; tipoBebidaId: string; unidades: number; }
 interface InventoryEntry { almacen: number; consignacion: number; rechazo: number; }
 interface Order { id: string; estadoOrden: string; detalles: { productoId: string; cantidad: number; }[]; }
 
 const Dashboard: FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
   const { userSedeId } = useAuth();
-  const { beverageTypes, loadingMasterData } = useData();
+  const { beverageTypes, loadingMasterData, sedes } = useData();
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -104,6 +105,12 @@ const Dashboard: FC = () => {
     loadHistory();
   }, [userSedeId, products]);
 
+  const formatQty = (totalUnits: number, unitsPerBox: number) => {
+    const boxes = Math.floor(totalUnits / unitsPerBox);
+    const units = totalUnits % unitsPerBox;
+    return `${boxes}-${units}`;
+  };
+
   const stats = useMemo(() => {
     let tStockCJ = 0, tInventarioCJ = 0, tTransitoCJ = 0, tPreventaCJ = 0, tVentasCJ = 0, tRechazoCJ = 0;
     let totalAlmCJ = 0, totalConCJ = 0, totalRechCJ = 0;
@@ -117,12 +124,13 @@ const Dashboard: FC = () => {
     });
 
     products.forEach(p => {
-      if (selectedType && p.tipoBebidaId !== selectedType) return;
-      const factor = p.unidades || 1;
+      // Aplicar filtro de tipo de bebida si existe
+      if (selectedType !== '' && p.tipoBebidaId !== selectedType) return;
 
       const hoy = todayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
       const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-      
+      const factor = p.unidades || 1;
+
       let uPreventa = 0;
       orders.forEach(o => {
         const item = o.detalles.find(d => d.productoId === p.id);
@@ -155,7 +163,22 @@ const Dashboard: FC = () => {
         catMetrics[p.tipoBebidaId].Ventas += cVentaReal;
       }
 
-      productMetrics.push({ id: p.id, name: p.nombre, sap: p.sap, stock: Number(cStock.toFixed(2)), transito: Number(cTransito.toFixed(2)), ventas: Number(cVentaReal.toFixed(2)), inventario: Number(cInventario.toFixed(2)), preventa: Number(cPreventa.toFixed(2)), rechazo: Number(cRechazo.toFixed(2)) });
+      productMetrics.push({ 
+        id: p.id, 
+        name: p.nombre, 
+        sap: p.sap, 
+        basis: p.basis,
+        tipo: beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros',
+        almacen: hoy.almacen,
+        consignacion: hoy.consignacion,
+        rechazo: hoy.rechazo,
+        transito: uTransito,
+        inventario: uInventario,
+        stock: Number(cStock.toFixed(2)), 
+        ventas: Number(cVentaReal.toFixed(2)), 
+        preventa: Number(cPreventa.toFixed(2)),
+        factor: p.unidades
+      });
 
       if (uInventario > 0) {
         const typeName = beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros';
@@ -183,9 +206,50 @@ const Dashboard: FC = () => {
         ventas: [...productMetrics].sort((a, b) => b.ventas - a.ventas).slice(0, 5),
         transito: [...productMetrics].sort((a, b) => b.transito - a.transito).slice(0, 5),
         critico: [...productMetrics].filter(p => p.inventario > 0).sort((a, b) => a.stock - b.stock).slice(0, 5)
-      }
+      },
+      productMetrics // Export all metrics for CSV
     };
   }, [products, todayInventory, yesterdayInventory, orders, selectedType, beverageTypes]);
+
+  const handleDownloadCSV = () => {
+    if (stats.productMetrics.length === 0) {
+      toast.error("No hay datos para descargar");
+      return;
+    }
+
+    const headers = ["PRODUCTO", "SAP", "BASIS", "CATEGORIA", "ALMACEN", "CONSIGNACION", "RECHAZO", "TRANSITO", "INVENTARIO"];
+    const rows = stats.productMetrics
+      .filter(p => p.almacen > 0 || p.consignacion > 0 || p.rechazo > 0 || p.transito > 0)
+      .map(p => [
+        `"${p.name}"`,
+        `"${p.sap}"`,
+        `"${p.basis}"`,
+        `"${p.tipo}"`,
+        `="${formatQty(p.almacen, p.factor)}"`,
+        `="${formatQty(p.consignacion, p.factor)}"`,
+        `="${formatQty(p.rechazo, p.factor)}"`,
+        `="${formatQty(p.transito, p.factor)}"`,
+        `="${formatQty(p.inventario, p.factor)}"`
+      ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => r.join(","))
+    ].join("\n");
+
+    // Añadimos el BOM (Byte Order Mark) para que Excel reconozca UTF-8 correctamente
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const sedeName = sedes.find(s => s.id === userSedeId)?.nombre || 'Sede';
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Inventario_${sedeName}_${selectedDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Archivo generado correctamente");
+  };
 
   const isDark = isDarkMode;
   const SYSTEM_COLORS = ['#F40009', '#6c757d', '#adb5bd', '#343a40', '#495057', '#212529', '#000000'];
@@ -202,7 +266,7 @@ const Dashboard: FC = () => {
     <div className="admin-layout-container flex-column overflow-hidden gap-3">
       <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto' }}>
         <Row className="g-2 align-items-center">
-          <Col xs={6} md={4}>
+          <Col xs={6} md={3}>
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober"><FaCalendarAlt /></span>
               <div className="pill-content flex-grow-1">
@@ -211,7 +275,7 @@ const Dashboard: FC = () => {
               </div>
             </div>
           </Col>
-          <Col xs={6} md={4}>
+          <Col xs={6} md={3}>
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober"><FaFilter /></span>
               <div className="pill-content flex-grow-1">
@@ -223,7 +287,7 @@ const Dashboard: FC = () => {
               </div>
             </div>
           </Col>
-          <Col xs={12} md={4}>
+          <Col xs={6} md={3}>
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober"><FaBox /></span>
               <div className="pill-content flex-grow-1">
@@ -233,6 +297,16 @@ const Dashboard: FC = () => {
                 </span>
               </div>
             </div>
+          </Col>
+          <Col xs={6} md={3}>
+            <Button 
+              variant="danger" 
+              className="w-100 fw-black text-uppercase d-flex align-items-center justify-content-center gap-2" 
+              onClick={handleDownloadCSV} 
+              style={{ fontSize: '0.75rem', height: '40px', borderRadius: '4px' }}
+            >
+              <FaTruck /> DESCARGAR DATA
+            </Button>
           </Col>
         </Row>
       </div>
