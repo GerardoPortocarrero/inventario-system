@@ -18,7 +18,7 @@ import { toast } from 'react-hot-toast';
 import GlobalSpinner from '../components/GlobalSpinner';
 
 interface Product { id: string; nombre: string; sap: string; basis: string; tipoBebidaId: string; unidades: number; }
-interface InventoryEntry { almacen: number; consignacion: number; rechazo: number; }
+interface InventoryEntry { almacen: number; consignacion: number; }
 interface Order { id: string; estadoOrden: string; detalles: { productoId: string; cantidad: number; }[]; }
 
 const Dashboard: FC = () => {
@@ -113,22 +113,22 @@ const Dashboard: FC = () => {
   }, [userSedeId, products]);
 
   const stats = useMemo(() => {
-    let tStockCJ = 0, tInventarioCJ = 0, tTransitoCJ = 0, tPreventaCJ = 0, tVentasCJ = 0, tRechazoCJ = 0;
-    let totalAlmCJ = 0, totalConCJ = 0, totalRechCJ = 0;
+    let tStockCJ = 0, tInventarioCJ = 0, tTransitoCJ = 0, tPreventaCJ = 0;
+    let totalAlmCJ = 0, totalConCJ = 0;
     
-    const catMetrics: Record<string, { name: string, Stock: number, Preventa: number, Ventas: number }> = {};
+    const catMetrics: Record<string, { name: string, Stock: number, Preventa: number }> = {};
     const typeDistribution: Record<string, number> = {};
     const productMetrics: any[] = [];
 
     beverageTypes.forEach(t => {
-      catMetrics[t.id] = { name: t.nombre.toUpperCase(), Stock: 0, Preventa: 0, Ventas: 0 };
+      catMetrics[t.id] = { name: t.nombre.toUpperCase(), Stock: 0, Preventa: 0 };
     });
 
     products.forEach(p => {
       if (selectedType !== '' && p.tipoBebidaId !== selectedType) return;
 
-      const hoy = todayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-      const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
+      const hoy = todayInventory[p.id] || { almacen: 0, consignacion: 0 };
+      const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0 };
       const factor = p.unidades || 1;
 
       let uPreventa = 0;
@@ -137,30 +137,25 @@ const Dashboard: FC = () => {
         if (item) uPreventa += item.cantidad;
       });
 
-      const totalAyerU = ayer.almacen + ayer.consignacion + ayer.rechazo;
+      const totalAyerU = ayer.almacen + ayer.consignacion;
       const uTransito = todayInventory.hasOwnProperty(p.id) ? Math.max(0, totalAyerU - hoy.almacen) : 0;
-      const uVentaReal = Math.max(0, uTransito - hoy.rechazo); 
-      const uInventario = hoy.almacen + hoy.consignacion + hoy.rechazo;
+      const uInventario = hoy.almacen + hoy.consignacion;
       const uStock = uInventario - uPreventa;
 
       const cStock = uStock / factor;
       const cInventario = uInventario / factor;
       const cTransito = uTransito / factor;
       const cPreventa = uPreventa / factor;
-      const cVentaReal = uVentaReal / factor;
-      const cRechazo = hoy.rechazo / factor;
 
       tStockCJ += cStock; tInventarioCJ += cInventario; tTransitoCJ += cTransito;
-      tPreventaCJ += cPreventa; tVentasCJ += cVentaReal; tRechazoCJ += cRechazo;
+      tPreventaCJ += cPreventa;
 
       totalAlmCJ += hoy.almacen / factor; 
       totalConCJ += hoy.consignacion / factor; 
-      totalRechCJ += hoy.rechazo / factor;
 
       if (catMetrics[p.tipoBebidaId]) {
         catMetrics[p.tipoBebidaId].Stock += cStock;
         catMetrics[p.tipoBebidaId].Preventa += cPreventa;
-        catMetrics[p.tipoBebidaId].Ventas += cVentaReal;
       }
 
       productMetrics.push({ 
@@ -171,11 +166,9 @@ const Dashboard: FC = () => {
         tipo: beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros',
         almacen: hoy.almacen,
         consignacion: hoy.consignacion,
-        rechazo: hoy.rechazo,
         transito: uTransito,
         inventario: uInventario,
         stock: Number(cStock.toFixed(2)), 
-        ventas: Number(cVentaReal.toFixed(2)), 
         preventa: Number(cPreventa.toFixed(2)),
         factor: p.unidades
       });
@@ -191,19 +184,15 @@ const Dashboard: FC = () => {
       tInventario: Number(tInventarioCJ.toFixed(2)), 
       tTransito: Number(tTransitoCJ.toFixed(2)), 
       tPreventa: Number(tPreventaCJ.toFixed(2)), 
-      tVentas: Number(tVentasCJ.toFixed(2)), 
-      tRechazo: Number(tRechazoCJ.toFixed(2)), 
-      chartMain: Object.values(catMetrics).filter(c => c.Stock > 0 || c.Preventa > 0 || c.Ventas > 0).map(c => ({
-        ...c, Stock: Number(c.Stock.toFixed(2)), Preventa: Number(c.Preventa.toFixed(2)), Ventas: Number(c.Ventas.toFixed(2))
+      chartMain: Object.values(catMetrics).filter(c => c.Stock > 0 || c.Preventa > 0).map(c => ({
+        ...c, Stock: Number(c.Stock.toFixed(2)), Preventa: Number(c.Preventa.toFixed(2))
       })),
       chartOps: [
         { name: 'ALMACÉN', value: Number(totalAlmCJ.toFixed(2)), color: '#6c757d' },
-        { name: 'CONSIGNACIÓN', value: Number(totalConCJ.toFixed(2)), color: '#adb5bd' },
-        { name: 'RECHAZO', value: Number(totalRechCJ.toFixed(2)), color: '#F40009' }
+        { name: 'CONSIGNACIÓN', value: Number(totalConCJ.toFixed(2)), color: '#adb5bd' }
       ],
       pieData: Object.keys(typeDistribution).map(name => ({ name, value: Number(typeDistribution[name].toFixed(2)) })).filter(d => d.value > 0),
       tops: {
-        ventas: [...productMetrics].sort((a, b) => b.ventas - a.ventas).slice(0, 5),
         transito: [...productMetrics].sort((a, b) => b.transito - a.transito).slice(0, 5),
         critico: [...productMetrics].filter(p => p.inventario > 0).sort((a, b) => a.stock - b.stock).slice(0, 5)
       },
@@ -423,11 +412,9 @@ const Dashboard: FC = () => {
                   { label: 'INV. FÍSICO', value: stats.tInventario, icon: <FaWarehouse />, color: '#FFFFFF' },
                   { label: 'STOCK VENTA', value: stats.tStock, icon: <FaBox />, color: '#F40009' },
                   { label: 'PREVENTA HOY', value: stats.tPreventa, icon: <FaShoppingCart />, color: '#adb5bd' },
-                  { label: 'TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#6c757d' },
-                  { label: 'VENTA REAL', value: stats.tVentas, icon: <FaHandHoldingUsd />, color: '#FFFFFF' },
-                  { label: 'RECHAZOS HOY', value: stats.tRechazo, icon: <FaUndoAlt />, color: '#F40009' }
+                  { label: 'TRÁNSITO', value: stats.tTransito, icon: <FaTruck />, color: '#6c757d' }
                 ].map((kpi, i) => (
-                  <Col key={i} xs={6} md={4} lg={2}>
+                  <Col key={i} xs={6} md={3}>
                     <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
                       <div className="dash-kpi-icon" style={{ color: kpi.color }}>{kpi.icon}</div>
                       <div className="dash-kpi-data">
@@ -501,7 +488,6 @@ const Dashboard: FC = () => {
                           <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                           <Bar name="STOCK VENTA" dataKey="Stock" fill="#F40009" radius={0} />
                           <Bar name="PREVENTA" dataKey="Preventa" fill="#adb5bd" radius={0} />
-                          <Bar name="VENTA REAL" dataKey="Ventas" fill={CHART_TEXT_COLOR} radius={0} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -534,11 +520,10 @@ const Dashboard: FC = () => {
 
               <Row className="g-2 pb-2">
                 {[
-                  { title: 'TOP VENTAS', data: stats.tops.ventas, key: 'ventas', color: 'text-success', icon: <FaTrophy /> },
                   { title: 'MÁS TRÁNSITO', data: stats.tops.transito, key: 'transito', color: 'text-warning', icon: <FaTruck /> },
                   { title: 'STOCK CRÍTICO', data: stats.tops.critico, key: 'stock', color: 'text-danger', icon: <FaExclamationTriangle /> }
                 ].map((top, i) => (
-                  <Col key={i} xs={12} md={4}>
+                  <Col key={i} xs={12} md={6}>
                     <div className="dash-top-card">
                       <div className="dash-top-header">{top.icon} {top.title}</div>
                       {top.data.map((p, idx) => (
@@ -602,10 +587,8 @@ const Dashboard: FC = () => {
                   <option value="TOTAL">TOTAL (Consolidado)</option>
                   <option value="ALMACEN">ALMACÉN (Físico)</option>
                   <option value="CONSIGNACION">CONSIGNACIÓN</option>
-                  <option value="RECHAZOS">RECHAZOS</option>
                   <option value="TRANSITO">TRÁNSITO</option>
-                  <option value="INVENTARIO">INVENTARIO (A+C+R)</option>
-                  <option value="VENTAS">VENTAS REALES</option>
+                  <option value="INVENTARIO">INVENTARIO (A+C)</option>
                   <option value="PREVENTAS">PREVENTAS</option>
                 </Form.Select>
               </div>

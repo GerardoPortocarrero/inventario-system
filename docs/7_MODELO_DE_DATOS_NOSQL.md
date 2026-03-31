@@ -40,7 +40,7 @@ La estructura se basará en las siguientes colecciones principales:
       "productoId": "ID_del_producto_en_la_coleccion_productos", // Este producto ya incluye sedeId
       "padreId": "ID_de_otra_unidadDeStock_si_esta_contenida", // ej. una caja dentro de un palet
       "tipo": "CAJA_FISICA", // PALET, CAMA, CAJA_FISICA, PRODUCTO_UNITARIO
-      "estadoFisico": "EN_ALMACEN", // EN_CONSIGNACION, EN_ALMACEN, EN_TRANSITO, EN_RECHAZO
+      "estadoFisico": "EN_ALMACEN", // EN_CONSIGNACION, EN_ALMACEN, EN_TRANSITO
       "cantidad": 12, // Para PRODUCTO_UNITARIO, la cantidad de unidades
       "actualizadoEn": "2024-02-06T10:00:00Z"
     }
@@ -59,7 +59,6 @@ La estructura se basará en las siguientes colecciones principales:
         "ID_Producto_A": {
           "almacen": 100,      // Conteo físico real (unidades)
           "consignacion": 20,   // Llegando a sede (unidades)
-          "rechazo": 5,        // Vuelto de ruta (unidades)
           "preventa": 15       // Acumulado de órdenes del día (unidades)
         },
         "ID_Producto_B": { ... }
@@ -68,7 +67,7 @@ La estructura se basará en las siguientes colecciones principales:
       "timestamp": "ServerTimestamp"
     }
     ```
-    *Nota: El campo `preventa` se actualiza mediante transacciones de Firestore cada vez que se crea una nueva `orden`, asegurando que `STOCK = (almacen + consignacion + rechazo) - preventa` siempre sea exacto.*
+    *Nota: El campo `preventa` se actualiza mediante transacciones de Firestore cada vez que se crea una nueva `orden`, asegurando que `STOCK = (almacen + consignacion) - preventa` siempre sea exacto.*
 
 ### Colección: `ordenes`
 *   **Propósito:** Almacena todas las órdenes de pedido generadas por los preventistas, vinculadas a una sede específica.

@@ -25,7 +25,6 @@ interface Product {
 interface InventoryEntry {
   almacen: number;
   consignacion: number;
-  rechazo: number;
 }
 
 const ScannerModal: FC<{
@@ -154,8 +153,8 @@ const AlmacenPage: FC = () => {
   const [viewMode, setViewMode] = useState<'edit' | 'summary'>('edit');
   const [showScanner, setShowScanner] = useState(false);
 
-  const [tempBoxes, setTempBoxes] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
-  const [tempUnits, setTempUnits] = useState<Record<string, number>>({ almacen: 0, consignacion: 0, rechazo: 0 });
+  const [tempBoxes, setTempBoxes] = useState<Record<string, number>>({ almacen: 0, consignacion: 0 });
+  const [tempUnits, setTempUnits] = useState<Record<string, number>>({ almacen: 0, consignacion: 0 });
 
   const yesterdayStr = useMemo(() => {
     const d = new Date(selectedDate + 'T12:00:00');
@@ -189,11 +188,11 @@ const AlmacenPage: FC = () => {
 
   const processedData = useMemo(() => {
     return products.map(p => {
-      const hoy = draftInventory[p.id] || dailyInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-      const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-      const totalAyer = ayer.almacen + ayer.consignacion + ayer.rechazo;
+      const hoy = draftInventory[p.id] || dailyInventory[p.id] || { almacen: 0, consignacion: 0 };
+      const ayer = yesterdayInventory[p.id] || { almacen: 0, consignacion: 0 };
+      const totalAyer = ayer.almacen + ayer.consignacion;
       const transito = Math.max(0, totalAyer - hoy.almacen);
-      const inventarioTotal = hoy.almacen + hoy.consignacion + hoy.rechazo;
+      const inventarioTotal = hoy.almacen + hoy.consignacion;
 
       return {
         ...p,
@@ -243,13 +242,11 @@ const AlmacenPage: FC = () => {
   const handleOpenModal = (product: any) => {
     setTempBoxes({
       almacen: Math.floor(product.almacen / product.unidades),
-      consignacion: Math.floor(product.consignacion / product.unidades),
-      rechazo: Math.floor(product.rechazo / product.unidades)
+      consignacion: Math.floor(product.consignacion / product.unidades)
     });
     setTempUnits({
       almacen: product.almacen % product.unidades,
-      consignacion: product.consignacion % product.unidades,
-      rechazo: product.rechazo % product.unidades
+      consignacion: product.consignacion % product.unidades
     });
     setSelectedProduct(product);
   };
@@ -274,8 +271,7 @@ const AlmacenPage: FC = () => {
       ...prev,
       [selectedProduct.id]: {
         almacen: (tempBoxes.almacen * selectedProduct.unidades) + tempUnits.almacen,
-        consignacion: (tempBoxes.consignacion * selectedProduct.unidades) + tempUnits.consignacion,
-        rechazo: (tempBoxes.rechazo * selectedProduct.unidades) + tempUnits.rechazo
+        consignacion: (tempBoxes.consignacion * selectedProduct.unidades) + tempUnits.consignacion
       }
     }));
     setSelectedProduct(null);
@@ -326,9 +322,9 @@ const AlmacenPage: FC = () => {
         <div className="text-secondary" style={{ fontSize: '0.65rem' }}>{p.sap} / {p.basis}</div>
       </div>
     )},
-    { header: 'A / C / R', render: (p) => (
+    { header: 'A / C', render: (p) => (
       <div className="small" style={{ color: 'var(--theme-text-primary)', opacity: 0.8 }}>
-        {formatQty(p.almacen, p.unidades)} / {formatQty(p.consignacion, p.unidades)} / {formatQty(p.rechazo, p.unidades)}
+        {formatQty(p.almacen, p.unidades)} / {formatQty(p.consignacion, p.unidades)}
       </div>
     )},
     { header: 'TRÁNSITO', render: (p) => (
@@ -506,10 +502,10 @@ const AlmacenPage: FC = () => {
               </div>
             </div>
             <div className="p-3">
-              {['almacen', 'consignacion', 'rechazo'].map((field) => (
+              {['almacen', 'consignacion'].map((field) => (
                 <div key={field} className="field-group-v3 mb-3">
                   <div className="group-title-v3 d-flex justify-content-between align-items-center mb-1">
-                    <span className="text-uppercase small fw-bold">{field === 'almacen' ? 'Conteo Almacén' : field === 'consignacion' ? 'Consignación' : 'Rechazo'}</span>
+                    <span className="text-uppercase small fw-bold">{field === 'almacen' ? 'Conteo Almacén' : 'Consignación'}</span>
                     <Badge bg="danger" className="border-radius-0 fs-6 px-3">
                       {tempBoxes[field] || 0} C / {tempUnits[field] || 0} U
                     </Badge>

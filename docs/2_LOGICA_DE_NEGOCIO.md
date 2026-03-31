@@ -8,7 +8,6 @@ Estas tres medidas son registradas diariamente por el Almacenero:
 
 *   **`CONTEO ALMACÉN`**: Representa el conteo físico real de productos dentro de las instalaciones en el momento actual. Es la base de toda la información del sistema.
 *   **`CONSIGNACIÓN`**: Representa los productos que han llegado a la sede pero aún no han sido descargados o ingresados formalmente al almacén físico.
-*   **`RECHAZO`**: Productos que regresaron de la distribución (no entregados) y deben reintegrarse al inventario.
 
 ---
 
@@ -22,15 +21,15 @@ Representa la cantidad física de productos que han salido del almacén para ser
 *   **Fórmula:**
     `TRANSITO = Total Almacén Ayer - Conteo Almacén Hoy`
 *   **Donde `Total Almacén Ayer` es:**
-    `(Conteo Almacén + Consignación + Rechazo)` registrados en la jornada anterior.
+    `(Conteo Almacén + Consignación)` registrados en la jornada anterior.
 *   **Interpretación:** La diferencia física entre lo que había al cierre de ayer y lo que se cuenta hoy es lo que está "en la calle".
 
 ### 2. STOCK (Disponible para Venta)
 Es el valor que ven los preventistas en tiempo real para saber qué pueden vender. Representa la propiedad física menos los compromisos de venta del día.
 
 *   **Fórmula:**
-    `STOCK = (Conteo Almacén + Consignación + Rechazo) - Preventa Acumulada`
-*   **Interpretación:** Es la suma de toda la propiedad física de la sede (lo que hay, lo que llegó y lo que volvió) menos lo que ya se comprometió a vender a través de órdenes generadas en la jornada actual.
+    `STOCK = (Conteo Almacén + Consignación) - Preventa Acumulada`
+*   **Interpretación:** Es la suma de toda la propiedad física de la sede (lo que hay y lo que llegó) menos lo que ya se comprometió a vender a través de órdenes generadas en la jornada actual.
 
 ---
 
