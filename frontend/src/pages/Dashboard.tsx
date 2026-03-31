@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Alert, Form, Button } from 'react-bootstrap';
+import { Row, Col, Alert, Form, Button, Modal, Spinner } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, doc, onSnapshot, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import { 
   FaTruck, FaBox, FaShoppingCart, FaExclamationTriangle, 
-  FaCalendarAlt, FaWarehouse, FaHandHoldingUsd, FaUndoAlt, FaFilter, FaTrophy, FaChartArea 
+  FaCalendarAlt, FaWarehouse, FaHandHoldingUsd, FaUndoAlt, FaFilter, FaTrophy, FaChartArea, FaDownload 
 } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import GlobalSpinner from '../components/GlobalSpinner';
@@ -24,7 +24,7 @@ interface Order { id: string; estadoOrden: string; detalles: { productoId: strin
 const Dashboard: FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
   const { userSedeId } = useAuth();
-  const { beverageTypes, loadingMasterData, sedes } = useData();
+  const { beverageTypes, loadingMasterData } = useData();
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -42,6 +42,13 @@ const Dashboard: FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedType, setSelectedType] = useState<string>('');
+
+  // Estados para el Modal de Reporte
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportStartDate, setReportStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportType, setReportType] = useState('TOTAL');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const yesterdayStr = useMemo(() => {
     const d = new Date(selectedDate + 'T12:00:00');
@@ -105,12 +112,6 @@ const Dashboard: FC = () => {
     loadHistory();
   }, [userSedeId, products]);
 
-  const formatQty = (totalUnits: number, unitsPerBox: number) => {
-    const boxes = Math.floor(totalUnits / unitsPerBox);
-    const units = totalUnits % unitsPerBox;
-    return `${boxes}-${units}`;
-  };
-
   const stats = useMemo(() => {
     let tStockCJ = 0, tInventarioCJ = 0, tTransitoCJ = 0, tPreventaCJ = 0, tVentasCJ = 0, tRechazoCJ = 0;
     let totalAlmCJ = 0, totalConCJ = 0, totalRechCJ = 0;
@@ -124,7 +125,6 @@ const Dashboard: FC = () => {
     });
 
     products.forEach(p => {
-      // Aplicar filtro de tipo de bebida si existe
       if (selectedType !== '' && p.tipoBebidaId !== selectedType) return;
 
       const hoy = todayInventory[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
@@ -207,48 +207,145 @@ const Dashboard: FC = () => {
         transito: [...productMetrics].sort((a, b) => b.transito - a.transito).slice(0, 5),
         critico: [...productMetrics].filter(p => p.inventario > 0).sort((a, b) => a.stock - b.stock).slice(0, 5)
       },
-      productMetrics // Export all metrics for CSV
+      productMetrics 
     };
   }, [products, todayInventory, yesterdayInventory, orders, selectedType, beverageTypes]);
 
-  const handleDownloadCSV = () => {
-    if (stats.productMetrics.length === 0) {
-      toast.error("No hay datos para descargar");
+  const handleDownloadCSV = async () => {
+    if (products.length === 0) {
+      toast.error("No hay productos cargados");
       return;
     }
 
-    const headers = ["PRODUCTO", "SAP", "BASIS", "CATEGORIA", "ALMACEN", "CONSIGNACION", "RECHAZO", "TRANSITO", "INVENTARIO"];
-    const rows = stats.productMetrics
-      .filter(p => p.almacen > 0 || p.consignacion > 0 || p.rechazo > 0 || p.transito > 0)
-      .map(p => [
-        `"${p.name}"`,
-        `"${p.sap}"`,
-        `"${p.basis}"`,
-        `"${p.tipo}"`,
-        `="${formatQty(p.almacen, p.factor)}"`,
-        `="${formatQty(p.consignacion, p.factor)}"`,
-        `="${formatQty(p.rechazo, p.factor)}"`,
-        `="${formatQty(p.transito, p.factor)}"`,
-        `="${formatQty(p.inventario, p.factor)}"`
-      ]);
+    setIsDownloading(true);
+    try {
+      const getDaysArray = (s: string, e: string) => {
+        const a = [];
+        const d = new Date(s + 'T12:00:00');
+        const end = new Date(e + 'T12:00:00');
+        while (d <= end) {
+          a.push(d.toISOString().split('T')[0]);
+          d.setDate(d.getDate() + 1);
+        }
+        return a;
+      };
+      const days = getDaysArray(reportStartDate, reportEndDate);
+      
+      const dStart = new Date(reportStartDate + 'T12:00:00');
+      dStart.setDate(dStart.getDate() - 1);
+      const dayBeforeStart = dStart.toISOString().split('T')[0];
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(r => r.join(","))
-    ].join("\n");
+      const qInv = query(collection(db, 'inventario_diario'), where('sedeId', '==', userSedeId), where('fecha', '>=', dayBeforeStart), where('fecha', '<=', reportEndDate));
+      const qOrd = query(collection(db, 'ordenes'), where('sedeId', '==', userSedeId), where('fechaCreacion', '>=', reportStartDate), where('fechaCreacion', '<=', reportEndDate));
+      
+      const [snapInv, snapOrd] = await Promise.all([getDocs(qInv), getDocs(qOrd)]);
+      
+      const invMap: Record<string, any> = {};
+      snapInv.docs.forEach(d => { invMap[d.data().fecha] = d.data().productos || {}; });
+      
+      const ordMap: Record<string, Record<string, number>> = {};
+      snapOrd.docs.forEach(d => {
+        const data = d.data();
+        const date = data.fechaCreacion;
+        if (!ordMap[date]) ordMap[date] = {};
+        data.detalles.forEach((det: any) => {
+          ordMap[date][det.productoId] = (ordMap[date][det.productoId] || 0) + det.cantidad;
+        });
+      });
 
-    // Añadimos el BOM (Byte Order Mark) para que Excel reconozca UTF-8 correctamente
-    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const sedeName = sedes.find(s => s.id === userSedeId)?.nombre || 'Sede';
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Inventario_${sedeName}_${selectedDate}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Archivo generado correctamente");
+      const fixedHeaders = ["PRODUCTO", "SAP", "BASIS", "CATEGORIA"];
+      const dynamicHeaders: string[] = [];
+      days.forEach(day => {
+        const d = day.split('-').slice(1).reverse().join('/');
+        if (reportType === 'TOTAL') {
+          dynamicHeaders.push(
+            `${d} ALM(C)`, `${d} ALM(U)`,
+            `${d} CON(C)`, `${d} CON(U)`,
+            `${d} REC(C)`, `${d} REC(U)`,
+            `${d} INV(C)`, `${d} INV(U)`,
+            `${d} TRA(C)`, `${d} TRA(U)`,
+            `${d} PRE(C)`, `${d} PRE(U)`,
+            `${d} VTA(C)`, `${d} VTA(U)`
+          );
+        } else {
+          const sc = reportType.substring(0, 3);
+          dynamicHeaders.push(`${d} ${sc}(C)`, `${d} ${sc}(U)`);
+        }
+      });
+      const headers = [...fixedHeaders, ...dynamicHeaders];
+
+      const rows = products.map(p => {
+        const factor = p.unidades || 1;
+        const rowBase = [`"${p.nombre}"`, `"${p.sap}"`, `"${p.basis}"`, `"${beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || 'Otros'}"`];
+        const rowData: string[] = [];
+
+        days.forEach(day => {
+          const prevD = new Date(day + 'T12:00:00');
+          prevD.setDate(prevD.getDate() - 1);
+          const prevStr = prevD.toISOString().split('T')[0];
+
+          const hoy = invMap[day]?.[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
+          const ayer = invMap[prevStr]?.[p.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
+          
+          const dInv = hoy.almacen + hoy.consignacion + hoy.rechazo;
+          const dPre = ordMap[day]?.[p.id] || 0;
+          const dTra = invMap[day] ? Math.max(0, (ayer.almacen + ayer.consignacion + ayer.rechazo) - hoy.almacen) : 0;
+          const dVta = Math.max(0, dTra - hoy.rechazo);
+
+          const getCU = (val: number) => [Math.floor(val / factor), val % factor];
+
+          if (reportType === 'TOTAL') {
+            const [alC, alU] = getCU(hoy.almacen);
+            const [coC, coU] = getCU(hoy.consignacion);
+            const [reC, reU] = getCU(hoy.rechazo);
+            const [inC, inU] = getCU(dInv);
+            const [trC, trU] = getCU(dTra);
+            const [prC, prU] = getCU(dPre);
+            const [vtC, vtU] = getCU(dVta);
+            
+            rowData.push(
+              alC.toString(), alU.toString(),
+              coC.toString(), coU.toString(),
+              reC.toString(), reU.toString(),
+              inC.toString(), inU.toString(),
+              trC.toString(), trU.toString(),
+              prC.toString(), prU.toString(),
+              vtC.toString(), vtU.toString()
+            );
+          } else {
+            let val = 0;
+            if (reportType === 'ALMACEN') val = hoy.almacen;
+            else if (reportType === 'CONSIGNACION') val = hoy.consignacion;
+            else if (reportType === 'RECHAZOS') val = hoy.rechazo;
+            else if (reportType === 'TRANSITO') val = dTra;
+            else if (reportType === 'INVENTARIO') val = dInv;
+            else if (reportType === 'VENTAS') val = dVta;
+            else if (reportType === 'PREVENTAS') val = dPre;
+            const [c, u] = getCU(val);
+            rowData.push(c.toString(), u.toString());
+          }
+        });
+        return [...rowBase, ...rowData].join(",");
+      });
+
+      const title = `REPORTE ${reportType} - ${reportStartDate} AL ${reportEndDate}`;
+      const csv = ["\ufeff" + title, "", headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Reporte_${reportType}_${reportStartDate}_${reportEndDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Reporte generado con éxito");
+      setShowReportModal(false);
+    } catch (e) {
+      console.error(e);
+      toast.error("Error al generar reporte");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const isDark = isDarkMode;
@@ -270,7 +367,7 @@ const Dashboard: FC = () => {
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober"><FaCalendarAlt /></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">FECHA</span>
+                <span className="pill-label">FECHA DASHBOARD</span>
                 <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2 w-100" />
               </div>
             </div>
@@ -279,7 +376,7 @@ const Dashboard: FC = () => {
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober"><FaFilter /></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">FILTRAR</span>
+                <span className="pill-label">FILTRAR BEBIDA</span>
                 <Form.Select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="pill-select-v2 w-100">
                   <option value="">TODAS LAS BEBIDAS</option>
                   {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>)}
@@ -302,7 +399,7 @@ const Dashboard: FC = () => {
             <Button 
               variant="danger" 
               className="w-100 fw-black text-uppercase d-flex align-items-center justify-content-center gap-2" 
-              onClick={handleDownloadCSV} 
+              onClick={() => setShowReportModal(true)} 
               style={{ fontSize: '0.75rem', height: '40px', borderRadius: '4px' }}
             >
               <FaTruck /> DESCARGAR DATA
@@ -460,7 +557,89 @@ const Dashboard: FC = () => {
         </div>
       </div>
 
+      {/* Modal de Configuración de Reporte - Estilo Sinergia Sistema */}
+      <Modal show={showReportModal} onHide={() => setShowReportModal(false)} centered className="inventory-modal-v3">
+        <Modal.Body className="p-0 overflow-hidden">
+          <div className="modal-header-v3">
+            <h5 className="mb-0 fw-bold text-uppercase">Configuración de Reporte</h5>
+            <span className="text-white-50 small fw-bold">RANGOS Y MÉTRICAS</span>
+          </div>
+          
+          <div className="p-4">
+            <Form>
+              <div className="field-group-v3 mb-4">
+                <span className="label-v3">SELECCIONAR RANGO DE FECHAS</span>
+                <Row className="g-2">
+                  <Col xs={6}>
+                    <Form.Label className="label-v3 opacity-50 mt-2">DESDE</Form.Label>
+                    <Form.Control 
+                      type="date" 
+                      value={reportStartDate} 
+                      onChange={(e) => setReportStartDate(e.target.value)} 
+                      className="input-v3"
+                    />
+                  </Col>
+                  <Col xs={6}>
+                    <Form.Label className="label-v3 opacity-50 mt-2">HASTA</Form.Label>
+                    <Form.Control 
+                      type="date" 
+                      value={reportEndDate} 
+                      onChange={(e) => setReportEndDate(e.target.value)} 
+                      className="input-v3"
+                    />
+                  </Col>
+                </Row>
+              </div>
+
+              <div className="field-group-v3 mb-4">
+                <span className="label-v3">TIPO DE MÉTRICA A DESCARGAR</span>
+                <Form.Select 
+                  value={reportType} 
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="input-v3 mt-2 text-start px-3"
+                  style={{ fontSize: '0.9rem' }}
+                >
+                  <option value="TOTAL">TOTAL (Consolidado)</option>
+                  <option value="ALMACEN">ALMACÉN (Físico)</option>
+                  <option value="CONSIGNACION">CONSIGNACIÓN</option>
+                  <option value="RECHAZOS">RECHAZOS</option>
+                  <option value="TRANSITO">TRÁNSITO</option>
+                  <option value="INVENTARIO">INVENTARIO (A+C+R)</option>
+                  <option value="VENTAS">VENTAS REALES</option>
+                  <option value="PREVENTAS">PREVENTAS</option>
+                </Form.Select>
+              </div>
+
+              <Button 
+                variant="danger" 
+                className="w-100 py-3 fw-bold text-uppercase d-flex align-items-center justify-content-center gap-2" 
+                onClick={handleDownloadCSV}
+                disabled={isDownloading}
+                style={{ borderRadius: '4px', letterSpacing: '1px' }}
+              >
+                {isDownloading ? <Spinner animation="border" size="sm" /> : <FaDownload />}
+                {isDownloading ? 'GENERANDO ARCHIVO...' : 'INICIAR DESCARGA'}
+              </Button>
+              
+              <Button 
+                variant="link" 
+                className="w-100 mt-2 text-muted small fw-bold text-decoration-none" 
+                onClick={() => setShowReportModal(false)}
+              >
+                CANCELAR
+              </Button>
+            </Form>
+          </div>
+        </Modal.Body>
+      </Modal>
+
       <style>{`
+        .inventory-modal-v3 .modal-content { background: var(--theme-background-primary) !important; border: 1px solid var(--theme-border-default) !important; color: var(--theme-text-primary) !important; border-radius: 8px; overflow: hidden; }
+        .modal-header-v3 { background: var(--color-red-primary); padding: 20px; color: white; border-bottom: 4px solid rgba(0,0,0,0.1); }
+        .input-v3 { background: var(--theme-background-secondary) !important; border: none !important; border-bottom: 2px solid var(--theme-border-default) !important; color: var(--theme-text-primary) !important; font-weight: bold; text-align: center; font-size: 1rem; border-radius: 0; padding: 10px; }
+        .input-v3:focus { border-color: var(--color-red-primary) !important; box-shadow: none; }
+        .label-v3 { font-size: 0.65rem; font-weight: 900; color: var(--theme-text-secondary); text-transform: uppercase; display: block; letter-spacing: 0.5px; }
+        
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 4px; height: 40px; overflow: hidden; }
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); padding: 0 10px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
         .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; }
