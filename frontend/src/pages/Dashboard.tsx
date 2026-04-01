@@ -422,7 +422,17 @@ const Dashboard: FC = () => {
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); padding: 0 10px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
         .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
         .pill-label { font-size: 0.45rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; color: var(--theme-text-primary); }
-        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.8rem; cursor: pointer; padding: 0 !important; width: 100%; }
+        .pill-date-input-v2 { 
+          background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; 
+          font-weight: 700 !important; font-size: 0.85rem !important; padding: 0 !important; height: auto !important; cursor: pointer;
+          width: 100% !important;
+        }
+        .pill-date-input-v2::-webkit-calendar-picker-indicator { 
+          filter: invert(var(--theme-calendar-invert, 1)); 
+          cursor: pointer;
+          transform: scale(1.5);
+          margin-left: 10px;
+        }
         .dash-kpi-card { background: var(--theme-background-secondary); padding: 15px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 12px; height: 100%; }
         .dash-kpi-icon { font-size: 1.5rem; }
         .dash-kpi-value { font-size: 1.3rem; font-weight: 900; color: var(--theme-text-primary); line-height: 1; }

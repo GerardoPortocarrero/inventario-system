@@ -164,7 +164,17 @@ const PreventistaPage: FC = () => {
         .pill-content { padding: 4px 12px; display: flex; flex-direction: column; justify-content: center; }
         .pill-label { font-size: 0.55rem; font-weight: 800; opacity: 0.6; text-uppercase: uppercase; color: var(--theme-text-primary); }
         .pill-value { color: var(--theme-text-primary); font-family: 'Inter', sans-serif; font-weight: bold; }
-        .pill-date-input-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.85rem !important; padding: 0 !important; height: auto !important; width: 100% !important; }
+        .pill-date-input-v2 { 
+          background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; 
+          font-weight: 700 !important; font-size: 0.85rem !important; padding: 0 !important; height: auto !important; cursor: pointer;
+          width: 100% !important;
+        }
+        .pill-date-input-v2::-webkit-calendar-picker-indicator { 
+          filter: invert(var(--theme-calendar-invert, 1)); 
+          cursor: pointer;
+          transform: scale(1.5);
+          margin-left: 10px;
+        }
         .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem !important; cursor: pointer; text-transform: uppercase; padding: 0 !important; width: 100% !important; }
         .dash-top-card { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); height: 100%; }
         .dash-top-header { padding: 12px; background: var(--theme-icon-bg); font-size: 0.7rem; font-weight: 900; border-bottom: 1px solid var(--theme-border-default); color: var(--theme-text-secondary); display: flex; align-items: center; }
