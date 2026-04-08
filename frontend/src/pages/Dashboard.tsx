@@ -433,6 +433,7 @@ const Dashboard: FC = () => {
           transform: scale(1.5);
           margin-left: 10px;
         }
+        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem !important; cursor: pointer; text-transform: uppercase; padding: 0 !important; width: 100% !important; }
         .dash-kpi-card { background: var(--theme-background-secondary); padding: 15px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 12px; height: 100%; }
         .dash-kpi-icon { font-size: 1.5rem; }
         .dash-kpi-value { font-size: 1.3rem; font-weight: 900; color: var(--theme-text-primary); line-height: 1; }

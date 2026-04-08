@@ -16,6 +16,7 @@ export const UI_TEXTS = {
   ROLE: 'Rol',
   SEDE: 'Sede',
   SEDE_NAME: 'Nombre de la Sede',
+  RUTA_NAME: 'Nombre de la Ruta',
   BEVERAGE_TYPE_NAME: 'Tipo de Bebida',
   PRODUCT_NAME: 'Nombre del Producto',
   SAP: 'SAP',
@@ -32,8 +33,10 @@ export const UI_TEXTS = {
   PLACEHOLDER_PASSWORD: 'Mínimo 6 caracteres',
   PLACEHOLDER_SEARCH_USERS: 'Buscar por nombre o email o sede...',
   PLACEHOLDER_SEARCH_SEDES: 'Buscar por nombre de sede...',
+  PLACEHOLDER_SEARCH_RUTAS: 'Buscar por nombre de ruta...',
   PLACEHOLDER_SEARCH_BEVERAGE_TYPES: 'Buscar por tipo de bebida...',
   PLACEHOLDER_SEDE_NAME: 'Ej. Sede Principal',
+  PLACEHOLDER_RUTA_NAME: 'Ej. Ruta 01 - Norte',
   PLACEHOLDER_BEVERAGE_TYPE_NAME: 'Ej. Gaseosas',
   PLACEHOLDER_PRODUCT_NAME: 'Ej. Coca Cola 3L',
   PLACEHOLDER_SAP: 'Ej. 102030',
@@ -42,6 +45,7 @@ export const UI_TEXTS = {
   // Buttons
   CREATE_USER: 'Crear Usuario',
   CREATE_SEDE: 'Crear Sede',
+  CREATE_RUTA: 'Crear Ruta',
   CREATE_ROLE: 'Crear Rol',
   CREATE_BEVERAGE_TYPE: 'Crear Tipo de Bebida',
   CREATE_PRODUCT: 'Crear Producto',
@@ -54,6 +58,8 @@ export const UI_TEXTS = {
   UPDATE_SEDE: 'Guardar Cambios',
   EDIT_USER: 'Editar Usuario',
   UPDATE_USER: 'Guardar Cambios',
+  EDIT_RUTA: 'Editar Ruta',
+  UPDATE_RUTA: 'Guardar Cambios',
   UPDATE_PRODUCT: 'Guardar Cambios',
   CONFIRM_DELETE: 'Confirmar Eliminación',
   DELETE: 'Eliminar',
@@ -63,6 +69,7 @@ export const UI_TEXTS = {
   PASSWORD_MIN_LENGTH: 'La contraseña debe tener al menos 6 caracteres.',
   EMAIL_ALREADY_IN_USE: 'El correo electrónico ya está en uso.',
   SEDE_NAME_EMPTY: 'El nombre de la sede no puede estar vacío.',
+  RUTA_NAME_EMPTY: 'El nombre de la ruta no puede estar vacío.',
   BEVERAGE_TYPE_NAME_EMPTY: 'El nombre del tipo de bebida no puede estar vacío.',
 
   // Table Headers

@@ -12,6 +12,7 @@ interface MasterData {
 interface DataContextType {
   roles: MasterData[];
   sedes: MasterData[];
+  rutas: MasterData[];
   beverageTypes: MasterData[];
   loadingMasterData: boolean;
 }
@@ -28,15 +29,17 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
   const { currentUser } = useAuth();
   const [roles, setRoles] = useState<MasterData[]>([]);
   const [sedes, setSedes] = useState<MasterData[]>([]);
+  const [rutas, setRutas] = useState<MasterData[]>([]);
   const [beverageTypes, setBeverageTypes] = useState<MasterData[]>([]);
-  const [loadingFlags, setLoadingFlags] = useState({ roles: true, sedes: true, types: true });
+  const [loadingFlags, setLoadingFlags] = useState({ roles: true, sedes: true, rutas: true, types: true });
 
   useEffect(() => {
     if (!currentUser) {
       setRoles([]);
       setSedes([]);
+      setRutas([]);
       setBeverageTypes([]);
-      setLoadingFlags({ roles: true, sedes: true, types: true });
+      setLoadingFlags({ roles: true, sedes: true, rutas: true, types: true });
       return;
     }
 
@@ -50,6 +53,11 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
       setLoadingFlags(prev => ({ ...prev, sedes: false }));
     });
 
+    const unsubRutas = onSnapshot(collection(db, 'rutas'), (s) => {
+      setRutas(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' })));
+      setLoadingFlags(prev => ({ ...prev, rutas: false }));
+    });
+
     const unsubTypes = onSnapshot(collection(db, 'tiposBebida'), (s) => {
       setBeverageTypes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' })));
       setLoadingFlags(prev => ({ ...prev, types: false }));
@@ -58,6 +66,7 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
     return () => {
       unsubRoles();
       unsubSedes();
+      unsubRutas();
       unsubTypes();
     };
   }, [currentUser]);
@@ -65,8 +74,9 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
   const value = {
     roles,
     sedes,
+    rutas,
     beverageTypes,
-    loadingMasterData: loadingFlags.roles || loadingFlags.sedes || loadingFlags.types
+    loadingMasterData: loadingFlags.roles || loadingFlags.sedes || loadingFlags.rutas || loadingFlags.types
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
