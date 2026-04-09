@@ -9,11 +9,14 @@ interface MasterData {
   nombre: string;
 }
 
+interface SedeData extends MasterData {
+  locacion: string;
+  codigo: string;
+}
+
 interface DataContextType {
   roles: MasterData[];
-  sedes: MasterData[];
-  mesas: MasterData[];
-  rutas: MasterData[];
+  sedes: SedeData[];
   beverageTypes: MasterData[];
   loadingMasterData: boolean;
 }
@@ -29,15 +32,11 @@ export const useData = () => {
 export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [roles, setRoles] = useState<MasterData[]>([]);
-  const [sedes, setSedes] = useState<MasterData[]>([]);
-  const [mesas, setMesas] = useState<MasterData[]>([]);
-  const [rutas, setRutas] = useState<MasterData[]>([]);
+  const [sedes, setSedes] = useState<SedeData[]>([]);
   const [beverageTypes, setBeverageTypes] = useState<MasterData[]>([]);
   const [loadingFlags, setLoadingFlags] = useState({ 
     roles: true, 
     sedes: true, 
-    mesas: true,
-    rutas: true, 
     types: true 
   });
 
@@ -45,10 +44,8 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
     if (!currentUser) {
       setRoles([]);
       setSedes([]);
-      setMesas([]);
-      setRutas([]);
       setBeverageTypes([]);
-      setLoadingFlags({ roles: true, sedes: true, mesas: true, rutas: true, types: true });
+      setLoadingFlags({ roles: true, sedes: true, types: true });
       return;
     }
 
@@ -58,18 +55,13 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
     });
 
     const unsubSedes = onSnapshot(collection(db, 'sedes'), (s) => {
-      setSedes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' })));
+      setSedes(s.docs.map(d => ({ 
+        id: d.id, 
+        nombre: d.get('nombre') || '',
+        locacion: d.get('locacion') || '',
+        codigo: d.get('codigo') || ''
+      } as SedeData)));
       setLoadingFlags(prev => ({ ...prev, sedes: false }));
-    });
-
-    const unsubMesas = onSnapshot(collection(db, 'mesas'), (s) => {
-      setMesas(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' })));
-      setLoadingFlags(prev => ({ ...prev, mesas: false }));
-    });
-
-    const unsubRutas = onSnapshot(collection(db, 'rutas'), (s) => {
-      setRutas(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' })));
-      setLoadingFlags(prev => ({ ...prev, rutas: false }));
     });
 
     const unsubTypes = onSnapshot(collection(db, 'tiposBebida'), (s) => {
@@ -80,8 +72,6 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
     return () => {
       unsubRoles();
       unsubSedes();
-      unsubMesas();
-      unsubRutas();
       unsubTypes();
     };
   }, [currentUser]);
@@ -89,10 +79,8 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
   const value = {
     roles,
     sedes,
-    mesas,
-    rutas,
     beverageTypes,
-    loadingMasterData: loadingFlags.roles || loadingFlags.sedes || loadingFlags.mesas || loadingFlags.rutas || loadingFlags.types
+    loadingMasterData: loadingFlags.roles || loadingFlags.sedes || loadingFlags.types
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
