@@ -26,7 +26,7 @@ interface InventoryEntry {
   consignacion: number;
 }
 
-const PreventistaPage: FC = () => {
+const StockPage: FC = () => {
   const { userSedeId } = useAuth();
   const { beverageTypes, loadingMasterData } = useData();
   
@@ -189,4 +189,4 @@ const PreventistaPage: FC = () => {
   );
 };
 
-export default PreventistaPage;
+export default StockPage;

@@ -14,7 +14,7 @@ import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import ProfilePage from './pages/ProfilePage';
-import PreventistaPage from './pages/PreventistaPage';
+import StockPage from './pages/StockPage';
 import AlmacenPage from './pages/AlmacenPage';
 import SupervisorPage from './pages/SupervisorPage';
 import AdminUsersPage from './pages/AdminUsersPage';
@@ -74,7 +74,7 @@ const App: FC = () => {
                 <Route path="/profile" element={<ProfilePage />} />
 
                 {/* Rutas Protegidas */}
-                <Route path="/preventista" element={<ProtectedRoute allowedRoles={['preventista']}><PreventistaPage /></ProtectedRoute>} />
+                <Route path="/preventista" element={<ProtectedRoute allowedRoles={['preventista']}><StockPage /></ProtectedRoute>} />
                 <Route path="/almacen" element={<ProtectedRoute allowedRoles={['almacenero']}><AlmacenPage /></ProtectedRoute>} />
                 <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['supervisor']}><SupervisorPage /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />
