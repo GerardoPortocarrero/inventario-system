@@ -48,6 +48,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /mesas/{mesaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     match /rutas/{rutaId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();

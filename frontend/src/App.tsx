@@ -21,6 +21,7 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminRolesPage from './pages/AdminRolesPage'; // Importa la nueva página de roles
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminSedesPage from './pages/AdminSedesPage';
+import AdminMesasPage from './pages/AdminMesasPage';
 import AdminRutasPage from './pages/AdminRutasPage';
 import AdminTipoBebidaPage from './pages/AdminTipoBebidaPage';
 
@@ -82,6 +83,7 @@ const App: FC = () => {
                 <Route path="/admin/roles" element={<ProtectedRoute allowedRoles={['admin']}><AdminRolesPage /></ProtectedRoute>} />
                 <Route path="/admin/products" element={<ProtectedRoute allowedRoles={['admin']}><AdminProductsPage /></ProtectedRoute>} />
                 <Route path="/admin/sedes" element={<ProtectedRoute allowedRoles={['admin']}><AdminSedesPage /></ProtectedRoute>} />
+                <Route path="/admin/mesas" element={<ProtectedRoute allowedRoles={['admin']}><AdminMesasPage /></ProtectedRoute>} />
                 <Route path="/admin/rutas" element={<ProtectedRoute allowedRoles={['admin']}><AdminRutasPage /></ProtectedRoute>} />
                 <Route path="/admin/beverage-types" element={<ProtectedRoute allowedRoles={['admin']}><AdminTipoBebidaPage /></ProtectedRoute>} />
 

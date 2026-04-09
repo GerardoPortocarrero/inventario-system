@@ -12,6 +12,7 @@ interface MasterData {
 interface DataContextType {
   roles: MasterData[];
   sedes: MasterData[];
+  mesas: MasterData[];
   rutas: MasterData[];
   beverageTypes: MasterData[];
   loadingMasterData: boolean;
@@ -29,17 +30,25 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
   const { currentUser } = useAuth();
   const [roles, setRoles] = useState<MasterData[]>([]);
   const [sedes, setSedes] = useState<MasterData[]>([]);
+  const [mesas, setMesas] = useState<MasterData[]>([]);
   const [rutas, setRutas] = useState<MasterData[]>([]);
   const [beverageTypes, setBeverageTypes] = useState<MasterData[]>([]);
-  const [loadingFlags, setLoadingFlags] = useState({ roles: true, sedes: true, rutas: true, types: true });
+  const [loadingFlags, setLoadingFlags] = useState({ 
+    roles: true, 
+    sedes: true, 
+    mesas: true,
+    rutas: true, 
+    types: true 
+  });
 
   useEffect(() => {
     if (!currentUser) {
       setRoles([]);
       setSedes([]);
+      setMesas([]);
       setRutas([]);
       setBeverageTypes([]);
-      setLoadingFlags({ roles: true, sedes: true, rutas: true, types: true });
+      setLoadingFlags({ roles: true, sedes: true, mesas: true, rutas: true, types: true });
       return;
     }
 
@@ -51,6 +60,11 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
     const unsubSedes = onSnapshot(collection(db, 'sedes'), (s) => {
       setSedes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' })));
       setLoadingFlags(prev => ({ ...prev, sedes: false }));
+    });
+
+    const unsubMesas = onSnapshot(collection(db, 'mesas'), (s) => {
+      setMesas(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' })));
+      setLoadingFlags(prev => ({ ...prev, mesas: false }));
     });
 
     const unsubRutas = onSnapshot(collection(db, 'rutas'), (s) => {
@@ -66,6 +80,7 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
     return () => {
       unsubRoles();
       unsubSedes();
+      unsubMesas();
       unsubRutas();
       unsubTypes();
     };
@@ -74,9 +89,10 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
   const value = {
     roles,
     sedes,
+    mesas,
     rutas,
     beverageTypes,
-    loadingMasterData: loadingFlags.roles || loadingFlags.sedes || loadingFlags.rutas || loadingFlags.types
+    loadingMasterData: loadingFlags.roles || loadingFlags.sedes || loadingFlags.mesas || loadingFlags.rutas || loadingFlags.types
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

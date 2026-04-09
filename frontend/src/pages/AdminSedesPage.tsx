@@ -19,6 +19,8 @@ import { matchSearchTerms } from '../utils/searchUtils';
 interface Sede {
   id: string;
   nombre: string;
+  locacion: string;
+  codigo: string;
 }
 
 const SedeForm: React.FC<{
@@ -28,21 +30,29 @@ const SedeForm: React.FC<{
   loading: boolean;
 }> = ({ initialData, onSubmit, onCancel, loading }) => {
   const [nombreSede, setNombreSede] = useState(initialData?.nombre || '');
+  const [locacionSede, setLocacionSede] = useState(initialData?.locacion || '');
+  const [codigoSede, setCodigoSede] = useState(initialData?.codigo || '');
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
     setNombreSede('');
+    setLocacionSede('');
+    setCodigoSede('');
     setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombreSede.trim()) {
-      setError(UI_TEXTS.SEDE_NAME_EMPTY);
+    if (!nombreSede.trim() || !locacionSede.trim() || !codigoSede.trim()) {
+      setError(UI_TEXTS.REQUIRED_FIELDS);
       return;
     }
     try {
-      await onSubmit({ nombre: nombreSede }, !!initialData, resetForm);
+      await onSubmit({ 
+        nombre: nombreSede, 
+        locacion: locacionSede, 
+        codigo: codigoSede 
+      }, !!initialData, resetForm);
     } catch (err: any) {
       setError(UI_TEXTS.ERROR_GENERIC_CREATE);
     }
@@ -58,6 +68,31 @@ const SedeForm: React.FC<{
           onChange={(e) => setNombreSede(e.target.value)}
           required
           disabled={loading}
+          placeholder={UI_TEXTS.PLACEHOLDER_SEDE_NAME}
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.SEDE_LOCATION}</Form.Label>
+        <Form.Control
+          type="text"
+          value={locacionSede}
+          onChange={(e) => setLocacionSede(e.target.value)}
+          required
+          disabled={loading}
+          placeholder={UI_TEXTS.PLACEHOLDER_SEDE_LOCATION}
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3">
+        <Form.Label>{UI_TEXTS.SEDE_CODE}</Form.Label>
+        <Form.Control
+          type="text"
+          value={codigoSede}
+          onChange={(e) => setCodigoSede(e.target.value)}
+          required
+          disabled={loading}
+          placeholder={UI_TEXTS.PLACEHOLDER_SEDE_CODE}
         />
       </Form.Group>
       {error && <Alert variant="danger">{error}</Alert>}
@@ -101,7 +136,12 @@ const AdminSedesPage: FC = () => {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'sedes'), s => {
-      setSedes(s.docs.map(d => ({ id: d.id, nombre: d.get('nombre') || '' } as Sede)));
+      setSedes(s.docs.map(d => ({ 
+        id: d.id, 
+        nombre: d.get('nombre') || '',
+        locacion: d.get('locacion') || '',
+        codigo: d.get('codigo') || ''
+      } as Sede)));
       setLoading(false);
     });
     return unsub;
@@ -125,10 +165,12 @@ const AdminSedesPage: FC = () => {
     }
   };
 
-  const filteredSedes = useMemo(() => sedes.filter(s => matchSearchTerms(s, searchTerm, ['nombre'])), [sedes, searchTerm]);
+  const filteredSedes = useMemo(() => sedes.filter(s => matchSearchTerms(s, searchTerm, ['nombre', 'locacion', 'codigo'])), [sedes, searchTerm]);
 
   const columns: Column<Sede>[] = [
+    { accessorKey: 'codigo', header: UI_TEXTS.SEDE_CODE },
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
+    { accessorKey: 'locacion', header: UI_TEXTS.SEDE_LOCATION },
     {
       header: UI_TEXTS.TABLE_HEADER_ACTIONS,
       render: (s) => (
