@@ -68,7 +68,7 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
             <Nav.Item>
               <Nav.Link as={Link} to="/preventista" className={location.pathname === '/preventista' ? 'active' : ''} onClick={handleLinkClick}>
                 <FaShoppingCart className="me-2" />
-                Ventas
+                Stock
               </Nav.Link>
             </Nav.Item>
           )}
