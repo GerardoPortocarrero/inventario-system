@@ -6,16 +6,33 @@ import * as XLSX from 'xlsx';
 import { rtdb } from '../api/firebase';
 import { ref, set, onValue } from 'firebase/database';
 import { useAuth } from '../context/AuthContext';
+import GlobalSpinner from '../components/GlobalSpinner';
+import { SPINNER_VARIANTS } from '../constants';
 import toast from 'react-hot-toast';
 
+// Columnas para la plantilla del Maestro
+const MAESTRO_COLUMNS = [
+  'Loc', 'Codigo', 'Cliente', 'Dirección', 'Loc. Com.', 
+  'Mesa Com', 'Ruta com', 'Ruta', 'Segmento', 'SEG.DIAS', 'SEM. PREV'
+];
+
+// Columnas para la plantilla de Demanda
+const DEMANDA_COLUMNS = [
+  'Fecha documento', 'Clase doc.ventas', 'Documento de ventas', 'Posición', 
+  'Solicitante', 'Material', 'Descripción del material', 'Cantidad de pedido (Posición)', 
+  'Un.medida venta', 'Valor neto (posición)', 'Moneda del documento', 'Status de entrega', 
+  'Descripción del motivo de rechazo', 'Bloqueo de factura'
+];
+
 const AdminUploadPage: FC = () => {
-  const { currentUser, userName, userEmail } = useAuth(); // Usar userName del contexto
+  const { currentUser, userName, userEmail } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [lastUploads, setLastUploads] = useState<Record<string, any>>({});
-  const [loadingMetadata, setLoadingMetadata] = useState(true);
-
-  // ... (MAESTRO_COLUMNS y DEMANDA_COLUMNS igual)
+  const [metadataLoadingStatus, setMetadataLoadingStatus] = useState<Record<string, boolean>>({
+    maestro: true,
+    demanda: true
+  });
 
   // Cargar metadatos iniciales desde RTDB
   useEffect(() => {
@@ -23,10 +40,14 @@ const AdminUploadPage: FC = () => {
     const unsubs = types.map(type => {
       const r = ref(rtdb, `${type}/metadata`);
       return onValue(r, (snapshot) => {
-        if (snapshot.exists()) {
-          setLastUploads(prev => ({ ...prev, [type]: snapshot.val() }));
-        }
-        setLoadingMetadata(false);
+        setLastUploads(prev => ({ 
+          ...prev, 
+          [type]: snapshot.exists() ? snapshot.val() : null 
+        }));
+        setMetadataLoadingStatus(prev => ({ ...prev, [type]: false }));
+      }, (error) => {
+        console.error(`Error cargando metadatos de ${type}:`, error);
+        setMetadataLoadingStatus(prev => ({ ...prev, [type]: false }));
       });
     });
     return () => unsubs.forEach(unsub => unsub());
@@ -77,19 +98,11 @@ const AdminUploadPage: FC = () => {
         const metadata = {
           updatedAt: new Date().toLocaleString(),
           rowCount: sanitizedData.length,
-          userName: userName || userEmail || 'Usuario Desconocido' // Solución al error de 'nombre'
+          userName: userName || userEmail || 'Usuario Desconocido'
         };
-
-        // SUBIDA OPTIMIZADA
-        // Primero subimos la metadata (rápido) y luego el data (pesado)
-        // Esto evita que el objeto gigante bloquee la respuesta de la metadata
-        const updates: any = {};
-        updates[`${type}/metadata`] = metadata;
-        updates[`${type}/data`] = sanitizedData;
 
         setUploadProgress(85);
         
-        // El uso de update en la raíz permite enviar múltiples nodos en una sola petición
         await set(ref(rtdb, type), {
           metadata: metadata,
           data: sanitizedData
@@ -128,7 +141,7 @@ const AdminUploadPage: FC = () => {
     <div className="admin-layout-container flex-column">
       <div className="admin-section-table d-flex flex-column h-100">
         <div className="px-1">
-          <Alert variant="warning" className="d-flex align-items-center mb-4 border-0 shadow-sm" style={{ backgroundColor: 'rgba(255, 193, 7, 0.1)', color: '#856404' }}>
+          <Alert variant="warning" className="d-flex align-items-center mb-4 border-0 shadow-sm" style={{ backgroundColor: 'rgba(255, 193, 7, 0.1)', color: '#856404', borderRadius: '4px' }}>
             <FaExclamationTriangle className="me-3 fs-4" />
             <div style={{ fontSize: '0.9rem' }}>
               <strong>Atención:</strong> Al subir un nuevo archivo, el sistema <strong>reemplazará completamente</strong> la información existente. Asegúrese de que el formato sea el correcto.
@@ -170,33 +183,35 @@ const AdminUploadPage: FC = () => {
                     </p>
 
                     <div className="mt-auto">
-                      <div className="mb-3 p-3 rounded-3 border" style={{ backgroundColor: 'var(--theme-icon-bg)', borderColor: 'var(--theme-border-default)', minHeight: '100px' }}>
+                      <div className="mb-3 p-3 border" style={{ backgroundColor: 'transparent', borderColor: 'var(--theme-border-default)', borderRadius: '0', minHeight: '100px' }}>
                         <div className="d-flex align-items-center mb-2 small fw-bold" style={{ color: 'var(--theme-text-primary)' }}>
                           <FaHistory className={`me-2 text-${type === 'maestro' ? 'danger' : 'primary'}`} /> HISTORIAL DE CARGA
                         </div>
                         
-                        {loadingMetadata ? (
-                          <div className="text-center py-2"><div className="spinner-border spinner-border-sm text-secondary" /></div>
+                        {metadataLoadingStatus[type] ? (
+                          <div className="d-flex justify-content-center align-items-center h-100" style={{ minHeight: '60px' }}>
+                            <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
+                          </div>
                         ) : lastUploads[type] ? (
                           <Row className="g-2">
                             <Col xs={6}>
-                              <div style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase' }}>Sincronización</div>
+                              <div style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Sincronización</div>
                               <div className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>{lastUploads[type].updatedAt}</div>
                             </Col>
                             <Col xs={6}>
-                              <div style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase' }}>Responsable</div>
+                              <div style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Responsable</div>
                               <div className="fw-bold d-flex align-items-center" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>
                                 <FaUser className="me-1" size={10} /> {lastUploads[type].userName}
                               </div>
                             </Col>
                             <Col xs={12}>
-                              <div className="mt-2 fw-bold text-success d-flex align-items-center" style={{ fontSize: '0.7rem' }}>
+                              <div className="mt-2 fw-bold text-success d-flex align-items-center" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                                 <div className="dot-success me-2"></div> {lastUploads[type].rowCount.toLocaleString()} FILAS PROCESADAS
                               </div>
                             </Col>
                           </Row>
                         ) : (
-                          <div className="d-flex align-items-center justify-content-center h-100 text-secondary py-3" style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
+                          <div className="d-flex align-items-center justify-content-center h-100 text-secondary py-3" style={{ fontSize: '0.8rem', fontStyle: 'italic', opacity: 0.7 }}>
                             <FaInfoCircle className="me-2" /> Sin registros de carga previos
                           </div>
                         )}
