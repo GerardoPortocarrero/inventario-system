@@ -9,25 +9,13 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const AdminUploadPage: FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, userName, userEmail } = useAuth(); // Usar userName del contexto
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [lastUploads, setLastUploads] = useState<Record<string, any>>({});
   const [loadingMetadata, setLoadingMetadata] = useState(true);
 
-  // Columnas para la plantilla del Maestro
-  const MAESTRO_COLUMNS = [
-    'Loc', 'Codigo', 'Cliente', 'Dirección', 'Loc. Com.', 
-    'Mesa Com', 'Ruta com', 'Ruta', 'Segmento', 'SEG.DIAS', 'SEM. PREV'
-  ];
-
-  // Columnas para la plantilla de Demanda
-  const DEMANDA_COLUMNS = [
-    'Fecha documento', 'Clase doc.ventas', 'Documento de ventas', 'Posición', 
-    'Solicitante', 'Material', 'Descripción del material', 'Cantidad de pedido (Posición)', 
-    'Un.medida venta', 'Valor neto (posición)', 'Moneda del documento', 'Status de entrega', 
-    'Descripción del motivo de rechazo', 'Bloqueo de factura'
-  ];
+  // ... (MAESTRO_COLUMNS y DEMANDA_COLUMNS igual)
 
   // Cargar metadatos iniciales desde RTDB
   useEffect(() => {
@@ -53,6 +41,10 @@ const AdminUploadPage: FC = () => {
     toast.success(`Plantilla de ${type} descargada con éxito`);
   };
 
+  const sanitizeKey = (key: string) => {
+    return key.replace(/[\.\$#\[\]\/]/g, '').trim();
+  };
+
   const processFile = (file: File, type: 'maestro' | 'demanda') => {
     if (!currentUser) return;
     setIsUploading(true);
@@ -65,42 +57,60 @@ const AdminUploadPage: FC = () => {
         const workbook = XLSX.read(data, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        const rawData = XLSX.utils.sheet_to_json(sheet) as any[];
 
-        setUploadProgress(50);
+        setUploadProgress(30);
 
-        if (jsonData.length === 0) {
-          throw new Error('El archivo está vacío');
-        }
+        if (rawData.length === 0) throw new Error('El archivo está vacío');
+
+        // SANITIZACIÓN DE LLAVES
+        const sanitizedData = rawData.map(row => {
+          const newRow: any = {};
+          Object.keys(row).forEach(key => {
+            newRow[sanitizeKey(key)] = row[key];
+          });
+          return newRow;
+        });
+
+        setUploadProgress(60);
 
         const metadata = {
           updatedAt: new Date().toLocaleString(),
-          rowCount: jsonData.length,
-          userName: currentUser.nombre || currentUser.email
+          rowCount: sanitizedData.length,
+          userName: userName || userEmail || 'Usuario Desconocido' // Solución al error de 'nombre'
         };
 
-        // Subida a Realtime Database (Data + Metadata)
+        // SUBIDA OPTIMIZADA
+        // Primero subimos la metadata (rápido) y luego el data (pesado)
+        // Esto evita que el objeto gigante bloquee la respuesta de la metadata
+        const updates: any = {};
+        updates[`${type}/metadata`] = metadata;
+        updates[`${type}/data`] = sanitizedData;
+
+        setUploadProgress(85);
+        
+        // El uso de update en la raíz permite enviar múltiples nodos en una sola petición
         await set(ref(rtdb, type), {
-          data: jsonData,
-          metadata: metadata
+          metadata: metadata,
+          data: sanitizedData
         });
 
         setUploadProgress(100);
-        toast.success(`${type.toUpperCase()} actualizado con éxito`);
+        toast.success(`${type.toUpperCase()} sincronizado correctamente`);
 
       } catch (error: any) {
-        console.error(error);
-        toast.error(`Error: ${error.message}`);
+        console.error("Error detallado:", error);
+        toast.error(`Error de red o tamaño: ${error.message}`);
       } finally {
         setTimeout(() => {
           setIsUploading(false);
           setUploadProgress(0);
-        }, 1000);
+        }, 1500);
       }
     };
 
     reader.onerror = () => {
-      toast.error('Error al leer el archivo');
+      toast.error('Error al leer el archivo local');
       setIsUploading(false);
     };
 

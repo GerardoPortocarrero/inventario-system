@@ -1,0 +1,17 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    "maestro": {
+      ".write": "auth != null",
+      "metadata": {
+        ".validate": "newData.hasChildren(['updatedAt', 'rowCount', 'userName'])"
+      }
+    },
+    "demanda": {
+      ".write": "auth != null",
+      "metadata": {
+        ".validate": "newData.hasChildren(['updatedAt', 'rowCount', 'userName'])"
+      }
+    }
+  }
+}

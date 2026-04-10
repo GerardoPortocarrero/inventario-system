@@ -2,6 +2,9 @@
 | FIREBASE |
 '----------'
 
+Subir reglas de realdatabase
+>_ firebase deploy --only database
+
 Subir reglas de firestore
 >_ firebase deploy --only firestore:rules
 
