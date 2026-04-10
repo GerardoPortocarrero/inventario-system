@@ -142,7 +142,7 @@ const StockPage: FC = () => {
             <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
           ) : (
             <>
-              <div className="mb-3 px-1">
+              <div className="px-1">
                 <SearchInput searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Buscar por nombre o SAP..." />
               </div>
               
