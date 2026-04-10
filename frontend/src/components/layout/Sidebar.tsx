@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Nav } from 'react-bootstrap';
-import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle } from 'react-icons/fa'; // Importar FaUserCircle
+import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle, FaDatabase } from 'react-icons/fa'; // Importar FaUserCircle y FaDatabase
 import './Sidebar.css';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -89,6 +89,16 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
               <Nav.Link as={Link} to="/supervisor" className={location.pathname === '/supervisor' ? 'active' : ''} onClick={handleLinkClick}>
                 <FaClipboardList className="me-2" />
                 Supervisión
+              </Nav.Link>
+            </Nav.Item>
+          )}
+
+          {/* Enlaces para Supervisor / Admin - Carga de Datos */}
+          {(userRole === 'supervisor' || isAdmin) && (
+            <Nav.Item>
+              <Nav.Link as={Link} to="/admin/upload" className={location.pathname === '/admin/upload' ? 'active' : ''} onClick={handleLinkClick}>
+                <FaDatabase className="me-2" />
+                Cargar Datos
               </Nav.Link>
             </Nav.Item>
           )}
