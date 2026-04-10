@@ -24,22 +24,16 @@ Representa la cantidad física de productos que han salido del almacén para ser
     `(Conteo Almacén + Consignación)` registrados en la jornada anterior.
 *   **Interpretación:** La diferencia física entre lo que había al cierre de ayer y lo que se cuenta hoy es lo que está "en la calle".
 
-### 2. STOCK (Disponible para Venta)
-Es el valor que ven los preventistas en tiempo real para saber qué pueden vender. Representa la propiedad física menos los compromisos de venta del día.
+### 2. STOCK (Propiedad Física Total)
+Es el valor que ven los preventistas y supervisores en tiempo real para conocer la disponibilidad de producto en la sede.
 
 *   **Fórmula:**
-    `STOCK = (Conteo Almacén + Consignación) - Preventa Acumulada`
-*   **Interpretación:** Es la suma de toda la propiedad física de la sede (lo que hay y lo que llegó) menos lo que ya se comprometió a vender a través de órdenes generadas en la jornada actual.
+    `STOCK = (Conteo Almacén + Consignación)`
+*   **Interpretación:** Es la suma de toda la propiedad física de la sede (lo que hay físicamente en racks más lo que acaba de llegar en camiones de consignación).
 
 ---
 
-## Integridad y Atomicidad (Ventas)
-Para garantizar que no exista sobreventa en escenarios de alta concurrencia, el sistema implementa **Transacciones Atómicas**:
-1.  **Validación Pre-Venta:** Antes de registrar una orden, el sistema lee el inventario físico total y resta la preventa acumulada.
-2.  **Bloqueo de Venta:** Si la cantidad solicitada supera el `STOCK` disponible, la transacción se cancela y se notifica al usuario.
-3.  **Registro Sincronizado:** Al confirmar una venta, se crea simultáneamente el documento de la orden y se incrementa el contador de `preventa` en el registro de inventario diario.
-
 ## Dependencia Operativa
 El sistema sigue un flujo estrictamente físico:
-1.  **Sin conteo no hay datos:** No se calcula Stock ni Tránsito si no hay un registro de `CONTEO ALMACÉN` para la fecha actual. No se permiten preventas si el Almacenero no ha iniciado la jornada con el conteo base.
-2.  **Actualización Dinámica:** A medida que el Almacenero actualiza las medidas en el "Controlador", el Tránsito y el Stock se recalculan automáticamente en el Dashboard y la vista de Preventistas.
+1.  **Sin conteo no hay datos:** No se calcula Stock ni Tránsito si no hay un registro de `CONTEO ALMACÉN` para la fecha actual. El sistema se mantiene en espera hasta que el Almacenero inicie la jornada con el conteo base.
+2.  **Actualización Dinámica:** A medida que el Almacenero actualiza las medidas en el "Controlador", el Tránsito y el Stock se recalculan automáticamente en el Dashboard y la vista de consulta de Stock.

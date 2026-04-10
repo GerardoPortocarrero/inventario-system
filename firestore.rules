@@ -66,11 +66,6 @@ service cloud.firestore {
                     request.resource.data.sedeId == resource.data.sedeId;
     }
 
-    match /inventario/{inventoryId} {
-      allow read: if isAdmin() || isSupervisor() || (isAuthenticated() && resource.data.sedeId == getSedeId());
-      allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
-    }
-
     match /unidadesDeStock/{unitId} {
       allow read: if isAdmin() || isSupervisor() || (isAuthenticated() && resource.data.sedeId == getSedeId());
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
@@ -78,10 +73,10 @@ service cloud.firestore {
 
     match /inventario_diario/{docId} {
       allow read: if isAuthenticated();
+      // Solo Admin y Almaceneros pueden escribir/actualizar el inventario físico.
+      // Los preventistas ya NO tienen permisos de update (antes los tenían para preventa).
       allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
-      allow update: if isAdmin() || 
-                    (isAlmacenero() && request.resource.data.sedeId == getSedeId()) ||
-                    (isPreventista() && request.resource.data.sedeId == getSedeId());
+      allow update: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
     }
 
     match /transito/{docId} {
@@ -90,19 +85,10 @@ service cloud.firestore {
     }
 
     match /ordenes/{orderId} {
-      allow read: if isAdmin() || isSupervisor() || 
-                  (isPreventista() && resource.data.preventistaId == request.auth.uid);
-
-      // CORRECCIÓN: Permitir create si es Admin O si es Preventista con los datos correctos
-      allow create: if isAdmin() || 
-                    (isPreventista() && request.resource.data.sedeId == getSedeId() && 
-                     request.resource.data.preventistaId == request.auth.uid);
-      
-      allow update: if isAdmin() || 
-                    (isPreventista() && resource.data.preventistaId == request.auth.uid &&
-                     resource.data.estadoOrden == 'PENDIENTE');
-
-      allow delete: if isAdmin();
+      // Las órdenes ahora son solo para histórico o supervisión si existen. 
+      // Los preventistas ya NO pueden crear órdenes.
+      allow read: if isAdmin() || isSupervisor();
+      allow write: if isAdmin();
     }
   }
 }

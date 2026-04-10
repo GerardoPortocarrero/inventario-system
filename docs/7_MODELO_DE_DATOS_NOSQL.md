@@ -1,130 +1,72 @@
 # 7. Modelo de Datos (NoSQL - Firestore)
 
-Este documento describe la estructura de la base de datos NoSQL en Firestore, adaptada a partir del modelo conceptual para optimizar el rendimiento y la escalabilidad, y ahora incluyendo el concepto de `sedes`.
+Este documento describe la estructura de la base de datos NoSQL en Firestore, optimizada para la consulta de inventario en tiempo real y segmentación por sedes.
 
-La estructura se basará en las siguientes colecciones principales:
+La estructura se basa en las siguientes colecciones principales:
 
 ### Colección: `sedes`
 *   **Propósito:** Define las diferentes ubicaciones o sucursales de la empresa.
-*   **Estructura del Documento:** Cada documento representa una sede, usando el `ID_Sede` como identificador del documento.
-    ```json
+*   ```json
     {
       "nombre": "Sede Central",
+      "locacion": "Dirección...",
+      "codigo": "SC-01"
     }
     ```
 
 ### Colección: `productos`
-*   **Propósito:** Mantiene el catálogo global de productos disponibles en la empresa.
-*   **Estructura del Documento:** Cada documento representa un producto, usando el `ID_Producto` como identificador del documento.
-    ```json
+*   **Propósito:** Mantiene el catálogo global de productos.
+*   ```json
     {
       "nombre": "Coca-Cola 3 Litros",
       "sap": "102030",
-      "tipoBebidaId": "ID_del_documento_en_la_coleccion_tiposBebida",
+      "tipoBebidaId": "ID_tipo",
       "basis": "Base-01",
       "comercial": "Com-01",
       "contaaya": "Cont-01",
       "mililitros": 3000,
       "unidades": 6,
       "precio": 7.50,
-      "creadoEn": "2024-02-06T10:00:00Z"
+      "creadoEn": "Timestamp"
     }
     ```
-
-### Colección: `unidadesDeStock`
-*   **Propósito:** Representa cada unidad física contable en el inventario (un palet, una caja, etc.) de una sede específica. Su conjunto y estado definen las cantidades de `ALMACEN`, `CONSIGNACION`, etc.
-*   **Estructura del Documento:** Cada documento es una unidad física.
-    ```json
-    {
-      "sedeId": "ID_de_la_sede_a_la_que_pertenece_la_unidad",
-      "productoId": "ID_del_producto_en_la_coleccion_productos", // Este producto ya incluye sedeId
-      "padreId": "ID_de_otra_unidadDeStock_si_esta_contenida", // ej. una caja dentro de un palet
-      "tipo": "CAJA_FISICA", // PALET, CAMA, CAJA_FISICA, PRODUCTO_UNITARIO
-      "estadoFisico": "EN_ALMACEN", // EN_CONSIGNACION, EN_ALMACEN, EN_TRANSITO
-      "cantidad": 12, // Para PRODUCTO_UNITARIO, la cantidad de unidades
-      "actualizadoEn": "2024-02-06T10:00:00Z"
-    }
-    ```
-    *Nota: Las cantidades totales de `ALMACEN` y `CONSIGNACION` se calculan agregando los datos de esta colección, filtradas por `sedeId`.*
 
 ### Colección: `inventario_diario`
-*   **Propósito:** Almacena el estado consolidado del inventario físico y los compromisos de venta por sede y fecha. Es el documento central para el cálculo de Stock y Tránsito.
-*   **ID del Documento:** `{ID_Sede}_{YYYY-MM-DD}` (ej. `central_2024-02-06`)
-*   **Estructura del Documento:**
-    ```json
+*   **Propósito:** Almacena el estado consolidado del inventario físico por sede y fecha. Es el documento central para el cálculo de Stock y Tránsito.
+*   **ID del Documento:** `{ID_Sede}_{YYYY-MM-DD}`
+*   ```json
     {
       "sedeId": "ID_de_la_sede",
       "fecha": "2024-02-06",
       "productos": {
         "ID_Producto_A": {
           "almacen": 100,      // Conteo físico real (unidades)
-          "consignacion": 20,   // Llegando a sede (unidades)
-          "preventa": 15       // Acumulado de órdenes del día (unidades)
-        },
-        "ID_Producto_B": { ... }
+          "consignacion": 20    // Llegando a sede (unidades)
+        }
       },
       "actualizadoPor": "Nombre del Usuario",
       "timestamp": "ServerTimestamp"
     }
     ```
-    *Nota: El campo `preventa` se actualiza mediante transacciones de Firestore cada vez que se crea una nueva `orden`, asegurando que `STOCK = (almacen + consignacion) - preventa` siempre sea exacto.*
-
-### Colección: `ordenes`
-*   **Propósito:** Almacena todas las órdenes de pedido generadas por los preventistas, vinculadas a una sede específica.
-*   **Estructura del Documento:** Cada documento es una orden.
-    ```json
-    {
-      "sedeId": "ID_de_la_sede_del_preventista_que_creo_la_orden",
-      "preventistaId": "ID_del_usuario_preventista",
-      "cliente": "Nombre o ID del cliente",
-      "fechaCreacion": "2024-02-06T11:30:00Z",
-      "estadoOrden": "PENDIENTE", // PENDIENTE, DESPACHADA, COMPLETADA
-      "total": 150.00,
-      // Los detalles se anidan para lecturas rápidas
-      "detalles": [
-        {
-          "productoId": "ID_del_producto", // Este ID de producto ya contiene el sedeId
-          "nombreProducto": "Coca-Cola 3 Litros",
-          "cantidad": 10,
-          "tipoUnidad": "CAJA_FISICA"
-        },
-        {
-          "productoId": "ID_de_otro_producto",
-          "nombreProducto": "Inca-Kola 2.5 Litros",
-          "cantidad": 5,
-          "tipoUnidad": "CAJA_FISICA"
-        }
-      ]
-    }
-    ```
 
 ### Colección: `usuarios`
-*   **Propósito:** Almacena la información de los usuarios y su rol, vinculados a una sede específica.
-*   **Estructura del Documento:** El ID del documento será el UID de Firebase Auth.
-    ```json
+*   **Propósito:** Almacena la información de los usuarios, su rol y sede asignada.
+*   ```json
     {
-      "sedeId": "ID_de_la_sede_a_la_que_pertenece_el_usuario",
+      "sedeId": "ID_de_la_sede",
       "nombre": "Juan Pérez",
       "email": "juan.perez@ejemplo.com",
-      "rolId": "preventista", // Referencia al ID del documento en la colección 'roles'
+      "rolId": "preventista", // admin, supervisor, almacenero, preventista
       "activo": true
     }
     ```
 
 ### Colección: `roles`
-*   **Propósito:** Define los roles disponibles en el sistema y sus propiedades. Permite una gestión centralizada de los permisos.
-*   **Estructura del Documento:** El ID del documento es el identificador único del rol (ej. "admin", "preventista").
-    ```json
-    {
-      "nombre": "Preventista",
-    }
-    ```
+*   **Propósito:** Define los niveles de acceso.
+    *   `admin`: Gestión total.
+    *   `supervisor`: Lectura total y reportes.
+    *   `almacenero`: Edición de inventario físico en su sede.
+    *   `preventista`: Solo lectura de stock en su sede.
 
 ### Colección: `tiposBebida`
-*   **Propósito:** Define las categorías o tipos de bebida (ej. Gaseosas, Aguas, Cervezas).
-*   **Estructura del Documento:**
-    ```json
-    {
-      "nombre": "Gaseosas"
-    }
-    ```
+*   **Propósito:** Categorización de productos (Gaseosas, Aguas, etc.).
