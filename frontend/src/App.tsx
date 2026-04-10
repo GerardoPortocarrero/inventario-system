@@ -74,7 +74,7 @@ const App: FC = () => {
                 <Route path="/profile" element={<ProfilePage />} />
 
                 {/* Rutas Protegidas */}
-                <Route path="/preventista" element={<ProtectedRoute allowedRoles={['preventista']}><StockPage /></ProtectedRoute>} />
+                <Route path="/stock" element={<ProtectedRoute allowedRoles={['preventista']}><StockPage /></ProtectedRoute>} />
                 <Route path="/almacen" element={<ProtectedRoute allowedRoles={['almacenero']}><AlmacenPage /></ProtectedRoute>} />
                 <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['supervisor']}><SupervisorPage /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />

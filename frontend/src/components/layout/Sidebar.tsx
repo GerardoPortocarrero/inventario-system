@@ -66,7 +66,7 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
           {/* Enlaces para Preventista */}
           {(userRole === 'preventista' || isAdmin) && (
             <Nav.Item>
-              <Nav.Link as={Link} to="/preventista" className={location.pathname === '/preventista' ? 'active' : ''} onClick={handleLinkClick}>
+              <Nav.Link as={Link} to="/stock" className={location.pathname === '/stock' ? 'active' : ''} onClick={handleLinkClick}>
                 <FaShoppingCart className="me-2" />
                 Stock
               </Nav.Link>
