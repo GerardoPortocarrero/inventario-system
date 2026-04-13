@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Form, ProgressBar, Alert } from 'react-bootstrap';
-import { FaCloudUploadAlt, FaFileExcel, FaDatabase, FaHistory, FaExclamationTriangle, FaUser, FaDownload, FaInfoCircle } from 'react-icons/fa';
+import { FaCloudUploadAlt, FaFileExcel, FaHistory, FaExclamationTriangle, FaUser, FaDownload, FaInfoCircle } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { rtdb } from '../api/firebase';
 import { ref, set, onValue } from 'firebase/database';
