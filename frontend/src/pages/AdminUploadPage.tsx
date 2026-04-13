@@ -18,10 +18,10 @@ const MAESTRO_COLUMNS = [
 
 // Columnas para la plantilla de Demanda
 const DEMANDA_COLUMNS = [
-  'Fecha documento', 'Clase doc.ventas', 'Documento de ventas', 'Posición', 
-  'Solicitante', 'Material', 'Descripción del material', 'Cantidad de pedido (Posición)', 
-  'Un.medida venta', 'Valor neto (posición)', 'Moneda del documento', 'Status de entrega', 
-  'Descripción del motivo de rechazo', 'Bloqueo de factura'
+  'Entrega', 'Hora', 'Referencia de cliente', 'Fecha documento', 'Clase', 
+  'Documento', 'Posición', 'Solicitante', 'Material', 'Nombre material', 
+  'Cantidad', 'Medida', 'Valor', 'Moneda', 'Status', 'Motivo de rechazo', 
+  'Bloqueo de factura'
 ];
 
 const AdminUploadPage: FC = () => {
