@@ -12,6 +12,14 @@
       "metadata": {
         ".validate": "newData.hasChildren(['updatedAt', 'rowCount', 'userName'])"
       }
+    },
+    "reportes": {
+      ".write": "auth != null",
+      "volumen": {
+        "metadata": {
+          ".validate": "newData.hasChildren(['lastUpdated', 'processedBy'])"
+        }
+      }
     }
   }
 }
