@@ -98,7 +98,7 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
             <Nav.Item>
               <Nav.Link as={Link} to="/admin/upload" className={location.pathname === '/admin/upload' ? 'active' : ''} onClick={handleLinkClick}>
                 <FaDatabase className="me-2" />
-                Cargar Datos
+                Datos
               </Nav.Link>
             </Nav.Item>
           )}
