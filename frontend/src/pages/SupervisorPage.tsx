@@ -104,14 +104,108 @@ const SupervisorPage: FC = () => {
     };
   }, [selectedDate, yesterdayStr]);
 
+  const volumenReportData = useMemo(() => {
+    if (!maestroData.length || !demandaData.length || !products.length) return [];
+
+    const productMap = products.reduce((acc, p) => ({ ...acc, [p.sap]: p }), {} as Record<string, any>);
+    const maestroMap = maestroData.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
+
+    const UNIT_CASE_ML = 5677.92;
+
+    // 1. Filtrar y Procesar Demanda
+    const processedDemanda = demandaData.map(d => {
+      const prod = productMap[String(d.Material)];
+      const client = maestroMap[String(d.Solicitante)];
+      
+      if (!prod || !client) return null;
+
+      // Unidades Totales
+      let totalUnits = 0;
+      const cant = Number(d.Cantidad) || 0;
+      if (d.Medida === 'CAJ') {
+        totalUnits = cant * (prod.unidades || 1);
+      } else {
+        totalUnits = cant;
+      }
+
+      // Cajas Físicas
+      const physicalBoxes = totalUnits / (prod.unidades || 1);
+      
+      // Cajas Unitarias (Volumétricas)
+      const totalMl = totalUnits * (prod.mililitros || 0);
+      const unitCases = totalMl / UNIT_CASE_ML;
+
+      return {
+        loc: client.Loc,
+        mesa: client['Mesa Com'] || 'SIN MESA',
+        ruta: client['Ruta com'] || 'SIN RUTA',
+        physicalBoxes,
+        unitCases
+      };
+    }).filter(Boolean);
+
+    // 2. Agrupar por Jerarquía
+    const grouped: Record<string, any> = {};
+
+    processedDemanda.forEach((item: any) => {
+      // Si hay sede seleccionada, filtramos por su código
+      if (selectedSedeId !== 'GLOBAL') {
+        const sede = sedes.find(s => s.id === selectedSedeId);
+        if (sede && item.loc !== sede.codigo) return;
+      }
+
+      const key = `${item.loc}-${item.mesa}-${item.ruta}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          loc: item.loc,
+          mesa: item.mesa,
+          ruta: item.ruta,
+          cajasFisicas: 0,
+          cajasUnitarias: 0
+        };
+      }
+      grouped[key].cajasFisicas += item.physicalBoxes;
+      grouped[key].cajasUnitarias += item.unitCases;
+    });
+
+    return Object.values(grouped).sort((a, b) => {
+      const locA = String(a.loc || '');
+      const locB = String(b.loc || '');
+      const mesaA = String(a.mesa || '');
+      const mesaB = String(b.mesa || '');
+      return locA.localeCompare(locB) || mesaA.localeCompare(mesaB);
+    });
+  }, [maestroData, demandaData, products, selectedSedeId, sedes]);
+
   const renderVolumenReport = () => (
     <div className="dash-chart-box">
-      <div className="dash-chart-header text-uppercase">
-        <FaShoppingCart className="me-2 text-danger" /> Reporte de Volumen
+      <div className="dash-chart-header text-uppercase d-flex justify-content-between align-items-center">
+        <span><FaShoppingCart className="me-2 text-danger" /> Reporte de Volumen</span>
+        <Badge bg="danger" style={{ fontSize: '0.6rem' }}>FACTOR UC: 5677.92</Badge>
       </div>
-      <div className="p-3 text-center text-muted small">
-        Sincronizando con Maestro y Demanda para análisis de carga...
-      </div>
+      
+      <GenericTable 
+        data={volumenReportData}
+        columns={[
+          { 
+            header: 'LOCALIDAD', 
+            render: (row: any) => {
+              const sede = sedes.find(s => s.codigo === row.loc);
+              return <span className="fw-bold">{sede ? sede.nombre : row.loc}</span>;
+            }
+          },
+          { header: 'MESA COM', accessorKey: 'mesa' },
+          { header: 'RUTA COM', accessorKey: 'ruta' },
+          { 
+            header: 'CAJAS FÍSICAS', 
+            render: (row: any) => <span className="fw-bold text-primary">{row.cajasFisicas.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          },
+          { 
+            header: 'CAJAS UNITARIAS (UC)', 
+            render: (row: any) => <span className="fw-bold text-success">{row.cajasUnitarias.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+          }
+        ]}
+      />
     </div>
   );
 
