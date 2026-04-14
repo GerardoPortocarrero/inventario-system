@@ -76,6 +76,7 @@ const AdminUploadPage: FC = () => {
 
   const generateReportVolumen = async (demanda: any[], maestro: any[]) => {
     setReportProgress(prev => ({ ...prev, volumen: 10 }));
+    
     const prodSnap = await getDocs(collection(db, 'productos'));
     const products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
     setReportProgress(prev => ({ ...prev, volumen: 30 }));
@@ -163,7 +164,9 @@ const AdminUploadPage: FC = () => {
 
         const sanitizedData = rawData.map(row => {
           const newRow: any = {};
-          Object.keys(row).forEach(key => { newRow[sanitizeKey(key)] = row[key]; });
+          Object.keys(row).forEach(key => {
+            newRow[sanitizeKey(key)] = row[key];
+          });
           return newRow;
         });
 
@@ -175,7 +178,10 @@ const AdminUploadPage: FC = () => {
         };
 
         setUploadProgress(85);
-        await set(ref(rtdb, type), { metadata, data: sanitizedData });
+        await set(ref(rtdb, type), {
+          metadata: metadata,
+          data: sanitizedData
+        });
 
         setUploadProgress(100);
         toast.success(`${type.toUpperCase()} sincronizado correctamente`);
@@ -189,11 +195,15 @@ const AdminUploadPage: FC = () => {
           setReportProgress(prev => ({ ...prev, eficiencia: 100, diageo: 100, acl: 100 }));
           setTimeout(() => setProcessingReports(false), 2000);
         }
+
       } catch (error: any) {
         console.error("Error:", error);
         toast.error(`Error: ${error.message}`);
       } finally {
-        setTimeout(() => { setIsUploading(false); setUploadProgress(0); }, 1500);
+        setTimeout(() => {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }, 1500);
       }
     };
     reader.readAsBinaryString(file);
@@ -217,7 +227,7 @@ const AdminUploadPage: FC = () => {
 
           <Row className="g-3 g-md-4 m-0 w-100 mb-4">
             {['maestro', 'demanda'].map((type) => (
-              <Col key={type} xs={12} xl={6} className="px-0 px-md-2">
+              <Col key={type} xs={12} xl={6} className="px-0 px-md-2 m-0">
                 <Card className="dash-top-card border-0 shadow-sm h-100 w-100" style={{ borderRadius: '0' }}>
                   <Card.Body className="p-3 p-md-4 d-flex flex-column">
                     <div className="d-flex align-items-center mb-3">
@@ -226,7 +236,9 @@ const AdminUploadPage: FC = () => {
                       </div>
                       <div className="flex-grow-1 min-width-0">
                         <h6 className="mb-0 fw-black text-uppercase text-truncate" style={{ letterSpacing: '0.5px', color: 'var(--theme-text-primary)', fontSize: '0.9rem' }}>{type}</h6>
-                        <small className="fw-black text-truncate d-block" style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', opacity: 0.7 }}>SISTEMA DE REEMPLAZO TOTAL</small>
+                        <small className="fw-black text-truncate d-block" style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', opacity: 0.7 }}>
+                          SISTEMA DE REEMPLAZO TOTAL
+                        </small>
                       </div>
                       <Button variant="link" className={`text-${type === 'maestro' ? 'danger' : 'primary'} p-0 text-decoration-none ms-2`} onClick={() => downloadTemplate(type as any)} title="Descargar Plantilla">
                         <FaDownload size={16} />
@@ -234,15 +246,23 @@ const AdminUploadPage: FC = () => {
                     </div>
                     
                     <p className="mb-4" style={{ fontSize: '0.8rem', lineHeight: '1.5', color: 'var(--theme-text-primary)', opacity: 0.85 }}>
-                      {type === 'maestro' ? 'Cargue el catálogo maestro de clientes. Base para segmentación de demanda.' : 'Actualice los requerimientos de demanda diaria para sincronizar la jornada actual.'}
+                      {type === 'maestro' 
+                        ? 'Cargue el catálogo maestro de clientes y rutas. Base para geolocalización y segmentación.'
+                        : 'Actualice la demanda diaria para sincronizar las cuotas de la jornada actual.'
+                      }
                     </p>
 
                     <div className="mt-auto w-100">
-                      <div className="mb-3 p-2 p-md-3 border" style={{ backgroundColor: 'transparent', borderColor: 'var(--theme-border-default)', borderRadius: '0', minHeight: '90px' }}>
+                      <div className="mb-3 p-2 p-md-3" style={{ backgroundColor: 'transparent', border: '1px solid var(--theme-border-default)', borderRadius: '0', minHeight: '90px' }}>
                         <div className="d-flex align-items-center mb-2 small fw-black" style={{ color: 'var(--theme-text-primary)', fontSize: '0.7rem' }}>
                           <FaHistory className={`me-2 text-${type === 'maestro' ? 'danger' : 'primary'}`} /> ÚLTIMA CARGA
                         </div>
-                        {metadataLoadingStatus[type] ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : lastUploads[type] ? (
+                        
+                        {metadataLoadingStatus[type] ? (
+                          <div className="d-flex justify-content-center align-items-center py-2">
+                            <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
+                          </div>
+                        ) : lastUploads[type] ? (
                           <Row className="g-2">
                             <Col xs={12} sm={6}>
                               <div style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Sincronización</div>
@@ -251,22 +271,33 @@ const AdminUploadPage: FC = () => {
                             <Col xs={12} sm={6}>
                               <div style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Responsable</div>
                               <div className="fw-black d-flex align-items-center text-truncate" style={{ fontSize: '0.7rem', color: 'var(--theme-text-primary)' }}>
-                                <FaUser className="me-1" size={10} /> {lastUploads[type].userName}
+                                <FaUser className="me-1 flex-shrink-0" size={10} /> <span className="text-truncate">{lastUploads[type].userName}</span>
                               </div>
                             </Col>
                             <Col xs={12}>
                               <div className="mt-1 fw-black text-success d-flex align-items-center" style={{ fontSize: '0.65rem' }}>
-                                <FaCheckCircle className="me-2" /> {lastUploads[type].rowCount.toLocaleString()} REGISTROS ACTIVOS
+                                <FaCheckCircle className="me-2 flex-shrink-0" /> {lastUploads[type].rowCount.toLocaleString()} REGISTROS ACTIVOS
                               </div>
                             </Col>
                           </Row>
-                        ) : <div className="text-secondary py-2 small font-italic opacity-70"><FaInfoCircle className="me-2" /> Sin registros</div>}
+                        ) : (
+                          <div className="d-flex align-items-center justify-content-center h-100 text-secondary py-2" style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.7 }}>
+                            <FaInfoCircle className="me-2" /> Sin registros
+                          </div>
+                        )}
                       </div>
+                      
                       <Form.Group controlId={`upload${type}`} className="w-100">
                         <Form.Label className={`btn btn-outline-${type === 'maestro' ? 'danger' : 'primary'} w-100 d-flex align-items-center justify-content-center py-2 fw-black text-uppercase`} style={{ fontSize: '0.75rem', letterSpacing: '0.5px', borderRadius: '0' }}>
                           <FaCloudUploadAlt className="me-2 fs-5" /> Iniciar Sincronización
                         </Form.Label>
-                        <Form.Control type="file" accept=".xlsx, .xls, .csv" hidden onChange={(e: any) => handleFileChange(e, type as any)} disabled={isUploading} />
+                        <Form.Control 
+                          type="file" 
+                          accept=".xlsx, .xls, .csv" 
+                          hidden 
+                          onChange={(e: any) => handleFileChange(e, type as any)}
+                          disabled={isUploading}
+                        />
                       </Form.Group>
                     </div>
                   </Card.Body>
