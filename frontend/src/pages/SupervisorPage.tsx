@@ -175,17 +175,17 @@ const SupervisorPage: FC = () => {
                   <div className="d-flex align-items-center gap-3">
                     <div className="loc-avatar">{loc.id}</div>
                     <div>
-                      <div className="fw-black text-uppercase small" style={{ letterSpacing: '0.5px' }}>{loc.nombre}</div>
-                      <div className="text-muted" style={{ fontSize: '0.6rem' }}>RESUMEN DE LOCALIDAD</div>
+                      <div className="fw-black text-uppercase" style={{ letterSpacing: '0.5px', fontSize: '0.85rem', color: 'var(--theme-text-primary)' }}>{loc.nombre}</div>
+                      <div className="fw-bold" style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', opacity: 0.7 }}>RESUMEN DE LOCALIDAD</div>
                     </div>
                   </div>
                   <div className="d-flex gap-2">
-                    <Badge bg="primary" className="p-2 px-3 d-flex flex-column align-items-center justify-content-center">
-                      <span style={{ fontSize: '0.5rem', opacity: 0.8 }}>CF</span>
+                    <Badge bg="primary" className="p-2 px-3 d-flex flex-column align-items-center justify-content-center" style={{ borderRadius: 0 }}>
+                      <span style={{ fontSize: '0.55rem', fontWeight: 800 }}>CF</span>
                       <span className="fw-black fs-6">{loc.totalCF.toFixed(1)}</span>
                     </Badge>
-                    <Badge bg="success" className="p-2 px-3 d-flex flex-column align-items-center justify-content-center">
-                      <span style={{ fontSize: '0.5rem', opacity: 0.8 }}>UC</span>
+                    <Badge bg="success" className="p-2 px-3 d-flex flex-column align-items-center justify-content-center" style={{ borderRadius: 0 }}>
+                      <span style={{ fontSize: '0.55rem', fontWeight: 800 }}>CU</span>
                       <span className="fw-black fs-6">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
                   </div>
@@ -194,10 +194,10 @@ const SupervisorPage: FC = () => {
               <Accordion.Body className="bg-transparent p-0 pt-1">
                 {Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
                   <div key={mesaName} className="mesa-section mb-3">
-                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-1 mb-2">
-                      <span className="fw-black text-danger" style={{ fontSize: '0.65rem' }}>MESA: {mesaName.toUpperCase()}</span>
-                      <div className="small fw-bold text-muted" style={{ fontSize: '0.6rem' }}>
-                        {mesa.totalCF.toFixed(1)} CF / {mesa.totalUC.toFixed(2)} UC
+                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2">
+                      <span className="fw-black" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>MESA: {mesaName.toUpperCase()}</span>
+                      <div className="fw-black text-uppercase" style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)' }}>
+                        {mesa.totalCF.toFixed(1)} CF / {mesa.totalUC.toFixed(2)} CU
                       </div>
                     </div>
                     
@@ -212,14 +212,14 @@ const SupervisorPage: FC = () => {
                                 <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => toggleRuta(rutaKey)} style={{ cursor: 'pointer' }}>
                                   <div className="d-flex align-items-center gap-2">
                                     <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
-                                    <span className="fw-bold small" style={{ color: 'var(--theme-text-primary)' }}>RUTA {rutaName}</span>
+                                    <span className="fw-black" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>RUTA {rutaName}</span>
                                   </div>
                                   <div className="d-flex gap-3 align-items-center">
                                     <div className="d-flex flex-column align-items-end">
-                                      <span className="fw-black text-primary" style={{ fontSize: '0.75rem' }}>{ruta.totalCF.toFixed(2)} <span style={{ fontSize: '0.55rem', opacity: 0.6 }}>CF</span></span>
+                                      <span className="fw-black text-primary" style={{ fontSize: '0.8rem' }}>{ruta.totalCF.toFixed(2)} <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>CF</span></span>
                                     </div>
-                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '50px' }}>
-                                      <span className="fw-black text-success" style={{ fontSize: '0.75rem' }}>{ruta.totalUC.toFixed(2)} <span style={{ fontSize: '0.55rem', opacity: 0.6 }}>UC</span></span>
+                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '60px' }}>
+                                      <span className="fw-black text-success" style={{ fontSize: '0.8rem' }}>{ruta.totalUC.toFixed(2)} <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>CU</span></span>
                                     </div>
                                   </div>
                                 </div>
@@ -230,14 +230,14 @@ const SupervisorPage: FC = () => {
                                       {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
                                         <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
                                           <div className="d-flex flex-column">
-                                            <span className="fw-bold" style={{ fontSize: '0.65rem', color: 'var(--theme-text-primary)' }}>{p.nombre}</span>
-                                            <span className="text-muted" style={{ fontSize: '0.55rem' }}>SAP: {sap}</span>
+                                            <span className="fw-bold" style={{ fontSize: '0.7rem', color: 'var(--theme-text-primary)' }}>{p.nombre}</span>
+                                            <span className="text-muted fw-bold" style={{ fontSize: '0.6rem' }}>SAP: {sap}</span>
                                           </div>
                                           <div className="d-flex gap-2 align-items-center">
-                                            <Badge bg="dark" className="text-light fw-bold" style={{ fontSize: '0.6rem' }}>
+                                            <Badge bg="dark" className="text-light fw-black" style={{ fontSize: '0.65rem', borderRadius: 0 }}>
                                               {p.cantU} UND
                                             </Badge>
-                                            <Badge bg="light" className="text-dark border fw-bold" style={{ fontSize: '0.6rem' }}>
+                                            <Badge bg="light" className="text-dark border fw-black" style={{ fontSize: '0.65rem', borderRadius: 0 }}>
                                               {p.cantC.toFixed(1)} CJ
                                             </Badge>
                                           </div>
@@ -262,23 +262,24 @@ const SupervisorPage: FC = () => {
       
       <style>{`
         .fw-black { font-weight: 900 !important; }
-        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 8px !important; overflow: hidden; }
-        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 12px !important; }
+        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; }
+        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 12px !important; border-radius: 0 !important; }
         .loc-header-compact .accordion-button:after { display: none; }
-        .loc-avatar { width: 40px; height: 40px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 900; font-size: 0.9rem; }
+        .loc-avatar { width: 42px; height: 42px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; border-radius: 0; font-weight: 900; font-size: 1rem; }
         
-        .mesa-title-bar { background: var(--theme-icon-bg); border-left: 3px solid var(--color-red-primary); }
+        .mesa-title-bar { background: var(--theme-icon-bg); border-left: 4px solid var(--color-red-primary); }
         
-        .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 4px; transition: all 0.2s ease; }
+        .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 0; transition: all 0.2s ease; }
         .ruta-card-compact:hover { border-color: var(--color-red-primary); }
-        .ruta-card-compact.expanded { border-color: var(--color-red-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .ruta-card-compact.expanded { border-color: var(--color-red-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         
-        .chevron-icon { font-size: 0.6rem; transition: transform 0.2s ease; color: var(--theme-text-secondary); }
+        .chevron-icon { font-size: 0.65rem; transition: transform 0.2s ease; color: var(--theme-text-secondary); }
         .chevron-icon.active { transform: rotate(90deg); color: var(--color-red-primary); }
         
-        .ruta-details-list { max-height: 250px; overflow-y: auto; scrollbar-width: thin; }
+        .ruta-details-list { max-height: 300px; overflow-y: auto; scrollbar-width: thin; }
         
         .volumen-compact-view .accordion-button:not(.collapsed) { color: inherit; }
+        .info-pill-new { border-radius: 0 !important; }
       `}</style>
     </div>
   );
