@@ -236,6 +236,12 @@ const SupervisorPage: FC = () => {
                     <Badge bg="success" className="badge-industrial">
                       <span className="b-label">EFEC</span><span className="fw-black fs-6">{loc.totalEfec}</span>
                     </Badge>
+                    <Badge bg="danger" className="badge-industrial">
+                      <span className="b-label">S. VISITA</span><span className="fw-black fs-6">{loc.totalProg - loc.totalEfec}</span>
+                    </Badge>
+                    <Badge bg="dark" className="badge-industrial border border-secondary">
+                      <span className="b-label text-info">EF (%)</span><span className="fw-black fs-6 text-info">{((loc.totalEfec / loc.totalProg) * 100).toFixed(0)}%</span>
+                    </Badge>
                   </div>
                 </div>
               </Accordion.Header>
@@ -251,6 +257,7 @@ const SupervisorPage: FC = () => {
                         {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => {
                           const sinVis = ruta.stats.prog - ruta.stats.efec;
                           const efPorc = (ruta.stats.efec / ruta.stats.prog) * 100;
+                          const porcColor = efPorc < 70 ? 'var(--color-red-primary)' : efPorc < 85 ? '#ff8800' : '#00ff88';
                           return (
                             <Col xs={12} key={rutaName}>
                               <div className="ruta-card-compact border-0 shadow-none">
@@ -263,7 +270,7 @@ const SupervisorPage: FC = () => {
                                     <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-primary r-val">{ruta.stats.prog} <span className="r-unit">P</span></span></div>
                                     <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-success r-val">{ruta.stats.efec} <span className="r-unit">E</span></span></div>
                                     <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-danger r-val">{sinVis} <span className="r-unit">SV</span></span></div>
-                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '55px' }}><span className="fw-black text-dark r-val">{efPorc.toFixed(0)} <span className="r-unit">%</span></span></div>
+                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '55px' }}><span className="fw-black r-val" style={{ color: porcColor }}>{efPorc.toFixed(0)} <span className="r-unit">%</span></span></div>
                                   </div>
                                 </div>
                               </div>
