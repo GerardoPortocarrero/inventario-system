@@ -6,14 +6,13 @@ import { ref, onValue } from 'firebase/database';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import { 
-  FaShoppingCart, FaChartLine, FaWarehouse, FaBox, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt
+  FaChartLine, FaWarehouse, FaBox, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt
 } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
 
 type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'DIAGEO' | 'ACL';
 
 const SupervisorPage: FC = () => {
-  const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
   const { sedes, loadingMasterData } = useData();
 
   // Estados para datos pre-calculados
@@ -25,12 +24,6 @@ const SupervisorPage: FC = () => {
   const [selectedReportType, setSelectedReportType] = useState<ReportType>('VOLUMEN');
   
   const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => setIsDarkMode(document.body.classList.contains('theme-dark')));
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     setLoading(true);

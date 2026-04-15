@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useState, useEffect, Fragment } from 'react';
 import { Row, Col, Button, Form, ProgressBar, Alert, Container } from 'react-bootstrap';
-import { FaCloudUploadAlt, FaFileExcel, FaHistory, FaExclamationTriangle, FaUser, FaDownload, FaCheckCircle, FaSpinner, FaShoppingCart, FaChartLine, FaGlassMartiniAlt, FaBox, FaDatabase, FaInfoCircle } from 'react-icons/fa';
+import { FaCloudUploadAlt, FaFileExcel, FaHistory, FaExclamationTriangle, FaUser, FaDownload, FaCheckCircle, FaSpinner, FaShoppingCart, FaChartLine, FaGlassMartiniAlt, FaBox, FaInfoCircle } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { db, rtdb } from '../api/firebase';
 import { ref, set, onValue } from 'firebase/database';
@@ -16,7 +16,7 @@ const MAESTRO_COLUMNS = ['Loc', 'Codigo', 'Cliente', 'Dirección', 'Loc. Com.', 
 const DEMANDA_COLUMNS = ['Entrega', 'Hora', 'Referencia de cliente', 'Fecha documento', 'Clase', 'Documento', 'Posición', 'Solicitante', 'Material', 'Nombre material', 'Cantidad', 'Medida', 'Valor', 'Moneda', 'Status', 'Motivo de rechazo', 'Bloqueo de factura'];
 
 const AdminUploadPage: FC = () => {
-  const { currentUser, userName, userEmail } = useAuth();
+  const { userName, userEmail } = useAuth();
   const { sedes } = useData();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
