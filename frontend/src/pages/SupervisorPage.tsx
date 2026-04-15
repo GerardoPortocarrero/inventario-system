@@ -1,12 +1,12 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Form, Badge, Accordion, ListGroup } from 'react-bootstrap';
+import { Row, Col, Form, Badge, Accordion, ListGroup, Dropdown } from 'react-bootstrap';
 import { rtdb } from '../api/firebase';
 import { ref, onValue } from 'firebase/database';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import { 
-  FaChartLine, FaWarehouse, FaBox, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt
+  FaChartLine, FaWarehouse, FaBox, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt
 } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
 
@@ -27,12 +27,11 @@ const SupervisorPage: FC = () => {
   
   // Filtros para Eficiencia
   const [selectedDia, setSelectedDia] = useState<string>(['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'][new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
-  const [selectedSemana, setSelectedSemana] = useState<string>('');
+  const [selectedSemanas, setSelectedSemanas] = useState<string[]>([]);
   const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setLoading(true);
-    
     const volumenRef = ref(rtdb, 'reportes/volumen');
     const unsubVolumen = onValue(volumenRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -68,10 +67,27 @@ const SupervisorPage: FC = () => {
         });
       });
     });
-    const sorted = Array.from(semanas).sort();
-    if (selectedSemana === '' && sorted.length > 0) setSelectedSemana(sorted[0]);
-    return sorted;
+    return Array.from(semanas).sort();
   }, [eficienciaReport]);
+
+  // Selección por defecto: última semana disponible
+  useEffect(() => {
+    if (selectedSemanas.length === 0 && availableSemanas.length > 0) {
+      setSelectedSemanas([availableSemanas[availableSemanas.length - 1]]);
+    }
+  }, [availableSemanas]);
+
+  const handleSemanaToggle = (sem: string) => {
+    setSelectedSemanas(prev => prev.includes(sem) ? prev.filter(s => s !== sem) : [...prev, sem]);
+  };
+
+  const handleSelectAllWeeks = () => {
+    if (selectedSemanas.length === availableSemanas.length) {
+      setSelectedSemanas([availableSemanas[availableSemanas.length - 1]]);
+    } else {
+      setSelectedSemanas(availableSemanas);
+    }
+  };
 
   const filteredVolumenData = useMemo(() => {
     if (selectedSedeId === 'GLOBAL') return volumenReport;
@@ -80,15 +96,21 @@ const SupervisorPage: FC = () => {
 
   const filteredEficienciaData = useMemo(() => {
     let data = selectedSedeId === 'GLOBAL' ? eficienciaReport : eficienciaReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
-    const schedKey = `${selectedDia}_${selectedSemana}`;
     
+    if (selectedSemanas.length === 0) return [];
+
     return data.map(loc => {
       const newMesas: Record<string, any> = {};
       Object.entries(loc.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
         const newRutas: Record<string, any> = {};
         Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
-          const stats = ruta.schedules[schedKey];
-          if (stats && stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
+          const stats = { prog: 0, efec: 0 };
+          selectedSemanas.forEach(sem => {
+            const s = ruta.schedules[`${selectedDia}_${sem}`];
+            if (s) { stats.prog += s.prog; stats.efec += s.efec; }
+          });
+
+          if (stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
         });
         if (Object.keys(newRutas).length > 0) {
           const totalProg = Object.values(newRutas).reduce((acc, r) => acc + r.stats.prog, 0);
@@ -103,7 +125,7 @@ const SupervisorPage: FC = () => {
       }
       return null;
     }).filter(Boolean);
-  }, [eficienciaReport, selectedSedeId, sedes, selectedDia, selectedSemana]);
+  }, [eficienciaReport, selectedSedeId, sedes, selectedDia, selectedSemanas]);
 
   const toggleRuta = (rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] }));
 
@@ -193,7 +215,7 @@ const SupervisorPage: FC = () => {
   const renderEficienciaReport = () => (
     <div className="volumen-compact-view">
       {filteredEficienciaData.length === 0 ? (
-        <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE EFICIENCIA.</div>
+        <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE EFICIENCIA PARA LOS FILTROS SELECCIONADOS.</div>
       ) : (
         <Accordion defaultActiveKey={filteredEficienciaData[0]?.id}>
           {filteredEficienciaData.map((loc: any) => (
@@ -262,25 +284,28 @@ const SupervisorPage: FC = () => {
 
   return (
     <div className="admin-layout-container flex-column overflow-hidden gap-3">
-      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto' }}>
-        <Row className="g-2 align-items-center">
-          <Col xs={12} md={selectedReportType === 'EFICIENCIA' ? 3 : 4}>
+      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem' }}>
+        <Row className="g-1 align-items-center">
+          {/* 1. Sede */}
+          <Col xs={12} md={2}>
             <div className="info-pill-new w-100">
-              <span className="pill-icon-sober text-danger"><FaWarehouse /></span>
+              <span className="pill-icon-sober text-danger p-1"><FaWarehouse size={12}/></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">SEDE AUDITADA</span>
+                <span className="pill-label">SEDE</span>
                 <Form.Select value={selectedSedeId} onChange={(e) => setSelectedSedeId(e.target.value)} className="pill-select-v2 w-100">
-                  <option value="GLOBAL">TODAS LAS SEDES (GLOBAL)</option>
+                  <option value="GLOBAL">GLOBAL</option>
                   {sedes.map(s => <option key={s.id} value={s.id}>{s.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
             </div>
           </Col>
-          <Col xs={12} md={selectedReportType === 'EFICIENCIA' ? 3 : 4}>
+
+          {/* 2. Reporte */}
+          <Col xs={12} md={2}>
             <div className="info-pill-new w-100">
-              <span className="pill-icon-sober text-primary"><FaFilter /></span>
+              <span className="pill-icon-sober text-primary p-1"><FaFilter size={12}/></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">TIPO DE REPORTE</span>
+                <span className="pill-label">REPORTE</span>
                 <Form.Select value={selectedReportType} onChange={(e) => setSelectedReportType(e.target.value as ReportType)} className="pill-select-v2 w-100">
                   <option value="VOLUMEN">VOLUMEN</option>
                   <option value="EFICIENCIA">EFICIENCIA</option>
@@ -290,27 +315,81 @@ const SupervisorPage: FC = () => {
               </div>
             </div>
           </Col>
+
           {selectedReportType === 'EFICIENCIA' ? (
             <>
-              <Col xs={6} md={1.5}>
-                <div className="info-pill-new w-100"><div className="pill-content flex-grow-1"><span className="pill-label">DÍA</span><Form.Select value={selectedDia} onChange={(e) => setSelectedDia(e.target.value)} className="pill-select-v2 w-100">{['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'].map(d => <option key={d} value={d}>{d}</option>)}</Form.Select></div></div>
+              {/* 3. Día */}
+              <Col xs={4} md={1}>
+                <div className="info-pill-new w-100">
+                  <div className="pill-content flex-grow-1 text-center p-0 ps-1">
+                    <span className="pill-label">DÍA</span>
+                    <Form.Select value={selectedDia} onChange={(e) => setSelectedDia(e.target.value)} className="pill-select-v2 w-100 text-center">
+                      {['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'].map(d => <option key={d} value={d}>{d}</option>)}
+                    </Form.Select>
+                  </div>
+                </div>
               </Col>
-              <Col xs={6} md={1.5}>
-                <div className="info-pill-new w-100"><div className="pill-content flex-grow-1"><span className="pill-label">SEMANA</span><Form.Select value={selectedSemana} onChange={(e) => setSelectedSemana(e.target.value)} className="pill-select-v2 w-100">{availableSemanas.length > 0 ? availableSemanas.map(s => <option key={s} value={s}>{s}</option>) : <option value="">...</option>}</Form.Select></div></div>
+              {/* 4. Semanas (Multi-Select con estilo de Dropdown Limpio) */}
+              <Col xs={8} md={3}>
+                <div className="info-pill-new w-100">
+                  <span className="pill-icon-sober text-info p-1"><FaCalendarAlt size={12}/></span>
+                  <div className="pill-content flex-grow-1 ps-2">
+                    <span className="pill-label">SEMANAS ({selectedSemanas.length})</span>
+                    <Dropdown autoClose="outside" className="w-100 border-0 shadow-none">
+                      <Dropdown.Toggle 
+                        className="pill-select-v2 w-100 text-start d-flex justify-content-between align-items-center p-0" 
+                        style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
+                      >
+                        <span className="text-truncate" style={{ maxWidth: '120px' }}>
+                          {selectedSemanas.length === availableSemanas.length && availableSemanas.length > 1 
+                            ? 'TODAS' 
+                            : (selectedSemanas.join(', ') || '...')}
+                        </span>
+                      </Dropdown.Toggle>
+                      <Dropdown.Menu className="custom-scrollbar border-0 shadow-lg mt-2" style={{ maxHeight: '250px', background: 'var(--theme-background-secondary)', width: '220px', borderRadius: '0' }}>
+                        <div className="px-3 py-2 d-flex align-items-center gap-2 border-bottom border-secondary border-opacity-10" onClick={handleSelectAllWeeks} style={{ cursor: 'pointer' }}>
+                          <Form.Check type="checkbox" checked={selectedSemanas.length === availableSemanas.length && availableSemanas.length > 0} readOnly />
+                          <span className="fw-black text-danger" style={{ fontSize: '0.7rem' }}>TODAS LAS SEMANAS</span>
+                        </div>
+                        {availableSemanas.map(sem => (
+                          <div key={sem} className="px-3 py-1 d-flex align-items-center gap-2 dropdown-item-custom" onClick={() => handleSemanaToggle(sem)} style={{ cursor: 'pointer' }}>
+                            <Form.Check type="checkbox" checked={selectedSemanas.includes(sem)} readOnly />
+                            <span className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>SEMANA {sem}</span>
+                          </div>
+                        ))}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </div>
+                </div>
+              </Col>
+              {/* 5. Sincro */}
+              <Col xs={12} md={4}>
+                <div className="info-pill-new w-100">
+                  <span className="pill-icon-sober text-success p-1"><FaSyncAlt size={12}/></span>
+                  <div className="pill-content flex-grow-1">
+                    <span className="pill-label">SINCRO DEMANDA</span>
+                    <div className="fw-black sincro-val">
+                      {eficienciaMetadata?.lastUpdated || 'SIN DATOS'}
+                    </div>
+                  </div>
+                </div>
               </Col>
             </>
-          ) : null}
-          <Col xs={12} md={selectedReportType === 'EFICIENCIA' ? 3 : 4}>
-            <div className="info-pill-new w-100">
-              <span className="pill-icon-sober text-success"><FaSyncAlt /></span>
-              <div className="pill-content flex-grow-1">
-                <span className="pill-label">SINCRO DEMANDA</span>
-                <div className="fw-black sincro-val">
-                  {selectedReportType === 'EFICIENCIA' ? (eficienciaMetadata?.lastUpdated || 'SIN DATOS') : (volumenMetadata?.lastUpdated || 'SIN DATOS')}
+          ) : (
+            <>
+              <Col xs={12} md={8}>
+                <div className="info-pill-new w-100">
+                  <span className="pill-icon-sober text-success p-1"><FaSyncAlt size={12}/></span>
+                  <div className="pill-content flex-grow-1">
+                    <span className="pill-label">SINCRO DEMANDA</span>
+                    <div className="fw-black sincro-val">
+                      {volumenMetadata?.lastUpdated || 'SIN DATOS'}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </Col>
+              </Col>
+            </>
+          )}
         </Row>
       </div>
 
@@ -330,38 +409,41 @@ const SupervisorPage: FC = () => {
       <style>{`
         .admin-layout-container { background: var(--theme-background-primary); min-height: 100%; }
         .fw-black { font-weight: 900 !important; }
-        .l-height-1 { letter-spacing: 0.5px; font-size: 0.85rem; color: var(--theme-text-primary); }
-        .sub-label { font-size: 0.6rem; color: var(--theme-text-secondary); opacity: 0.7; }
+        .l-height-1 { letter-spacing: 0.5px; font-size: 0.8rem; color: var(--theme-text-primary); }
+        .sub-label { font-size: 0.55rem; color: var(--theme-text-secondary); opacity: 0.7; }
         
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 40px; overflow: hidden; }
-        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); padding: 0 10px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
-        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; }
-        .pill-label { font-size: 0.45rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; color: var(--theme-text-primary); }
-        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; }
-        .sincro-val { font-size: 0.75rem; color: var(--theme-text-primary); margin-top: -2px; }
+        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 36px; overflow: hidden; }
+        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 28px; justify-content: center; }
+        .pill-content { padding: 0 8px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .pill-label { font-size: 0.4rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; color: var(--theme-text-primary); margin-bottom: -2px; }
+        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem; padding: 0 !important; margin-top: -2px; }
+        .sincro-val { font-size: 0.65rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .dropdown-item-custom:hover { background: var(--theme-background-tertiary); }
+        .dropdown-toggle::after { color: var(--theme-text-secondary) !important; margin-left: auto; }
 
         .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; }
-        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 12px !important; border-radius: 0 !important; }
+        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 10px !important; border-radius: 0 !important; }
         .loc-header-compact .accordion-button:not(.collapsed) { background: transparent !important; color: inherit !important; box-shadow: none !important; }
         .loc-header-compact .accordion-button:after { display: none; }
-        .loc-avatar { width: 42px; height: 42px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; }
-        .badge-industrial { padding: 8px 12px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 60px; }
-        .b-label { font-size: 0.55rem; font-weight: 800; }
+        .loc-avatar { width: 38px; height: 38px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; }
+        .badge-industrial { padding: 6px 10px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 50px; }
+        .b-label { font-size: 0.5rem; font-weight: 800; }
 
         .mesa-title-bar { background: var(--theme-icon-bg); border-left: 4px solid var(--color-red-primary); }
-        .m-label { font-size: 0.75rem; color: var(--theme-text-primary); }
-        .m-stats { font-size: 0.65rem; color: var(--theme-text-secondary); text-transform: uppercase; }
+        .m-label { font-size: 0.7rem; color: var(--theme-text-primary); }
+        .m-stats { font-size: 0.6rem; color: var(--theme-text-secondary); text-transform: uppercase; }
 
         .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 0; }
-        .r-label { font-size: 0.75rem; color: var(--theme-text-primary); }
-        .r-val { font-size: 0.8rem; }
-        .r-unit { font-size: 0.6rem; opacity: 0.7; }
-        .chevron-icon { font-size: 0.65rem; transition: transform 0.2s ease; color: var(--theme-text-secondary); }
+        .r-label { font-size: 0.7rem; color: var(--theme-text-primary); }
+        .r-val { font-size: 0.75rem; }
+        .r-unit { font-size: 0.55rem; opacity: 0.7; }
+        .chevron-icon { font-size: 0.6rem; transition: transform 0.2s ease; color: var(--theme-text-secondary); }
         .chevron-icon.active { transform: rotate(90deg); color: var(--color-red-primary); }
 
-        .p-name { font-size: 0.7rem; color: var(--theme-text-primary); }
-        .p-sap { font-size: 0.6rem; }
-        .p-badge { font-size: 0.65rem; border-radius: 0; font-weight: 900; }
+        .p-name { font-size: 0.65rem; color: var(--theme-text-primary); }
+        .p-sap { font-size: 0.55rem; }
+        .p-badge { font-size: 0.6rem; border-radius: 0; font-weight: 900; }
 
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
         .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; margin-bottom: 10px; }
