@@ -100,8 +100,10 @@ const AdminUploadPage: FC = () => {
       const loc = m.Loc || 'OTRO';
       const mesa = m['Mesa Com'] || m['MESA COM'] || 'SIN MESA';
       const ruta = m['Ruta com'] || m['RUTA COM'] || 'SIN RUTA';
-      const dias = String(m['SEG.DIAS'] || '').split(/[, -]/).map(d => d.trim().toUpperCase().substring(0, 2)).filter(d => d.length === 2);
-      const sem = String(m['SEM. PREV'] || '1');
+      const dias = String(m['SEGDIAS'] || m['SEG DIAS'] || m['SEG.DIAS'] || '').split(/[, -]/)
+        .map(d => d.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 2))
+        .filter(d => d.length === 2);
+      const sem = String(m['SEMPREV'] || m['SEM PREV'] || m['SEM. PREV'] || '1');
 
       if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, id: loc, mesas: {} };
       if (!hier[loc].mesas[mesa]) hier[loc].mesas[mesa] = { rutas: {} };
