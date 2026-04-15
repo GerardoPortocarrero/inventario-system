@@ -192,10 +192,10 @@ const AdminUploadPage: FC = () => {
                       </div>
 
                       <Form.Group>
-                        <Form.Label className={`btn btn-outline-${type === 'maestro' ? 'danger' : 'primary'} w-100 py-2 fw-black text-uppercase`} style={{ fontSize: '0.75rem' }}>
+                        <Form.Label htmlFor={`upload-${type}`} className={`btn btn-outline-${type === 'maestro' ? 'danger' : 'primary'} w-100 py-2 fw-black text-uppercase`} style={{ fontSize: '0.75rem' }}>
                           <FaCloudUploadAlt className="me-2 fs-5" /> Sincronizar {type}
                         </Form.Label>
-                        <Form.Control type="file" accept=".xlsx, .xls, .csv" hidden onChange={(e: any) => processFile(e.target.files?.[0], type as any)} disabled={isUploading} />
+                        <Form.Control id={`upload-${type}`} type="file" accept=".xlsx, .xls, .csv" hidden onChange={(e: any) => processFile(e.target.files?.[0], type as any)} disabled={isUploading} />
                       </Form.Group>
                     </div>
                   </Col>
