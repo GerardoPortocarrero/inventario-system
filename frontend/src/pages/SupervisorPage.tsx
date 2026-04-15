@@ -283,8 +283,8 @@ const SupervisorPage: FC = () => {
   );
 
   return (
-    <div className="admin-layout-container flex-column overflow-hidden gap-3">
-      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem' }}>
+    <div className="admin-layout-container flex-column gap-3" style={{ overflow: 'visible' }}>
+      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem', overflow: 'visible' }}>
         <Row className="g-1 align-items-center">
           {/* 1. Sede */}
           <Col xs={12} md={2}>
@@ -346,12 +346,21 @@ const SupervisorPage: FC = () => {
                             : (selectedSemanas.join(', ') || '...')}
                         </span>
                       </Dropdown.Toggle>
-                      <Dropdown.Menu className="custom-scrollbar border-0 shadow-lg mt-2" style={{ maxHeight: '250px', background: 'var(--theme-background-secondary)', width: '220px', borderRadius: '0' }}>
+                      <Dropdown.Menu 
+                        flip={false}
+                        popperConfig={{ strategy: 'fixed' }}
+                        className="custom-scrollbar border-0 shadow-lg mt-2" 
+                        style={{ maxHeight: '250px', background: 'var(--theme-background-secondary)', width: '220px', borderRadius: '0', zIndex: 99999 }}
+                      >
                         <div className="px-3 py-2 d-flex align-items-center gap-2 border-bottom border-secondary border-opacity-10" onClick={handleSelectAllWeeks} style={{ cursor: 'pointer' }}>
                           <Form.Check type="checkbox" checked={selectedSemanas.length === availableSemanas.length && availableSemanas.length > 0} readOnly />
                           <span className="fw-black text-danger" style={{ fontSize: '0.7rem' }}>TODAS LAS SEMANAS</span>
                         </div>
-                        {availableSemanas.map(sem => (
+                        {availableSemanas.length === 0 ? (
+                          <div className="px-3 py-3 text-center text-muted fw-bold" style={{ fontSize: '0.65rem' }}>
+                            SIN SEMANAS DISPONIBLES
+                          </div>
+                        ) : availableSemanas.map(sem => (
                           <div key={sem} className="px-3 py-1 d-flex align-items-center gap-2 dropdown-item-custom" onClick={() => handleSemanaToggle(sem)} style={{ cursor: 'pointer' }}>
                             <Form.Check type="checkbox" checked={selectedSemanas.includes(sem)} readOnly />
                             <span className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>SEMANA {sem}</span>
@@ -412,15 +421,24 @@ const SupervisorPage: FC = () => {
         .l-height-1 { letter-spacing: 0.5px; font-size: 0.8rem; color: var(--theme-text-primary); }
         .sub-label { font-size: 0.55rem; color: var(--theme-text-secondary); opacity: 0.7; }
         
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 36px; overflow: hidden; }
-        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 28px; justify-content: center; }
-        .pill-content { padding: 0 8px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 36px; position: relative; }
+        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 28px; justify-content: center; z-index: 2; }
+        .pill-content { padding: 0 8px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; z-index: 1; }
         .pill-label { font-size: 0.4rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; color: var(--theme-text-primary); margin-bottom: -2px; }
-        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem; padding: 0 !important; margin-top: -2px; }
+        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
         .sincro-val { font-size: 0.65rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .dropdown-item-custom:hover { background: var(--theme-background-tertiary); }
-        .dropdown-toggle::after { color: var(--theme-text-secondary) !important; margin-left: auto; }
+        .dropdown-item-custom:hover { background: var(--color-red-primary) !important; color: white !important; }
+        .dropdown-item-custom:hover span { color: white !important; }
+        .dropdown-toggle::after { color: var(--theme-text-secondary) !important; margin-left: 8px; vertical-align: middle; }
+        
+        /* Ajuste para que el dropdown no se corte */
+        .dropdown-menu { 
+          z-index: 9999 !important; 
+          border-radius: 0 !important; 
+          margin-top: 5px !important;
+          border: 1px solid var(--theme-border-default) !important;
+        }
 
         .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; }
         .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 10px !important; border-radius: 0 !important; }

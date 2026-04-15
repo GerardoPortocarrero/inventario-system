@@ -88,7 +88,42 @@ const AdminUploadPage: FC = () => {
       data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
       metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
     });
-    setReportProgress({ volumen: 100, eficiencia: 100, diageo: 100, acl: 100 });
+    setReportProgress(prev => ({ ...prev, volumen: 100 }));
+  };
+
+  const generateReportEficiencia = async (demanda: any[], maestro: any[]) => {
+    setReportProgress(prev => ({ ...prev, eficiencia: 10 }));
+    const demandaSet = new Set(demanda.map(d => String(d.Solicitante)));
+    const hier: Record<string, any> = {};
+
+    maestro.forEach(m => {
+      const loc = m.Loc || 'OTRO';
+      const mesa = m['Mesa Com'] || m['MESA COM'] || 'SIN MESA';
+      const ruta = m['Ruta com'] || m['RUTA COM'] || 'SIN RUTA';
+      const dias = String(m['SEG.DIAS'] || '').split(/[, -]/).map(d => d.trim().toUpperCase().substring(0, 2)).filter(d => d.length === 2);
+      const sem = String(m['SEM. PREV'] || '1');
+
+      if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, id: loc, mesas: {} };
+      if (!hier[loc].mesas[mesa]) hier[loc].mesas[mesa] = { rutas: {} };
+      if (!hier[loc].mesas[mesa].rutas[ruta]) hier[loc].mesas[mesa].rutas[ruta] = { schedules: {} };
+
+      const r = hier[loc].mesas[mesa].rutas[ruta];
+      const isEfec = demandaSet.has(String(m.Codigo));
+
+      dias.forEach(dia => {
+        const key = `${dia}_${sem}`;
+        if (!r.schedules[key]) r.schedules[key] = { prog: 0, efec: 0 };
+        r.schedules[key].prog += 1;
+        if (isEfec) r.schedules[key].efec += 1;
+      });
+    });
+
+    setReportProgress(prev => ({ ...prev, eficiencia: 80 }));
+    await set(ref(rtdb, 'reportes/eficiencia'), {
+      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
+      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
+    });
+    setReportProgress(prev => ({ ...prev, eficiencia: 100 }));
   };
 
   const processFile = (file: File, type: 'maestro' | 'demanda') => {
@@ -116,7 +151,10 @@ const AdminUploadPage: FC = () => {
         if (type === 'demanda') {
           setProcessingReports(true);
           const maestroSnap = await new Promise<any[]>((res) => onValue(ref(rtdb, 'maestro/data'), (s) => res(s.exists() ? s.val() : []), { onlyOnce: true }));
-          await generateReportVolumen(sanitizedData, maestroSnap);
+          await Promise.all([
+            generateReportVolumen(sanitizedData, maestroSnap),
+            generateReportEficiencia(sanitizedData, maestroSnap)
+          ]);
           setTimeout(() => {
             setProcessingReports(false);
             setReportProgress({ volumen: 0, eficiencia: 0, diageo: 0, acl: 0 });
