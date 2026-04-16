@@ -344,8 +344,9 @@ const SupervisorPage: FC = () => {
                     <span className="pill-label">SEMANAS ({selectedSemanas.length})</span>
                     <Dropdown autoClose="outside" className="w-100 border-0 shadow-none">
                       <Dropdown.Toggle 
+                        as="div"
                         className="pill-select-v2 w-100 text-start d-flex justify-content-between align-items-center p-0" 
-                        style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
+                        style={{ background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
                       >
                         <span className="text-truncate" style={{ maxWidth: '120px' }}>
                           {selectedSemanas.length === availableSemanas.length && availableSemanas.length > 1 
