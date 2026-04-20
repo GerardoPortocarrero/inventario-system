@@ -5,9 +5,7 @@ import { rtdb } from '../api/firebase';
 import { ref, onValue } from 'firebase/database';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
-import { 
-  FaChartLine, FaWarehouse, FaBox, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt
-} from 'react-icons/fa';
+import { FaWarehouse, FaBox, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
 
 type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'DIAGEO' | 'ACL';
