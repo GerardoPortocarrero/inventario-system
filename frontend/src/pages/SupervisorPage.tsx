@@ -65,7 +65,8 @@ const SupervisorPage: FC = () => {
         });
       });
     });
-    return Array.from(semanas).sort();
+    // Ordenamiento numérico para evitar bug de orden alfabético
+    return Array.from(semanas).sort((a, b) => parseInt(a) - parseInt(b));
   }, [eficienciaReport]);
 
   // Selección por defecto: última semana disponible
@@ -75,11 +76,13 @@ const SupervisorPage: FC = () => {
     }
   }, [availableSemanas]);
 
-  const handleSemanaToggle = (sem: string) => {
+  const handleSemanaToggle = (sem: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar que el dropdown se confunda
     setSelectedSemanas(prev => prev.includes(sem) ? prev.filter(s => s !== sem) : [...prev, sem]);
   };
 
-  const handleSelectAllWeeks = () => {
+  const handleSelectAllWeeks = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (selectedSemanas.length === availableSemanas.length) {
       setSelectedSemanas([availableSemanas[availableSemanas.length - 1]]);
     } else {
@@ -349,7 +352,7 @@ const SupervisorPage: FC = () => {
                         <span className="text-truncate" style={{ maxWidth: '120px' }}>
                           {selectedSemanas.length === availableSemanas.length && availableSemanas.length > 1 
                             ? 'TODAS' 
-                            : (selectedSemanas.join(', ') || '...')}
+                            : ([...selectedSemanas].sort((a, b) => parseInt(a) - parseInt(b)).join(', ') || '...')}
                         </span>
                       </Dropdown.Toggle>
                       <Dropdown.Menu 
@@ -434,8 +437,20 @@ const SupervisorPage: FC = () => {
         .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
         .sincro-val { font-size: 0.65rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .dropdown-item-custom:hover { background: var(--color-red-primary) !important; color: white !important; }
-        .dropdown-item-custom:hover span { color: white !important; }
+        .dropdown-item-custom {
+          transition: all 0.2s ease;
+        }
+        .dropdown-item-custom:hover { 
+          background: rgba(244, 0, 9, 0.1) !important; 
+        }
+        .dropdown-item-custom .form-check-input:checked {
+          background-color: var(--color-red-primary) !important;
+          border-color: var(--color-red-primary) !important;
+        }
+        .dropdown-item-custom .form-check-input:focus {
+          box-shadow: 0 0 0 0.25rem rgba(244, 0, 9, 0.25) !important;
+          border-color: var(--color-red-primary) !important;
+        }
         .dropdown-toggle::after { color: var(--theme-text-secondary) !important; margin-left: 8px; vertical-align: middle; }
         
         /* Ajuste para que el dropdown no se corte */
