@@ -356,12 +356,19 @@ const SupervisorPage: FC = () => {
                         </span>
                       </Dropdown.Toggle>
                       <Dropdown.Menu 
+                        renderOnMount
                         flip={false}
-                        popperConfig={{ strategy: 'fixed' }}
+                        popperConfig={{ 
+                          strategy: 'fixed',
+                          modifiers: [
+                            { name: 'computeStyles', options: { gpuAcceleration: false } },
+                            { name: 'preventOverflow', options: { boundary: 'viewport' } }
+                          ]
+                        }}
                         className="custom-scrollbar border-0 shadow-lg mt-2" 
                         style={{ maxHeight: '250px', background: 'var(--theme-background-secondary)', width: '220px', borderRadius: '0', zIndex: 99999 }}
                       >
-                        <div className="px-3 py-2 d-flex align-items-center gap-2 border-bottom border-secondary border-opacity-10" onClick={handleSelectAllWeeks} style={{ cursor: 'pointer' }}>
+                        <div className="px-3 py-2 d-flex align-items-center gap-2 border-bottom border-secondary border-opacity-10" onClick={(e) => handleSelectAllWeeks(e)} style={{ cursor: 'pointer' }}>
                           <Form.Check type="checkbox" checked={selectedSemanas.length === availableSemanas.length && availableSemanas.length > 0} readOnly />
                           <span className="fw-black text-danger" style={{ fontSize: '0.7rem' }}>TODAS LAS SEMANAS</span>
                         </div>
@@ -370,7 +377,7 @@ const SupervisorPage: FC = () => {
                             SIN SEMANAS DISPONIBLES
                           </div>
                         ) : availableSemanas.map(sem => (
-                          <div key={sem} className="px-3 py-1 d-flex align-items-center gap-2 dropdown-item-custom" onClick={() => handleSemanaToggle(sem)} style={{ cursor: 'pointer' }}>
+                          <div key={sem} className="px-3 py-1 d-flex align-items-center gap-2 dropdown-item-custom" onClick={(e) => handleSemanaToggle(sem, e)} style={{ cursor: 'pointer' }}>
                             <Form.Check type="checkbox" checked={selectedSemanas.includes(sem)} readOnly />
                             <span className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>SEMANA {sem}</span>
                           </div>
