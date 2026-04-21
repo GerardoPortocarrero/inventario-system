@@ -19,6 +19,11 @@
         "metadata": {
           ".validate": "newData.hasChildren(['lastUpdated', 'processedBy'])"
         }
+      },
+      "bebidas": {
+        "metadata": {
+          ".validate": "newData.hasChildren(['lastUpdated', 'processedBy'])"
+        }
       }
     }
   }

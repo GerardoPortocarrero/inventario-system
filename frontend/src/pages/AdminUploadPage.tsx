@@ -17,14 +17,14 @@ const DEMANDA_COLUMNS = ['Entrega', 'Hora', 'Referencia de cliente', 'Fecha docu
 
 const AdminUploadPage: FC = () => {
   const { userName, userEmail } = useAuth();
-  const { sedes } = useData();
+  const { sedes, beverageTypes } = useData();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [lastUploads, setLastUploads] = useState<Record<string, any>>({});
   const [metadataLoadingStatus, setMetadataLoadingStatus] = useState<Record<string, boolean>>({ maestro: true, demanda: true });
 
   const [processingReports, setProcessingReports] = useState(false);
-  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, diageo: 0, acl: 0 });
+  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, acl: 0 });
 
   useEffect(() => {
     const types = ['maestro', 'demanda'];
@@ -128,6 +128,51 @@ const AdminUploadPage: FC = () => {
     setReportProgress(prev => ({ ...prev, eficiencia: 100 }));
   };
 
+  const generateReportBebidas = async (demanda: any[], maestro: any[]) => {
+    setReportProgress(prev => ({ ...prev, bebidas: 10 }));
+    const prodSnap = await getDocs(collection(db, 'productos'));
+    const products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    const productMap = products.reduce((acc, p) => ({ ...acc, [p.sap]: p }), {} as Record<string, any>);
+    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
+    const UNIT_CASE_ML = 5677.92;
+    const hier: Record<string, any> = {};
+
+    setReportProgress(prev => ({ ...prev, bebidas: 40 }));
+    demanda.forEach(d => {
+      const prod = productMap[String(d.Material)];
+      const client = maestroMap[String(d.Solicitante)];
+      if (!prod || !client) return;
+
+      const loc = client.Loc || 'OTRO';
+      const tipoId = prod.tipoBebidaId || 'SIN_TIPO';
+      const tipoNombre = beverageTypes.find(t => t.id === tipoId)?.nombre || 'OTROS';
+      const rutaCom = client['Ruta com'] || client['RUTA COM'] || 'SIN RUTA';
+
+      let totalUnits = d.Medida === 'CAJ' ? (Number(d.Cantidad) || 0) * (prod.unidades || 1) : (Number(d.Cantidad) || 0);
+      const physicalBoxes = totalUnits / (prod.unidades || 1);
+      const unitCases = (totalUnits * (prod.mililitros || 0)) / UNIT_CASE_ML;
+
+      if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, tipos: {} };
+      if (!hier[loc].tipos[tipoId]) hier[loc].tipos[tipoId] = { nombre: tipoNombre.toUpperCase(), totalCF: 0, totalUC: 0, rutas: {} };
+      if (!hier[loc].tipos[tipoId].rutas[rutaCom]) hier[loc].tipos[tipoId].rutas[rutaCom] = { totalCF: 0, totalUC: 0, productos: {} };
+
+      const r = hier[loc].tipos[tipoId].rutas[rutaCom];
+      r.totalCF += physicalBoxes; r.totalUC += unitCases;
+      
+      if (!r.productos[prod.sap]) r.productos[prod.sap] = { nombre: prod.nombre, cantU: 0, cantC: 0 };
+      r.productos[prod.sap].cantU += totalUnits; r.productos[prod.sap].cantC += physicalBoxes;
+
+      hier[loc].tipos[tipoId].totalCF += physicalBoxes; hier[loc].tipos[tipoId].totalUC += unitCases;
+    });
+
+    setReportProgress(prev => ({ ...prev, bebidas: 70 }));
+    await set(ref(rtdb, 'reportes/bebidas'), {
+      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
+      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
+    });
+    setReportProgress(prev => ({ ...prev, bebidas: 100 }));
+  };
+
   const processFile = (file: File, type: 'maestro' | 'demanda') => {
     setIsUploading(true); setUploadProgress(10);
     const reader = new FileReader();
@@ -155,11 +200,12 @@ const AdminUploadPage: FC = () => {
           const maestroSnap = await new Promise<any[]>((res) => onValue(ref(rtdb, 'maestro/data'), (s) => res(s.exists() ? s.val() : []), { onlyOnce: true }));
           await Promise.all([
             generateReportVolumen(sanitizedData, maestroSnap),
-            generateReportEficiencia(sanitizedData, maestroSnap)
+            generateReportEficiencia(sanitizedData, maestroSnap),
+            generateReportBebidas(sanitizedData, maestroSnap)
           ]);
           setTimeout(() => {
             setProcessingReports(false);
-            setReportProgress({ volumen: 0, eficiencia: 0, diageo: 0, acl: 0 });
+            setReportProgress({ volumen: 0, eficiencia: 0, bebidas: 0, acl: 0 });
           }, 3000);
         }
       } catch (err: any) { toast.error(err.message); }
@@ -260,7 +306,7 @@ const AdminUploadPage: FC = () => {
                   {[
                     { id: 'volumen', label: 'Reporte de Volumen', variant: 'success', icon: <FaShoppingCart /> },
                     { id: 'eficiencia', label: 'Reporte de Eficiencia', variant: 'primary', icon: <FaChartLine /> },
-                    { id: 'diageo', label: 'Reporte Diageo', variant: 'info', icon: <FaGlassMartiniAlt /> },
+                    { id: 'bebidas', label: 'Reporte de Bebidas', variant: 'info', icon: <FaGlassMartiniAlt /> },
                     { id: 'acl', label: 'Reporte ACL', variant: 'warning', icon: <FaBox /> }
                   ].map(rep => (
                     <Col key={rep.id} xs={12} md={6} lg={3}>
