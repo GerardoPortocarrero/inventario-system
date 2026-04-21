@@ -28,7 +28,17 @@ const SupervisorPage: FC = () => {
   // Filtros para Eficiencia
   const [selectedDia, setSelectedDia] = useState<string>(['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'][new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
   const [selectedSemanas, setSelectedSemanas] = useState<string[]>([]);
+  const [selectedBebidaTypes, setSelectedBebidaTypes] = useState<string[]>([]);
   const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
+
+  const { beverageTypes } = useData();
+
+  // Inicializar tipos de bebida
+  useEffect(() => {
+    if (beverageTypes.length > 0 && selectedBebidaTypes.length === 0) {
+      setSelectedBebidaTypes(beverageTypes.map(t => t.id));
+    }
+  }, [beverageTypes]);
 
   useEffect(() => {
     setLoading(true);
@@ -108,9 +118,37 @@ const SupervisorPage: FC = () => {
   }, [volumenReport, selectedSedeId, sedes]);
 
   const filteredBebidasData = useMemo(() => {
-    if (selectedSedeId === 'GLOBAL') return bebidasReport;
-    return bebidasReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
-  }, [bebidasReport, selectedSedeId, sedes]);
+    let data = selectedSedeId === 'GLOBAL' ? bebidasReport : bebidasReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    
+    if (selectedBebidaTypes.length === 0) return [];
+
+    return data.map(loc => {
+      const newTipos: Record<string, any> = {};
+      Object.entries(loc.tipos || {}).forEach(([tipoId, tipo]: [string, any]) => {
+        if (selectedBebidaTypes.includes(tipoId)) {
+          newTipos[tipoId] = tipo;
+        }
+      });
+      if (Object.keys(newTipos).length > 0) {
+        return { ...loc, tipos: newTipos };
+      }
+      return null;
+    }).filter(Boolean);
+  }, [bebidasReport, selectedSedeId, sedes, selectedBebidaTypes]);
+
+  const handleBebidaTypeToggle = (typeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedBebidaTypes(prev => prev.includes(typeId) ? prev.filter(t => t !== typeId) : [...prev, typeId]);
+  };
+
+  const handleSelectAllBebidas = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedBebidaTypes.length === beverageTypes.length) {
+      setSelectedBebidaTypes([]);
+    } else {
+      setSelectedBebidaTypes(beverageTypes.map(t => t.id));
+    }
+  };
 
   const filteredEficienciaData = useMemo(() => {
     let data = selectedSedeId === 'GLOBAL' ? eficienciaReport : eficienciaReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
@@ -421,7 +459,7 @@ const SupervisorPage: FC = () => {
             </div>
           </Col>
 
-          {selectedReportType === 'EFICIENCIA' ? (
+          {selectedReportType === 'EFICIENCIA' && (
             <>
               {/* 3. Día */}
               <Col xs={4} md={1}>
@@ -484,34 +522,80 @@ const SupervisorPage: FC = () => {
                   </div>
                 </div>
               </Col>
-              {/* 5. Sincro */}
-              <Col xs={12} md={4}>
-                <div className="info-pill-new w-100">
-                  <span className="pill-icon-sober text-success p-1"><FaSyncAlt size={12}/></span>
-                  <div className="pill-content flex-grow-1">
-                    <span className="pill-label">SINCRO DEMANDA</span>
-                    <div className="fw-black sincro-val">
-                      {eficienciaMetadata?.lastUpdated || 'SIN DATOS'}
-                    </div>
-                  </div>
-                </div>
-              </Col>
-            </>
-          ) : (
-            <>
-              <Col xs={12} md={8}>
-                <div className="info-pill-new w-100">
-                  <span className="pill-icon-sober text-success p-1"><FaSyncAlt size={12}/></span>
-                  <div className="pill-content flex-grow-1">
-                    <span className="pill-label">SINCRO DEMANDA</span>
-                    <div className="fw-black sincro-val">
-                      {selectedReportType === 'BEBIDAS' ? bebidasMetadata?.lastUpdated : volumenMetadata?.lastUpdated || 'SIN DATOS'}
-                    </div>
-                  </div>
-                </div>
-              </Col>
             </>
           )}
+
+          {selectedReportType === 'BEBIDAS' && (
+            <Col xs={12} md={4}>
+              <div className="info-pill-new w-100">
+                <span className="pill-icon-sober text-info p-1"><FaGlassMartiniAlt size={12}/></span>
+                <div className="pill-content flex-grow-1 ps-2">
+                  <span className="pill-label">CATEGORÍAS ({selectedBebidaTypes.length})</span>
+                  <Dropdown autoClose="outside" className="w-100 border-0 shadow-none">
+                    <Dropdown.Toggle 
+                      as="div"
+                      className="pill-select-v2 w-100 text-start d-flex justify-content-between align-items-center p-0" 
+                      style={{ background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
+                    >
+                      <span className="text-truncate" style={{ maxWidth: '180px' }}>
+                        {selectedBebidaTypes.length === beverageTypes.length && beverageTypes.length > 0 
+                          ? 'TODAS' 
+                          : (beverageTypes.filter(t => selectedBebidaTypes.includes(t.id)).map(t => t.nombre.toUpperCase()).join(', ') || '...')}
+                      </span>
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu 
+                      renderOnMount
+                      flip={false}
+                      popperConfig={{ 
+                        strategy: 'fixed',
+                        modifiers: [
+                          { name: 'computeStyles', options: { gpuAcceleration: false } },
+                          { name: 'preventOverflow', options: { boundary: 'viewport' } }
+                        ]
+                      }}
+                      className="custom-scrollbar border-0 shadow-lg mt-2" 
+                      style={{ 
+                        maxHeight: '400px', 
+                        overflowY: 'auto',
+                        background: 'var(--theme-background-secondary)', 
+                        minWidth: '240px', 
+                        width: 'auto',
+                        borderRadius: '0', 
+                        zIndex: 99999 
+                      }}
+                    >
+                      <div className="px-3 py-2 d-flex align-items-center gap-2 border-bottom border-secondary border-opacity-10" onClick={(e) => { e.stopPropagation(); handleSelectAllBebidas(e); }} style={{ cursor: 'pointer' }}>
+                        <Form.Check type="checkbox" checked={selectedBebidaTypes.length === beverageTypes.length && beverageTypes.length > 0} readOnly />
+                        <span className="fw-black text-danger" style={{ fontSize: '0.7rem' }}>TODAS LAS CATEGORÍAS</span>
+                      </div>
+                      {beverageTypes.length === 0 ? (
+                        <div className="px-3 py-3 text-center text-muted fw-bold" style={{ fontSize: '0.65rem' }}>
+                          SIN CATEGORÍAS DISPONIBLES
+                        </div>
+                      ) : beverageTypes.map(type => (
+                        <div key={type.id} className="px-3 py-1 d-flex align-items-center gap-2 dropdown-item-custom" onClick={(e) => handleBebidaTypeToggle(type.id, e)} style={{ cursor: 'pointer' }}>
+                          <Form.Check type="checkbox" checked={selectedBebidaTypes.includes(type.id)} readOnly />
+                          <span className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>{type.nombre.toUpperCase()}</span>
+                        </div>
+                      ))}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </div>
+              </div>
+            </Col>
+          )}
+
+          <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'ACL' ? 8 : 4}>
+            <div className="info-pill-new w-100">
+              <span className="pill-icon-sober text-success p-1"><FaSyncAlt size={12}/></span>
+              <div className="pill-content flex-grow-1">
+                <span className="pill-label">SINCRO DEMANDA</span>
+                <div className="fw-black sincro-val">
+                  {selectedReportType === 'EFICIENCIA' ? eficienciaMetadata?.lastUpdated : selectedReportType === 'BEBIDAS' ? bebidasMetadata?.lastUpdated : volumenMetadata?.lastUpdated || 'SIN DATOS'}
+                </div>
+              </div>
+            </div>
+          </Col>
         </Row>
       </div>
 
@@ -541,28 +625,50 @@ const SupervisorPage: FC = () => {
         .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
         .sincro-val { font-size: 0.65rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+        /* --- Estilo Industrial Dropdowns Múltiples --- */
+        .industrial-dropdown-menu { 
+          background: #111111 !important; 
+          border: 1px solid #333 !important; 
+          border-radius: 0 !important; 
+          box-shadow: 0 15px 40px rgba(0,0,0,0.9) !important;
+          padding: 0 !important;
+          z-index: 99999 !important;
+        }
+
         .dropdown-item-custom {
-          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 15px;
+          cursor: pointer;
+          transition: background 0.2s ease;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          background: transparent !important;
         }
+
         .dropdown-item-custom:hover { 
-          background: rgba(244, 0, 9, 0.1) !important; 
+          background: rgba(244, 0, 9, 0.15) !important; 
         }
+
+        .dropdown-label-text {
+          color: #ffffff !important;
+          font-size: 0.75rem !important;
+          font-weight: 700 !important;
+          text-transform: uppercase;
+          opacity: 1 !important;
+        }
+
+        .dropdown-item-custom .form-check-input {
+          background-color: #222;
+          border-color: #444;
+          width: 1.1rem;
+          height: 1.1rem;
+          cursor: pointer;
+        }
+
         .dropdown-item-custom .form-check-input:checked {
           background-color: var(--color-red-primary) !important;
           border-color: var(--color-red-primary) !important;
-        }
-        .dropdown-item-custom .form-check-input:focus {
-          box-shadow: 0 0 0 0.25rem rgba(244, 0, 9, 0.25) !important;
-          border-color: var(--color-red-primary) !important;
-        }
-        .dropdown-toggle::after { color: var(--theme-text-secondary) !important; margin-left: 8px; vertical-align: middle; }
-        
-        /* Ajuste para que el dropdown no se corte */
-        .dropdown-menu { 
-          z-index: 9999 !important; 
-          border-radius: 0 !important; 
-          margin-top: 5px !important;
-          border: 1px solid var(--theme-border-default) !important;
         }
 
         .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; }
