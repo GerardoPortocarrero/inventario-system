@@ -242,7 +242,7 @@ const SupervisorPage: FC = () => {
                                     <ListGroup variant="flush">
                                       {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
                                         <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
-                                          <div className="d-flex flex-column"><span className="fw-bold p-name">{p.nombre}</span><span className="text-muted fw-bold p-sap">SAP: {sap}</span></div>
+                                          <div className="d-flex flex-column"><span className="fw-bold p-name">{p.nombre}</span><span className="fw-bold p-sap">SAP: {sap}</span></div>
                                           <div className="d-flex gap-2 align-items-center">
                                             <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
                                             <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
@@ -322,7 +322,7 @@ const SupervisorPage: FC = () => {
                                     <ListGroup variant="flush">
                                       {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
                                         <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
-                                          <div className="d-flex flex-column"><span className="fw-bold p-name">{p.nombre}</span><span className="text-muted fw-bold p-sap">SAP: {sap}</span></div>
+                                          <div className="d-flex flex-column"><span className="fw-bold p-name">{p.nombre}</span><span className="fw-bold p-sap">SAP: {sap}</span></div>
                                           <div className="d-flex gap-2 align-items-center">
                                             <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
                                             <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
@@ -691,7 +691,7 @@ const SupervisorPage: FC = () => {
         .chevron-icon.active { transform: rotate(90deg); color: var(--color-red-primary); }
 
         .p-name { font-size: 0.65rem; color: var(--theme-text-primary); }
-        .p-sap { font-size: 0.55rem; }
+        .p-sap { font-size: 0.55rem; color: #00d1ff; }
         .p-badge { font-size: 0.6rem; border-radius: 0; font-weight: 900; }
 
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
