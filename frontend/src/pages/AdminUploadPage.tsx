@@ -24,7 +24,7 @@ const AdminUploadPage: FC = () => {
   const [metadataLoadingStatus, setMetadataLoadingStatus] = useState<Record<string, boolean>>({ maestro: true, demanda: true });
 
   const [processingReports, setProcessingReports] = useState(false);
-  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, acl: 0 });
+  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, cobertura: 0 });
 
   useEffect(() => {
     const types = ['maestro', 'demanda'];
@@ -205,7 +205,7 @@ const AdminUploadPage: FC = () => {
           ]);
           setTimeout(() => {
             setProcessingReports(false);
-            setReportProgress({ volumen: 0, eficiencia: 0, bebidas: 0, acl: 0 });
+            setReportProgress({ volumen: 0, eficiencia: 0, bebidas: 0, cobertura: 0 });
           }, 3000);
         }
       } catch (err: any) { toast.error(err.message); }
@@ -307,7 +307,7 @@ const AdminUploadPage: FC = () => {
                     { id: 'volumen', label: 'Reporte de Volumen', variant: 'success', icon: <FaShoppingCart /> },
                     { id: 'eficiencia', label: 'Reporte de Eficiencia', variant: 'primary', icon: <FaChartLine /> },
                     { id: 'bebidas', label: 'Reporte de Bebidas', variant: 'info', icon: <FaGlassMartiniAlt /> },
-                    { id: 'acl', label: 'Reporte ACL', variant: 'warning', icon: <FaBox /> }
+                    { id: 'cobertura', label: 'Reporte COBERTURA', variant: 'warning', icon: <FaBox /> }
                   ].map(rep => (
                     <Col key={rep.id} xs={12} md={6} lg={3}>
                       <div className="p-3 h-100 admin-border-industrial" style={{ background: 'var(--theme-background-primary)' }}>

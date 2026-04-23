@@ -8,7 +8,7 @@ import { SPINNER_VARIANTS } from '../constants';
 import { FaWarehouse, FaBox, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
 
-type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'BEBIDAS' | 'ACL';
+type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'BEBIDAS' | 'COBERTURA';
 
 const SupervisorPage: FC = () => {
   const { sedes, loadingMasterData } = useData();
@@ -453,7 +453,7 @@ const SupervisorPage: FC = () => {
                   <option value="VOLUMEN">VOLUMEN</option>
                   <option value="EFICIENCIA">EFICIENCIA</option>
                   <option value="BEBIDAS">BEBIDAS</option>
-                  <option value="ACL">ACL</option>
+                  <option value="COBERTURA">COBERTURA</option>
                 </Form.Select>
               </div>
             </div>
@@ -585,7 +585,7 @@ const SupervisorPage: FC = () => {
             </Col>
           )}
 
-          <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'ACL' ? 8 : 4}>
+          <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'COBERTURA' ? 8 : 4}>
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober text-success p-1"><FaSyncAlt size={12}/></span>
               <div className="pill-content flex-grow-1">
@@ -606,7 +606,7 @@ const SupervisorPage: FC = () => {
               {selectedReportType === 'VOLUMEN' && renderVolumenReport()}
               {selectedReportType === 'EFICIENCIA' && renderEficienciaReport()}
               {selectedReportType === 'BEBIDAS' && renderBebidasReport()}
-              {selectedReportType === 'ACL' && <div className="dash-chart-box"><div className="dash-chart-header"><FaBox className="me-2" /> Reporte ACL</div><div className="p-3 text-center text-muted small">Próximamente...</div></div>}
+              {selectedReportType === 'COBERTURA' && <div className="dash-chart-box"><div className="dash-chart-header"><FaBox className="me-2" /> Reporte COBERTURA</div><div className="p-3 text-center text-muted small">Próximamente...</div></div>}
             </div>
           )}
         </div>
