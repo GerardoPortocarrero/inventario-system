@@ -24,7 +24,7 @@ const AdminUploadPage: FC = () => {
   const [metadataLoadingStatus, setMetadataLoadingStatus] = useState<Record<string, boolean>>({ maestro: true, demanda: true });
 
   const [processingReports, setProcessingReports] = useState(false);
-  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, cobertura: 0 });
+  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0 });
 
   useEffect(() => {
     const types = ['maestro', 'demanda'];
@@ -173,6 +173,68 @@ const AdminUploadPage: FC = () => {
     setReportProgress(prev => ({ ...prev, bebidas: 100 }));
   };
 
+  const generateReportDuplicados = async (demanda: any[], maestro: any[]) => {
+    setReportProgress(prev => ({ ...prev, duplicados: 10 }));
+    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
+    const hier: Record<string, any> = {};
+
+    // 1. Agrupar por la llave de duplicado: Solicitante + Material + Cantidad + Medida
+    const groups: Record<string, any[]> = {};
+    demanda.forEach(d => {
+      const key = `${d.Solicitante}_${d.Material}_${d.Cantidad}_${d.Medida}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(d);
+    });
+
+    setReportProgress(prev => ({ ...prev, duplicados: 50 }));
+
+    // 2. Filtrar grupos que tengan más de un Documento diferente
+    Object.values(groups).forEach(group => {
+      const distinctDocs = Array.from(new Set(group.map(item => String(item.Documento))));
+      
+      if (distinctDocs.length > 1) {
+        // Es un posible duplicado
+        const firstItem = group[0];
+        const client = maestroMap[String(firstItem.Solicitante)];
+        const loc = client?.Loc || 'OTRO';
+        const clienteNombre = client?.Cliente || 'CLIENTE DESCONOCIDO';
+
+        if (!hier[loc]) {
+          hier[loc] = { 
+            nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, 
+            id: loc, 
+            clientes: {} 
+          };
+        }
+
+        const clientKey = String(firstItem.Solicitante);
+        if (!hier[loc].clientes[clientKey]) {
+          hier[loc].clientes[clientKey] = {
+            nombre: clienteNombre,
+            codigo: clientKey,
+            casos: []
+          };
+        }
+
+        hier[loc].clientes[clientKey].casos.push({
+          material: firstItem.Material,
+          nombreMaterial: firstItem['Nombre material'] || 'SIN NOMBRE',
+          cantidad: firstItem.Cantidad,
+          medida: firstItem.Medida,
+          documentos: distinctDocs,
+          totalItems: group.length
+        });
+      }
+    });
+
+    setReportProgress(prev => ({ ...prev, duplicados: 80 }));
+    await set(ref(rtdb, 'reportes/duplicados'), {
+      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
+      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
+    });
+    setReportProgress(prev => ({ ...prev, duplicados: 100 }));
+  };
+
   const processFile = (file: File, type: 'maestro' | 'demanda') => {
     setIsUploading(true); setUploadProgress(10);
     const reader = new FileReader();
@@ -201,11 +263,12 @@ const AdminUploadPage: FC = () => {
           await Promise.all([
             generateReportVolumen(sanitizedData, maestroSnap),
             generateReportEficiencia(sanitizedData, maestroSnap),
-            generateReportBebidas(sanitizedData, maestroSnap)
+            generateReportBebidas(sanitizedData, maestroSnap),
+            generateReportDuplicados(sanitizedData, maestroSnap)
           ]);
           setTimeout(() => {
             setProcessingReports(false);
-            setReportProgress({ volumen: 0, eficiencia: 0, bebidas: 0, cobertura: 0 });
+            setReportProgress({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0 });
           }, 3000);
         }
       } catch (err: any) { toast.error(err.message); }
@@ -307,7 +370,7 @@ const AdminUploadPage: FC = () => {
                     { id: 'volumen', label: 'Reporte de Volumen', variant: 'success', icon: <FaShoppingCart /> },
                     { id: 'eficiencia', label: 'Reporte de Eficiencia', variant: 'primary', icon: <FaChartLine /> },
                     { id: 'bebidas', label: 'Reporte de Bebidas', variant: 'info', icon: <FaGlassMartiniAlt /> },
-                    { id: 'cobertura', label: 'Reporte COBERTURA', variant: 'warning', icon: <FaBox /> }
+                    { id: 'duplicados', label: 'Reporte DUPLICADOS', variant: 'warning', icon: <FaBox /> }
                   ].map(rep => (
                     <Col key={rep.id} xs={12} md={6} lg={3}>
                       <div className="p-3 h-100 admin-border-industrial" style={{ background: 'var(--theme-background-primary)' }}>
@@ -358,3 +421,4 @@ const AdminUploadPage: FC = () => {
 };
 
 export default AdminUploadPage;
+
