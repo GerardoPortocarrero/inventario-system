@@ -175,27 +175,56 @@ const AdminUploadPage: FC = () => {
 
   const generateReportDuplicados = async (demanda: any[], maestro: any[]) => {
     setReportProgress(prev => ({ ...prev, duplicados: 10 }));
+    
+    // 1. Filtrar registros activos (Status != 'C')
+    const demandaActiva = demanda.filter(d => String(d.Status).toUpperCase() !== 'C');
+    
     const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
     const hier: Record<string, any> = {};
 
-    // 1. Agrupar por la llave de duplicado: Solicitante + Material + Cantidad + Medida
-    const groups: Record<string, any[]> = {};
-    demanda.forEach(d => {
-      const key = `${d.Solicitante}_${d.Material}_${d.Cantidad}_${d.Medida}`;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(d);
+    // 2. Agrupar la demanda activa por Solicitante y Documento para comparar carritos completos
+    const orderGroups: Record<string, Record<string, any[]>> = {}; // { solicitanteId: { documentoId: [items] } }
+    
+    demandaActiva.forEach(d => {
+      const solId = String(d.Solicitante);
+      const docId = String(d.Documento);
+      if (!orderGroups[solId]) orderGroups[solId] = {};
+      if (!orderGroups[solId][docId]) orderGroups[solId][docId] = [];
+      orderGroups[solId][docId].push(d);
     });
 
     setReportProgress(prev => ({ ...prev, duplicados: 50 }));
 
-    // 2. Filtrar grupos que tengan más de un Documento diferente
-    Object.values(groups).forEach(group => {
-      const distinctDocs = Array.from(new Set(group.map(item => String(item.Documento))));
-      
-      if (distinctDocs.length > 1) {
-        // Es un posible duplicado
-        const firstItem = group[0];
-        const client = maestroMap[String(firstItem.Solicitante)];
+    // 3. Comparar documentos del mismo solicitante
+    Object.entries(orderGroups).forEach(([solId, docs]) => {
+      const docIds = Object.keys(docs);
+      if (docIds.length < 2) return;
+
+      const duplicatePairs: any[] = [];
+
+      for (let i = 0; i < docIds.length; i++) {
+        for (let j = i + 1; j < docIds.length; j++) {
+          const docA = docs[docIds[i]];
+          const docB = docs[docIds[j]];
+
+          // Lógica de comparación: ¿Tienen los mismos productos con mismas cantidades?
+          // Creamos una "firma" del carrito: "Material_Cantidad_Medida" ordenado
+          const getSignature = (items: any[]) => items
+            .map(item => `${item.Material}_${item.Cantidad}_${item.Medida}`)
+            .sort()
+            .join('|');
+
+          if (getSignature(docA) === getSignature(docB)) {
+            duplicatePairs.push({
+              doc1: { id: docIds[i], items: docA.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) },
+              doc2: { id: docIds[j], items: docB.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) }
+            });
+          }
+        }
+      }
+
+      if (duplicatePairs.length > 0) {
+        const client = maestroMap[solId];
         const loc = client?.Loc || 'OTRO';
         const clienteNombre = client?.Cliente || 'CLIENTE DESCONOCIDO';
 
@@ -207,23 +236,14 @@ const AdminUploadPage: FC = () => {
           };
         }
 
-        const clientKey = String(firstItem.Solicitante);
-        if (!hier[loc].clientes[clientKey]) {
-          hier[loc].clientes[clientKey] = {
+        if (!hier[loc].clientes[solId]) {
+          hier[loc].clientes[solId] = {
             nombre: clienteNombre,
-            codigo: clientKey,
-            casos: []
+            codigo: solId,
+            duplas: []
           };
         }
-
-        hier[loc].clientes[clientKey].casos.push({
-          material: firstItem.Material,
-          nombreMaterial: firstItem['Nombre material'] || 'SIN NOMBRE',
-          cantidad: firstItem.Cantidad,
-          medida: firstItem.Medida,
-          documentos: distinctDocs,
-          totalItems: group.length
-        });
+        hier[loc].clientes[solId].duplas.push(...duplicatePairs);
       }
     });
 

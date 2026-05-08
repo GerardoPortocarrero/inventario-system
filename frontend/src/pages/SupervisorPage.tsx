@@ -442,11 +442,11 @@ const SupervisorPage: FC = () => {
                     <div className="loc-avatar bg-warning text-dark"><FaExclamationTriangle /></div>
                     <div>
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">POSIBLES DUPLICADOS DETECTADOS</div>
+                      <div className="fw-bold sub-label">CARRITOS IDÉNTICOS DETECTADOS</div>
                     </div>
                   </div>
                   <Badge bg="danger" className="badge-industrial">
-                    <span className="b-label">CLIENTES</span>
+                    <span className="b-label">CONFLICTOS</span>
                     <span className="fw-black fs-6">{Object.keys(loc.clientes).length}</span>
                   </Badge>
                 </div>
@@ -459,38 +459,46 @@ const SupervisorPage: FC = () => {
                         <span className="fw-black m-label">{cliente.nombre}</span>
                         <span className="fw-bold text-secondary" style={{ fontSize: '0.55rem' }}>CÓDIGO: {cliente.codigo}</span>
                       </div>
-                      <Badge bg="warning" text="dark" className="fw-black" style={{ fontSize: '0.6rem' }}>
-                        {cliente.casos.length} {cliente.casos.length === 1 ? 'CASO' : 'CASOS'}
-                      </Badge>
                     </div>
                     <div className="px-3">
-                      <Row className="g-2">
-                        {cliente.casos.map((caso: any, idx: number) => (
-                          <Col xs={12} key={idx}>
-                            <div className="ruta-card-compact p-3 border-warning border-opacity-25">
-                              <div className="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                  <div className="fw-black text-danger" style={{ fontSize: '0.75rem' }}>{caso.nombreMaterial}</div>
-                                  <div className="fw-bold text-info" style={{ fontSize: '0.6rem' }}>SAP: {caso.material}</div>
-                                </div>
-                                <div className="text-end">
-                                  <div className="fw-black fs-5" style={{ color: 'var(--theme-text-primary)' }}>{caso.cantidad} <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{caso.medida}</span></div>
-                                </div>
+                      {cliente.duplas.map((dupla: any, idx: number) => (
+                        <div key={idx} className="duplicado-comparativo-card mb-3">
+                          <Row className="g-0 border border-warning border-opacity-25 shadow-sm">
+                            <Col xs={6} className="border-end border-secondary border-opacity-25">
+                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25">
+                                <span className="fw-black text-warning" style={{ fontSize: '0.65rem' }}># {dupla.doc1.id}</span>
                               </div>
-                              <div className="mt-2 pt-2 border-top border-secondary border-opacity-10">
-                                <div className="fw-bold text-secondary mb-1" style={{ fontSize: '0.55rem', textTransform: 'uppercase' }}>Documentos en Conflicto:</div>
-                                <div className="d-flex flex-wrap gap-2">
-                                  {caso.documentos.map((doc: string) => (
-                                    <Badge key={doc} bg="dark" className="border border-warning text-warning fw-black" style={{ fontSize: '0.65rem' }}>
-                                      # {doc}
-                                    </Badge>
-                                  ))}
-                                </div>
+                              <div className="p-2 bg-transparent">
+                                {dupla.doc1.items.map((item: any, i: number) => (
+                                  <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                    <div className="d-flex flex-column min-width-0">
+                                      <span className="fw-bold text-truncate" style={{ fontSize: '0.6rem', color: 'var(--theme-text-primary)' }}>{item.nombre}</span>
+                                      <span style={{ fontSize: '0.5rem', opacity: 0.6 }}>{item.sap}</span>
+                                    </div>
+                                    <span className="fw-black ms-2" style={{ fontSize: '0.65rem', color: 'var(--color-red-primary)' }}>{item.cant} {item.med}</span>
+                                  </div>
+                                ))}
                               </div>
-                            </div>
-                          </Col>
-                        ))}
-                      </Row>
+                            </Col>
+                            <Col xs={6}>
+                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25">
+                                <span className="fw-black text-warning" style={{ fontSize: '0.65rem' }}># {dupla.doc2.id}</span>
+                              </div>
+                              <div className="p-2 bg-transparent">
+                                {dupla.doc2.items.map((item: any, i: number) => (
+                                  <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                    <div className="d-flex flex-column min-width-0">
+                                      <span className="fw-bold text-truncate" style={{ fontSize: '0.6rem', color: 'var(--theme-text-primary)' }}>{item.nombre}</span>
+                                      <span style={{ fontSize: '0.5rem', opacity: 0.6 }}>{item.sap}</span>
+                                    </div>
+                                    <span className="fw-black ms-2" style={{ fontSize: '0.65rem', color: 'var(--color-red-primary)' }}>{item.cant} {item.med}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Col>
+                          </Row>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -499,6 +507,10 @@ const SupervisorPage: FC = () => {
           ))}
         </Accordion>
       )}
+      <style>{`
+        .duplicado-comparativo-card { background: var(--theme-background-primary); border-radius: 4px; overflow: hidden; }
+        .last-child-no-border:last-child { border-bottom: none !important; }
+      `}</style>
     </div>
   );
 
