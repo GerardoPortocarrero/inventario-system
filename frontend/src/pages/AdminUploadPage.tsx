@@ -207,14 +207,22 @@ const AdminUploadPage: FC = () => {
           const docA = docs[docIds[i]];
           const docB = docs[docIds[j]];
 
-          // Lógica de comparación: ¿Tienen los mismos productos con mismas cantidades?
-          // Creamos una "firma" del carrito: "Material_Cantidad_Medida" ordenado
-          const getSignature = (items: any[]) => items
-            .map(item => `${item.Material}_${item.Cantidad}_${item.Medida}`)
+          // REGLA DE ORO: Si no tienen la misma cantidad de ítems, no son duplicados
+          if (docA.length !== docB.length) continue;
+
+          // Lógica de comparación normalizada
+          // Normalizamos Material (sin ceros) y Cantidad (número) para una firma exacta
+          const getNormalizedSignature = (items: any[]) => items
+            .map(item => {
+              const mat = String(item.Material || '').trim().replace(/^0+/, '');
+              const cant = parseFloat(item.Cantidad) || 0;
+              const med = String(item.Medida || '').trim().toUpperCase();
+              return `${mat}_${cant}_${med}`;
+            })
             .sort()
             .join('|');
 
-          if (getSignature(docA) === getSignature(docB)) {
+          if (getNormalizedSignature(docA) === getNormalizedSignature(docB)) {
             duplicatePairs.push({
               doc1: { id: docIds[i], items: docA.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) },
               doc2: { id: docIds[j], items: docB.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) }
