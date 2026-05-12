@@ -1,11 +1,11 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Row, Col, Form, Badge, Accordion, ListGroup, Dropdown } from 'react-bootstrap';
 import { rtdb } from '../api/firebase';
 import { ref, onValue } from 'firebase/database';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
-import { FaWarehouse, FaBox, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
 
 type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'BEBIDAS' | 'DUPLICADOS';
