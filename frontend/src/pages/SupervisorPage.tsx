@@ -465,8 +465,9 @@ const SupervisorPage: FC = () => {
                         <div key={idx} className="duplicado-comparativo-card mb-3">
                           <Row className="g-0 border border-warning border-opacity-25 shadow-sm">
                             <Col xs={6} className="border-end border-secondary border-opacity-25">
-                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25">
+                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
                                 <span className="fw-black text-warning" style={{ fontSize: '0.65rem' }}># {dupla.doc1.id}</span>
+                                <Badge bg="secondary" className="fw-bold" style={{ fontSize: '0.55rem' }}>{dupla.doc1.hora}</Badge>
                               </div>
                               <div className="p-2 bg-transparent">
                                 {dupla.doc1.items.map((item: any, i: number) => (
@@ -481,8 +482,9 @@ const SupervisorPage: FC = () => {
                               </div>
                             </Col>
                             <Col xs={6}>
-                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25">
+                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
                                 <span className="fw-black text-warning" style={{ fontSize: '0.65rem' }}># {dupla.doc2.id}</span>
+                                <Badge bg="secondary" className="fw-bold" style={{ fontSize: '0.55rem' }}>{dupla.doc2.hora}</Badge>
                               </div>
                               <div className="p-2 bg-transparent">
                                 {dupla.doc2.items.map((item: any, i: number) => (

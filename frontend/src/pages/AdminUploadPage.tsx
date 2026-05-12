@@ -224,8 +224,16 @@ const AdminUploadPage: FC = () => {
 
           if (getNormalizedSignature(docA) === getNormalizedSignature(docB)) {
             duplicatePairs.push({
-              doc1: { id: docIds[i], items: docA.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) },
-              doc2: { id: docIds[j], items: docB.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) }
+              doc1: { 
+                id: docIds[i], 
+                hora: docA[0].Hora || '--:--',
+                items: docA.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) 
+              },
+              doc2: { 
+                id: docIds[j], 
+                hora: docB[0].Hora || '--:--',
+                items: docB.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) 
+              }
             });
           }
         }
