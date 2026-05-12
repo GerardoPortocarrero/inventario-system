@@ -1,0 +1,30 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    "maestro": {
+      ".write": "auth != null",
+      "metadata": {
+        ".validate": "newData.hasChildren(['updatedAt', 'rowCount', 'userName'])"
+      }
+    },
+    "demanda": {
+      ".write": "auth != null",
+      "metadata": {
+        ".validate": "newData.hasChildren(['updatedAt', 'rowCount', 'userName'])"
+      }
+    },
+    "reportes": {
+      ".write": "auth != null",
+      "volumen": {
+        "metadata": {
+          ".validate": "newData.hasChildren(['lastUpdated', 'processedBy'])"
+        }
+      },
+      "bebidas": {
+        "metadata": {
+          ".validate": "newData.hasChildren(['lastUpdated', 'processedBy'])"
+        }
+      }
+    }
+  }
+}

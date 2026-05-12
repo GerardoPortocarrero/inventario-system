@@ -1,236 +1,689 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Form, Badge } from 'react-bootstrap';
-import { db } from '../api/firebase';
-import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
+import { Row, Col, Form, Badge, Accordion, ListGroup, Dropdown } from 'react-bootstrap';
+import { rtdb } from '../api/firebase';
+import { ref, onValue } from 'firebase/database';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
-} from 'recharts';
-import { 
-  FaUserTie, FaShoppingCart, FaTruck, FaHandHoldingUsd, FaUndoAlt, 
-  FaChartLine, FaWarehouse, FaCalendarAlt, FaSearch, FaBox,
-  FaSort, FaSortUp, FaSortDown
-} from 'react-icons/fa';
+import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
 import GlobalSpinner from '../components/GlobalSpinner';
-import GenericTable from '../components/GenericTable';
 
-interface Product { id: string; nombre: string; sap: string; tipoBebidaId: string; precio: number; unidades: number; }
-interface Order { id: string; preventistaId: string; sedeId: string; fechaCreacion: string; detalles: { productoId: string; cantidad: number; }[]; }
-interface User { id: string; nombre: string; rolId: string; sedeId: string; }
-interface DailyInventory { id: string; productos: Record<string, { almacen: number; consignacion: number; rechazo: number; }>; }
+type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'BEBIDAS' | 'DUPLICADOS';
 
 const SupervisorPage: FC = () => {
-  const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
-  const { sedes, beverageTypes, loadingMasterData } = useData();
+  const { sedes, loadingMasterData, beverageTypes } = useData();
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [ordersToday, setOrdersToday] = useState<Order[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [allInventory, setAllInventory] = useState<Record<string, DailyInventory>>({});
-  const [yesterdayInventory, setYesterdayInventory] = useState<Record<string, DailyInventory>>({});
+  // Estados para datos
+  const [volumenReport, setVolumenReport] = useState<any[]>([]);
+  const [volumenMetadata, setVolumenMetadata] = useState<any>(null);
+  const [eficienciaReport, setEficienciaReport] = useState<any[]>([]);
+  const [eficienciaMetadata, setEficienciaMetadata] = useState<any>(null);
+  const [bebidasReport, setBebidasReport] = useState<any[]>([]);
+  const [bebidasMetadata, setBebidasMetadata] = useState<any>(null);
+  const [duplicadosReport, setDuplicadosReport] = useState<any[]>([]);
+  const [duplicadosMetadata, setDuplicadosMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedSedeId, setSelectedSedeId] = useState<string>('GLOBAL');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedReportType, setSelectedReportType] = useState<ReportType>('VOLUMEN');
+  
+  // Filtros para Eficiencia
+  const [selectedDia, setSelectedDia] = useState<string>(['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'][new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
+  const [selectedSemanas, setSelectedSemanas] = useState<string[]>([]);
+  const [selectedBebidaTypes, setSelectedBebidaTypes] = useState<string[]>([]);
+  const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
 
-  const [sortConfig1, setSortConfig1] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
-  const [sortConfig2, setSortConfig2] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
-
-  const yesterdayStr = useMemo(() => {
-    const d = new Date(selectedDate + 'T12:00:00');
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
-  }, [selectedDate]);
-
+  // Inicializar tipos de bebida
   useEffect(() => {
-    const observer = new MutationObserver(() => setIsDarkMode(document.body.classList.contains('theme-dark')));
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
+    if (beverageTypes.length > 0 && selectedBebidaTypes.length === 0) {
+      setSelectedBebidaTypes(beverageTypes.map(t => t.id));
+    }
+  }, [beverageTypes, selectedBebidaTypes.length]);
 
   useEffect(() => {
     setLoading(true);
-    const unsubProducts = onSnapshot(collection(db, 'productos'), s => setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product))));
-    const unsubUsers = onSnapshot(collection(db, 'usuarios'), s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User))));
-    
-    const unsubOrdersToday = onSnapshot(query(collection(db, 'ordenes'), where('fechaCreacion', '==', selectedDate)), s => setOrdersToday(s.docs.map(d => ({ id: d.id, ...d.data() } as Order))));
-
-    const fetchInventories = async () => {
-      const qToday = query(collection(db, 'inventario_diario'), where('fecha', '==', selectedDate));
-      const qYesterday = query(collection(db, 'inventario_diario'), where('fecha', '==', yesterdayStr));
-      const [snapToday, snapYesterday] = await Promise.all([getDocs(qToday), getDocs(qYesterday)]);
-      
-      const invToday: Record<string, DailyInventory> = {};
-      snapToday.docs.forEach(d => { invToday[d.data().sedeId] = { id: d.id, productos: d.data().productos || {} }; });
-      const invYesterday: Record<string, DailyInventory> = {};
-      snapYesterday.docs.forEach(d => { invYesterday[d.data().sedeId] = { id: d.id, productos: d.data().productos || {} }; });
-
-      setAllInventory(invToday);
-      setYesterdayInventory(invYesterday);
-      setLoading(false);
-    };
-
-    fetchInventories();
-    return () => { 
-      unsubProducts(); 
-      unsubUsers(); 
-      unsubOrdersToday(); 
-    };
-  }, [selectedDate, yesterdayStr]);
-
-  const stats = useMemo(() => {
-    const prevStats: Record<string, any> = {};
-    const masterLog: any[] = [];
-    const catStats: Record<string, any> = {};
-    let tPrev = 0, tTrans = 0, tRech = 0, tVenta = 0;
-
-    beverageTypes.forEach(t => { catStats[t.id] = { name: t.nombre, PREVENTA: 0, VENTA: 0 }; });
-
-    const productMap = products.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, Product>);
-
-    ordersToday.forEach(order => {
-      if (selectedSedeId !== 'GLOBAL' && order.sedeId !== selectedSedeId) return;
-      
-      if (!prevStats[order.preventistaId]) {
-        const u = users.find(u => u.id === order.preventistaId);
-        const s = sedes.find(s => s.id === order.sedeId);
-        prevStats[order.preventistaId] = { id: order.preventistaId, nombre: u?.nombre || 'Desconocido', sede: s?.nombre || 'Sede', prevHoy: 0, ventaReal: 0, ventaRealMoney: 0 };
+    const volumenRef = ref(rtdb, 'reportes/volumen');
+    const unsubVolumen = onValue(volumenRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setVolumenReport(data.data || []);
+        setVolumenMetadata(data.metadata || null);
       }
+      if (selectedReportType === 'VOLUMEN') setLoading(false);
+    });
 
-      order.detalles.forEach(det => {
-        const prod = productMap[det.productoId];
-        if (!prod) return;
+    const eficienciaRef = ref(rtdb, 'reportes/eficiencia');
+    const unsubEficiencia = onValue(eficienciaRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setEficienciaReport(data.data || []);
+        setEficienciaMetadata(data.metadata || null);
+      }
+      if (selectedReportType === 'EFICIENCIA') setLoading(false);
+    });
 
-        tPrev += det.cantidad;
-        catStats[prod.tipoBebidaId].PREVENTA += det.cantidad;
-        prevStats[order.preventistaId].prevHoy += det.cantidad;
-        
-        prevStats[order.preventistaId].ventaReal += det.cantidad;
-        const subtotal = (det.cantidad / (prod.unidades || 1)) * (prod.precio || 0);
-        prevStats[order.preventistaId].ventaRealMoney += subtotal;
+    const bebidasRef = ref(rtdb, 'reportes/bebidas');
+    const unsubBebidas = onValue(bebidasRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setBebidasReport(data.data || []);
+        setBebidasMetadata(data.metadata || null);
+      }
+      if (selectedReportType === 'BEBIDAS') setLoading(false);
+    });
 
-        masterLog.push({ id: `${order.id}_${prod.id}`, sap: prod.sap, producto: prod.nombre, sede: prevStats[order.preventistaId].sede, preventista: prevStats[order.preventistaId].nombre, tipo: 'PREVENTA (HOY)', cant: det.cantidad });
+    const duplicadosRef = ref(rtdb, 'reportes/duplicados');
+    const unsubDuplicados = onValue(duplicadosRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setDuplicadosReport(data.data || []);
+        setDuplicadosMetadata(data.metadata || null);
+      }
+      if (selectedReportType === 'DUPLICADOS') setLoading(false);
+    });
+
+    return () => { unsubVolumen(); unsubEficiencia(); unsubBebidas(); unsubDuplicados(); };
+  }, [selectedReportType]);
+
+  const availableSemanas = useMemo(() => {
+    const semanas = new Set<string>();
+    eficienciaReport.forEach(loc => {
+      Object.values(loc.mesas || {}).forEach((mesa: any) => {
+        Object.values(mesa.rutas || {}).forEach((ruta: any) => {
+          Object.keys(ruta.schedules || {}).forEach(key => {
+            const sem = key.split('_')[1];
+            if (sem) semanas.add(sem);
+          });
+        });
       });
     });
+    return Array.from(semanas).sort((a, b) => parseInt(a) - parseInt(b));
+  }, [eficienciaReport]);
 
-    sedes.forEach(sede => {
-      if (selectedSedeId !== 'GLOBAL' && sede.id !== selectedSedeId) return;
-      
-      const hoySede = allInventory[sede.id]?.productos || {};
-      const ayerSede = yesterdayInventory[sede.id]?.productos || {};
+  useEffect(() => {
+    if (selectedSemanas.length === 0 && availableSemanas.length > 0) {
+      setSelectedSemanas([availableSemanas[availableSemanas.length - 1]]);
+    }
+  }, [availableSemanas, selectedSemanas.length]);
 
-      products.forEach(prod => {
-        const ayerData = ayerSede[prod.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-        const hoyData = hoySede[prod.id] || { almacen: 0, consignacion: 0, rechazo: 0 };
-        const totalAyer = ayerData.almacen + ayerData.consignacion + ayerData.rechazo;
-        const pTransito = allInventory[sede.id] ? Math.max(0, totalAyer - hoyData.almacen) : 0;
-        const pRechazo = hoyData.rechazo;
-        const pVenta = Math.max(0, pTransito - pRechazo);
+  const handleSemanaToggle = (sem: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedSemanas(prev => prev.includes(sem) ? prev.filter(s => s !== sem) : [...prev, sem]);
+  };
 
-        tTrans += pTransito; tRech += pRechazo; tVenta += pVenta;
-        catStats[prod.tipoBebidaId].VENTA += pVenta;
+  const handleSelectAllWeeks = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedSemanas.length === availableSemanas.length) {
+      setSelectedSemanas([availableSemanas[availableSemanas.length - 1]]);
+    } else {
+      setSelectedSemanas(availableSemanas);
+    }
+  };
+
+  const filteredVolumenData = useMemo(() => {
+    if (selectedSedeId === 'GLOBAL') return volumenReport;
+    return volumenReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+  }, [volumenReport, selectedSedeId, sedes]);
+
+  const filteredBebidasData = useMemo(() => {
+    let data = selectedSedeId === 'GLOBAL' ? bebidasReport : bebidasReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    if (selectedBebidaTypes.length === 0) return [];
+    return data.map(loc => {
+      const newTipos: Record<string, any> = {};
+      Object.entries(loc.tipos || {}).forEach(([tipoId, tipo]: [string, any]) => {
+        if (selectedBebidaTypes.includes(tipoId)) newTipos[tipoId] = tipo;
       });
-    });
+      return Object.keys(newTipos).length > 0 ? { ...loc, tipos: newTipos } : null;
+    }).filter(Boolean);
+  }, [bebidasReport, selectedSedeId, sedes, selectedBebidaTypes]);
 
-    return {
-      totals: { tPrev, tTrans, tRech, tVenta, efectividad: tTrans > 0 ? (tVenta / tTrans) * 100 : 0 },
-      preventistas: Object.values(prevStats),
-      masterLog,
-      chartData: Object.values(catStats).filter(c => c.PREVENTA > 0 || c.VENTA > 0)
-    };
-  }, [sedes, beverageTypes, allInventory, yesterdayInventory, products, ordersToday, users, selectedSedeId]);
+  const filteredDuplicadosData = useMemo(() => {
+    if (selectedSedeId === 'GLOBAL') return duplicadosReport;
+    return duplicadosReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+  }, [duplicadosReport, selectedSedeId, sedes]);
 
-  const sortedPreventistas = useMemo(() => {
-    if (!sortConfig1) return [...stats.preventistas].sort((a, b) => b.ventaRealMoney - a.ventaRealMoney);
-    return [...stats.preventistas].sort((a, b) => {
-      if (a[sortConfig1.key] < b[sortConfig1.key]) return sortConfig1.direction === 'asc' ? -1 : 1;
-      if (a[sortConfig1.key] > b[sortConfig1.key]) return sortConfig1.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [stats.preventistas, sortConfig1]);
+  const handleBebidaTypeToggle = (typeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedBebidaTypes(prev => prev.includes(typeId) ? prev.filter(t => t !== typeId) : [...prev, typeId]);
+  };
 
-  const sortedLog = useMemo(() => {
-    let list = stats.masterLog.filter(l => l.producto.toLowerCase().includes(searchTerm.toLowerCase()) || l.preventista.toLowerCase().includes(searchTerm.toLowerCase()) || l.sap.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (!sortConfig2) return list;
-    return [...list].sort((a, b) => {
-      if (a[sortConfig2.key] < b[sortConfig2.key]) return sortConfig2.direction === 'asc' ? -1 : 1;
-      if (a[sortConfig2.key] > b[sortConfig2.key]) return sortConfig2.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [stats.masterLog, searchTerm, sortConfig2]);
+  const handleSelectAllBebidas = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedBebidaTypes.length === beverageTypes.length) {
+      setSelectedBebidaTypes([]);
+    } else {
+      setSelectedBebidaTypes(beverageTypes.map(t => t.id));
+    }
+  };
 
-  const handleSort1 = (key: string) => {
-    setSortConfig1(prev => {
-      if (prev?.key === key) {
-        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+  const filteredEficienciaData = useMemo(() => {
+    let data = selectedSedeId === 'GLOBAL' ? eficienciaReport : eficienciaReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    if (selectedSemanas.length === 0) return [];
+    return data.map(loc => {
+      const newMesas: Record<string, any> = {};
+      Object.entries(loc.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
+        const newRutas: Record<string, any> = {};
+        Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
+          const stats = { prog: 0, efec: 0 };
+          selectedSemanas.forEach(sem => {
+            const s = ruta.schedules[`${selectedDia}_${sem}`];
+            if (s) { stats.prog += s.prog; stats.efec += s.efec; }
+          });
+          if (stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
+        });
+        if (Object.keys(newRutas).length > 0) {
+          const totalProg = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.prog, 0);
+          const totalEfec = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.efec, 0);
+          newMesas[mesaName] = { rutas: newRutas, totalProg, totalEfec };
+        }
+      });
+      if (Object.keys(newMesas).length > 0) {
+        const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
+        const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
+        return { ...loc, mesas: newMesas, totalProg, totalEfec };
       }
-      return { key, direction: 'asc' };
-    });
-  };
+      return null;
+    }).filter(Boolean);
+  }, [eficienciaReport, selectedSedeId, sedes, selectedDia, selectedSemanas]);
 
-  const handleSort2 = (key: string) => {
-    setSortConfig2(prev => {
-      if (prev?.key === key) {
-        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { key, direction: 'asc' };
-    });
-  };
+  const toggleRuta = (rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] }));
 
-  const SortableHeader = ({ label, sortKey, config, onSort }: any) => {
-    const isSorted = config?.key === sortKey;
-    return (
-      <div className="d-flex align-items-center gap-1 cursor-pointer select-none" onClick={() => onSort(sortKey)} style={{ cursor: 'pointer' }}>
-        {label}
-        {isSorted ? (
-          config.direction === 'asc' ? <FaSortUp size={10} /> : <FaSortDown size={10} />
-        ) : (
-          <FaSort size={10} style={{ opacity: 0.3 }} />
-        )}
-      </div>
-    );
-  };
+  const renderVolumenReport = () => (
+    <div className="volumen-compact-view">
+      {filteredVolumenData.length === 0 ? (
+        <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE VOLUMEN.</div>
+      ) : (
+        <Accordion defaultActiveKey={filteredVolumenData[0]?.id}>
+          {filteredVolumenData.map(loc => (
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
+              <Accordion.Header className="loc-header-compact">
+                <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="loc-avatar">{loc.id}</div>
+                    <div>
+                      <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
+                      <div className="fw-bold sub-label">RESUMEN DE LOCALIDAD</div>
+                    </div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <Badge bg="primary" className="badge-industrial">
+                      <span className="b-label">CF</span><span className="fw-black fs-6">{loc.totalCF.toFixed(1)}</span>
+                    </Badge>
+                    <Badge bg="success" className="badge-industrial">
+                      <span className="b-label">CU</span><span className="fw-black fs-6">{loc.totalUC.toFixed(2)}</span>
+                    </Badge>
+                  </div>
+                </div>
+              </Accordion.Header>
+              <Accordion.Body className="bg-transparent p-0 pt-1">
+                {Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
+                  <div key={mesaName} className="mesa-section mb-3">
+                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2">
+                      <span className="fw-black m-label">MESA: {mesaName.toUpperCase()}</span>
+                      <div className="fw-black m-stats">{mesa.totalCF.toFixed(1)} CF / {mesa.totalUC.toFixed(2)} CU</div>
+                    </div>
+                    <div className="px-3">
+                      <Row className="g-2">
+                        {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => {
+                          const rutaKey = `${loc.id}-${mesaName}-${rutaName}`;
+                          const isExpanded = expandedRutas[rutaKey];
+                          return (
+                            <Col xs={12} key={rutaName}>
+                              <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
+                                <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => toggleRuta(rutaKey)}>
+                                  <div className="d-flex align-items-center gap-2">
+                                    <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
+                                    <span className="fw-black r-label">RUTA {rutaName}</span>
+                                  </div>
+                                  <div className="d-flex gap-3 align-items-center">
+                                    <div className="d-flex flex-column align-items-end"><span className="fw-black text-primary r-val">{ruta.totalCF.toFixed(2)} <span className="r-unit">CF</span></span></div>
+                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '60px' }}><span className="fw-black text-success r-val">{ruta.totalUC.toFixed(2)} <span className="r-unit">CU</span></span></div>
+                                  </div>
+                                </div>
+                                {isExpanded && (
+                                  <div className="ruta-details-list p-2 pt-0 border-top border-secondary border-opacity-10">
+                                    <ListGroup variant="flush">
+                                      {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
+                                        <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
+                                          <div className="d-flex flex-column"><span className="fw-bold p-name">{p.nombre}</span><span className="fw-bold p-sap">SAP: {sap}</span></div>
+                                          <div className="d-flex gap-2 align-items-center">
+                                            <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
+                                            <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
+                                          </div>
+                                        </ListGroup.Item>
+                                      ))}
+                                    </ListGroup>
+                                  </div>
+                                )}
+                              </div>
+                            </Col>
+                          );
+                        })}
+                      </Row>
+                    </div>
+                  </div>
+                ))}
+              </Accordion.Body>
+            </Accordion.Item>
+          ))}
+        </Accordion>
+      )}
+    </div>
+  );
 
-  if (loadingMasterData) return <GlobalSpinner variant={SPINNER_VARIANTS.OVERLAY} />;
+  const renderBebidasReport = () => (
+    <div className="volumen-compact-view">
+      {filteredBebidasData.length === 0 ? (
+        <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE BEBIDAS.</div>
+      ) : (
+        <Accordion defaultActiveKey={filteredBebidasData[0]?.id}>
+          {filteredBebidasData.map(loc => (
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
+              <Accordion.Header className="loc-header-compact">
+                <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="loc-avatar">{loc.id}</div>
+                    <div>
+                      <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
+                      <div className="fw-bold sub-label">VOLUMEN POR CATEGORÍA</div>
+                    </div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <Badge bg="primary" className="badge-industrial">
+                      <span className="b-label text-white-50">Sede</span><span className="fw-black fs-6">{loc.id}</span>
+                    </Badge>
+                  </div>
+                </div>
+              </Accordion.Header>
+              <Accordion.Body className="bg-transparent p-0 pt-1">
+                {Object.entries(loc.tipos).map(([tipoId, tipo]: [string, any]) => (
+                  <div key={tipoId} className="mesa-section mb-3">
+                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2" style={{ borderLeftColor: 'var(--theme-icon-color)' }}>
+                      <span className="fw-black m-label"><FaGlassMartiniAlt className="me-2"/>{tipo.nombre}</span>
+                      <div className="fw-black m-stats">{tipo.totalCF.toFixed(1)} CF / {tipo.totalUC.toFixed(2)} CU</div>
+                    </div>
+                    <div className="px-3">
+                      <Row className="g-2">
+                        {Object.entries(tipo.rutas).map(([rutaName, ruta]: [string, any]) => {
+                          const rutaKey = `bebidas-${loc.id}-${tipoId}-${rutaName}`;
+                          const isExpanded = expandedRutas[rutaKey];
+                          return (
+                            <Col xs={12} key={rutaName}>
+                              <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
+                                <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => toggleRuta(rutaKey)}>
+                                  <div className="d-flex align-items-center gap-2">
+                                    <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
+                                    <span className="fw-black r-label">RUTA {rutaName}</span>
+                                  </div>
+                                  <div className="d-flex gap-3 align-items-center">
+                                    <div className="d-flex flex-column align-items-end"><span className="fw-black text-primary r-val">{ruta.totalCF.toFixed(2)} <span className="r-unit">CF</span></span></div>
+                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '60px' }}><span className="fw-black text-success r-val">{ruta.totalUC.toFixed(2)} <span className="r-unit">CU</span></span></div>
+                                  </div>
+                                </div>
+                                {isExpanded && (
+                                  <div className="ruta-details-list p-2 pt-0 border-top border-secondary border-opacity-10">
+                                    <ListGroup variant="flush">
+                                      {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
+                                        <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
+                                          <div className="d-flex flex-column"><span className="fw-bold p-name">{p.nombre}</span><span className="fw-bold p-sap">SAP: {sap}</span></div>
+                                          <div className="d-flex gap-2 align-items-center">
+                                            <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
+                                            <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
+                                          </div>
+                                        </ListGroup.Item>
+                                      ))}
+                                    </ListGroup>
+                                  </div>
+                                )}
+                              </div>
+                            </Col>
+                          );
+                        })}
+                      </Row>
+                    </div>
+                  </div>
+                ))}
+              </Accordion.Body>
+            </Accordion.Item>
+          ))}
+        </Accordion>
+      )}
+    </div>
+  );
 
-  const isDark = isDarkMode;
-  const GRID_COLOR = isDark ? '#333' : '#eee';
-  const TEXT_COLOR = isDark ? '#fff' : '#000';
+  const renderEficienciaReport = () => (
+    <div className="volumen-compact-view">
+      {filteredEficienciaData.length === 0 ? (
+        <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE EFICIENCIA PARA LOS FILTROS SELECCIONADOS.</div>
+      ) : (
+        <Accordion defaultActiveKey={filteredEficienciaData[0]?.id}>
+          {filteredEficienciaData.map((loc: any) => (
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
+              <Accordion.Header className="loc-header-compact">
+                <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="loc-avatar">{loc.id}</div>
+                    <div>
+                      <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
+                      <div className="fw-bold sub-label">EFECTIVIDAD DE COMPRA</div>
+                    </div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <Badge bg="primary" className="badge-industrial">
+                      <span className="b-label">PROG</span><span className="fw-black fs-6">{loc.totalProg}</span>
+                    </Badge>
+                    <Badge bg="success" className="badge-industrial">
+                      <span className="b-label">EFEC</span><span className="fw-black fs-6">{loc.totalEfec}</span>
+                    </Badge>
+                    <Badge bg="danger" className="badge-industrial">
+                      <span className="b-label">S. VISITA</span><span className="fw-black fs-6">{loc.totalProg - loc.totalEfec}</span>
+                    </Badge>
+                    <Badge bg="dark" className="badge-industrial border border-secondary">
+                      <span className="b-label text-info">EF (%)</span><span className="fw-black fs-6 text-info">{((loc.totalEfec / loc.totalProg) * 100).toFixed(0)}%</span>
+                    </Badge>
+                  </div>
+                </div>
+              </Accordion.Header>
+              <Accordion.Body className="bg-transparent p-0 pt-1">
+                {Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
+                  <div key={mesaName} className="mesa-section mb-3">
+                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2">
+                      <span className="fw-black m-label">MESA: {mesaName.toUpperCase()}</span>
+                      <div className="fw-black m-stats">{mesa.totalProg} P / {mesa.totalEfec} E / {((mesa.totalEfec / mesa.totalProg) * 100).toFixed(1)}% EF</div>
+                    </div>
+                    <div className="px-3">
+                      <Row className="g-2">
+                        {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => {
+                          const sinVis = ruta.stats.prog - ruta.stats.efec;
+                          const efPorc = (ruta.stats.efec / ruta.stats.prog) * 100;
+                          const porcColor = efPorc < 70 ? 'var(--color-red-primary)' : efPorc < 85 ? '#ff8800' : '#00ff88';
+                          return (
+                            <Col xs={12} key={rutaName}>
+                              <div className="ruta-card-compact border-0 shadow-none">
+                                <div className="ruta-main-row d-flex justify-content-between align-items-center p-2">
+                                  <div className="d-flex align-items-center gap-2">
+                                    <div style={{ width: '12px' }}></div>
+                                    <span className="fw-black r-label">RUTA {rutaName}</span>
+                                  </div>
+                                  <div className="d-flex gap-3 align-items-center">
+                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-primary r-val">{ruta.stats.prog} <span className="r-unit">P</span></span></div>
+                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-success r-val">{ruta.stats.efec} <span className="r-unit">E</span></span></div>
+                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-danger r-val">{sinVis} <span className="r-unit">SV</span></span></div>
+                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '55px' }}><span className="fw-black r-val" style={{ color: porcColor }}>{efPorc.toFixed(0)} <span className="r-unit">%</span></span></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </Col>
+                          );
+                        })}
+                      </Row>
+                    </div>
+                  </div>
+                ))}
+              </Accordion.Body>
+            </Accordion.Item>
+          ))}
+        </Accordion>
+      )}
+    </div>
+  );
+
+  const renderDuplicadosReport = () => (
+    <div className="volumen-compact-view">
+      {filteredDuplicadosData.length === 0 ? (
+        <div className="text-center p-5 text-muted small fw-black">NO SE DETECTARON PEDIDOS DUPLICADOS.</div>
+      ) : (
+        <Accordion defaultActiveKey={filteredDuplicadosData[0]?.id}>
+          {filteredDuplicadosData.map(loc => (
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
+              <Accordion.Header className="loc-header-compact">
+                <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="loc-avatar bg-warning text-dark"><FaExclamationTriangle /></div>
+                    <div>
+                      <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
+                      <div className="fw-bold sub-label">CARRITOS IDÉNTICOS DETECTADOS</div>
+                    </div>
+                  </div>
+                  <Badge bg="danger" className="badge-industrial">
+                    <span className="b-label">CONFLICTOS</span>
+                    <span className="fw-black fs-6">{Object.keys(loc.clientes).length}</span>
+                  </Badge>
+                </div>
+              </Accordion.Header>
+              <Accordion.Body className="bg-transparent p-0 pt-1">
+                {Object.values(loc.clientes).map((cliente: any) => (
+                  <div key={cliente.codigo} className="mesa-section mb-3">
+                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2" style={{ borderLeftColor: '#ffc107' }}>
+                      <div className="d-flex flex-column">
+                        <span className="fw-black m-label">{cliente.nombre}</span>
+                        <span className="fw-bold text-secondary" style={{ fontSize: '0.55rem' }}>CÓDIGO: {cliente.codigo}</span>
+                      </div>
+                    </div>
+                    <div className="px-3">
+                      {cliente.duplas.map((dupla: any, idx: number) => (
+                        <div key={idx} className="duplicado-comparativo-card mb-3">
+                          <Row className="g-0 border border-warning border-opacity-25 shadow-sm">
+                            <Col xs={6} className="border-end border-secondary border-opacity-25">
+                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
+                                <span className="fw-black text-warning" style={{ fontSize: '0.65rem' }}># {dupla.doc1.id}</span>
+                                <Badge bg="secondary" className="fw-bold" style={{ fontSize: '0.55rem' }}>{dupla.doc1.hora}</Badge>
+                              </div>
+                              <div className="p-2 bg-transparent">
+                                {dupla.doc1.items.map((item: any, i: number) => (
+                                  <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                    <div className="d-flex flex-column min-width-0">
+                                      <span className="fw-bold text-truncate" style={{ fontSize: '0.6rem', color: 'var(--theme-text-primary)' }}>{item.nombre}</span>
+                                      <span style={{ fontSize: '0.5rem', opacity: 0.6 }}>{item.sap}</span>
+                                    </div>
+                                    <span className="fw-black ms-2" style={{ fontSize: '0.65rem', color: 'var(--color-red-primary)' }}>{item.cant} {item.med}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Col>
+                            <Col xs={6}>
+                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
+                                <span className="fw-black text-warning" style={{ fontSize: '0.65rem' }}># {dupla.doc2.id}</span>
+                                <Badge bg="secondary" className="fw-bold" style={{ fontSize: '0.55rem' }}>{dupla.doc2.hora}</Badge>
+                              </div>
+                              <div className="p-2 bg-transparent">
+                                {dupla.doc2.items.map((item: any, i: number) => (
+                                  <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                    <div className="d-flex flex-column min-width-0">
+                                      <span className="fw-bold text-truncate" style={{ fontSize: '0.6rem', color: 'var(--theme-text-primary)' }}>{item.nombre}</span>
+                                      <span style={{ fontSize: '0.5rem', opacity: 0.6 }}>{item.sap}</span>
+                                    </div>
+                                    <span className="fw-black ms-2" style={{ fontSize: '0.65rem', color: 'var(--color-red-primary)' }}>{item.cant} {item.med}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Col>
+                          </Row>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </Accordion.Body>
+            </Accordion.Item>
+          ))}
+        </Accordion>
+      )}
+      <style>{`
+        .duplicado-comparativo-card { background: var(--theme-background-primary); border-radius: 4px; overflow: hidden; }
+        .last-child-no-border:last-child { border-bottom: none !important; }
+      `}</style>
+    </div>
+  );
 
   return (
-    <div className="admin-layout-container flex-column overflow-hidden gap-3">
-      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto' }}>
-        <Row className="g-2 align-items-center">
-          <Col xs={12} md={4}>
+    <div className="admin-layout-container flex-column gap-3" style={{ overflow: 'visible' }}>
+      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem', overflow: 'visible' }}>
+        <Row className="g-1 align-items-center">
+          {/* 1. Sede */}
+          <Col xs={12} md={2}>
             <div className="info-pill-new w-100">
-              <span className="pill-icon-sober text-danger"><FaWarehouse /></span>
+              <span className="pill-icon-sober text-danger p-1"><FaWarehouse size={12}/></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">SEDE AUDITADA</span>
+                <span className="pill-label">SEDE</span>
                 <Form.Select value={selectedSedeId} onChange={(e) => setSelectedSedeId(e.target.value)} className="pill-select-v2 w-100">
-                  <option value="GLOBAL">TODAS LAS SEDES (GLOBAL)</option>
+                  <option value="GLOBAL">GLOBAL</option>
                   {sedes.map(s => <option key={s.id} value={s.id}>{s.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
             </div>
           </Col>
-          <Col xs={6} md={4}>
+
+          {/* 2. Reporte */}
+          <Col xs={12} md={2}>
             <div className="info-pill-new w-100">
-              <span className="pill-icon-sober"><FaCalendarAlt /></span>
+              <span className="pill-icon-sober text-primary p-1"><FaFilter size={12}/></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">FECHA DE AUDITORÍA</span>
-                <Form.Control type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="pill-date-input-v2 w-100" />
+                <span className="pill-label">REPORTE</span>
+                <Form.Select value={selectedReportType} onChange={(e) => setSelectedReportType(e.target.value as ReportType)} className="pill-select-v2 w-100">
+                  <option value="VOLUMEN">VOLUMEN</option>
+                  <option value="EFICIENCIA">EFICIENCIA</option>
+                  <option value="BEBIDAS">BEBIDAS</option>
+                  <option value="DUPLICADOS">DUPLICADOS</option>
+                </Form.Select>
               </div>
             </div>
           </Col>
-          <Col xs={6} md={4}>
-            <div className="info-pill-new w-100 border-danger">
-              <span className="pill-icon-sober text-danger"><FaChartLine /></span>
+
+          {selectedReportType === 'EFICIENCIA' && (
+            <>
+              {/* 3. Día */}
+              <Col xs={4} md={1}>
+                <div className="info-pill-new w-100">
+                  <div className="pill-content flex-grow-1 text-center p-0 ps-1">
+                    <span className="pill-label">DÍA</span>
+                    <Form.Select value={selectedDia} onChange={(e) => setSelectedDia(e.target.value)} className="pill-select-v2 w-100 text-center">
+                      {['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'].map(d => <option key={d} value={d}>{d}</option>)}
+                    </Form.Select>
+                  </div>
+                </div>
+              </Col>
+              {/* 4. Semanas (Multi-Select con estilo de Dropdown Limpio) */}
+              <Col xs={8} md={3}>
+                <div className="info-pill-new w-100">
+                  <span className="pill-icon-sober text-info p-1"><FaCalendarAlt size={12}/></span>
+                  <div className="pill-content flex-grow-1 ps-2">
+                    <span className="pill-label">SEMANAS ({selectedSemanas.length})</span>
+                    <Dropdown autoClose="outside" className="w-100 border-0 shadow-none">
+                      <Dropdown.Toggle 
+                        as="div"
+                        className="pill-select-v2 w-100 text-start d-flex justify-content-between align-items-center p-0" 
+                        style={{ background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
+                      >
+                        <span className="text-truncate" style={{ maxWidth: '120px' }}>
+                          {selectedSemanas.length === availableSemanas.length && availableSemanas.length > 1 
+                            ? 'TODAS' 
+                            : ([...selectedSemanas].sort((a, b) => parseInt(a) - parseInt(b)).join(', ') || '...')}
+                        </span>
+                      </Dropdown.Toggle>
+                      <Dropdown.Menu 
+                        renderOnMount
+                        flip={false}
+                        popperConfig={{ 
+                          strategy: 'fixed',
+                          modifiers: [
+                            { name: 'computeStyles', options: { gpuAcceleration: false } },
+                            { name: 'preventOverflow', options: { boundary: 'viewport' } }
+                          ]
+                        }}
+                        className="custom-scrollbar border-0 shadow-lg mt-2" 
+                        style={{ maxHeight: '250px', background: 'var(--theme-background-secondary)', width: '220px', borderRadius: '0', zIndex: 99999 }}
+                      >
+                        <div className="px-3 py-2 d-flex align-items-center gap-2 border-bottom border-secondary border-opacity-10" onClick={(e) => handleSelectAllWeeks(e)} style={{ cursor: 'pointer' }}>
+                          <Form.Check type="checkbox" checked={selectedSemanas.length === availableSemanas.length && availableSemanas.length > 0} readOnly />
+                          <span className="fw-black text-danger" style={{ fontSize: '0.7rem' }}>TODAS LAS SEMANAS</span>
+                        </div>
+                        {availableSemanas.length === 0 ? (
+                          <div className="px-3 py-3 text-center text-muted fw-bold" style={{ fontSize: '0.65rem' }}>
+                            SIN SEMANAS DISPONIBLES
+                          </div>
+                        ) : availableSemanas.map(sem => (
+                          <div key={sem} className="px-3 py-1 d-flex align-items-center gap-2 dropdown-item-custom" onClick={(e) => handleSemanaToggle(sem, e)} style={{ cursor: 'pointer' }}>
+                            <Form.Check type="checkbox" checked={selectedSemanas.includes(sem)} readOnly />
+                            <span className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>SEMANA {sem}</span>
+                          </div>
+                        ))}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </div>
+                </div>
+              </Col>
+            </>
+          )}
+
+          {selectedReportType === 'BEBIDAS' && (
+            <Col xs={12} md={4}>
+              <div className="info-pill-new w-100">
+                <span className="pill-icon-sober text-info p-1"><FaGlassMartiniAlt size={12}/></span>
+                <div className="pill-content flex-grow-1 ps-2">
+                  <span className="pill-label">CATEGORÍAS ({selectedBebidaTypes.length})</span>
+                  <Dropdown autoClose="outside" className="w-100 border-0 shadow-none">
+                    <Dropdown.Toggle 
+                      as="div"
+                      className="pill-select-v2 w-100 text-start d-flex justify-content-between align-items-center p-0" 
+                      style={{ background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
+                    >
+                      <span className="text-truncate" style={{ maxWidth: '180px' }}>
+                        {selectedBebidaTypes.length === beverageTypes.length && beverageTypes.length > 0 
+                          ? 'TODAS' 
+                          : (beverageTypes.filter(t => selectedBebidaTypes.includes(t.id)).map(t => t.nombre.toUpperCase()).join(', ') || '...')}
+                      </span>
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu 
+                      renderOnMount
+                      flip={false}
+                      popperConfig={{ 
+                        strategy: 'fixed',
+                        modifiers: [
+                          { name: 'computeStyles', options: { gpuAcceleration: false } },
+                          { name: 'preventOverflow', options: { boundary: 'viewport' } }
+                        ]
+                      }}
+                      className="custom-scrollbar border-0 shadow-lg mt-2" 
+                      style={{ 
+                        maxHeight: '400px', 
+                        overflowY: 'auto',
+                        background: 'var(--theme-background-secondary)', 
+                        minWidth: '240px', 
+                        width: 'auto',
+                        borderRadius: '0', 
+                        zIndex: 99999 
+                      }}
+                    >
+                      <div className="px-3 py-2 d-flex align-items-center gap-2 border-bottom border-secondary border-opacity-10" onClick={(e) => { e.stopPropagation(); handleSelectAllBebidas(e); }} style={{ cursor: 'pointer' }}>
+                        <Form.Check type="checkbox" checked={selectedBebidaTypes.length === beverageTypes.length && beverageTypes.length > 0} readOnly />
+                        <span className="fw-black text-danger" style={{ fontSize: '0.7rem' }}>TODAS LAS CATEGORÍAS</span>
+                      </div>
+                      {beverageTypes.length === 0 ? (
+                        <div className="px-3 py-3 text-center text-muted fw-bold" style={{ fontSize: '0.65rem' }}>
+                          SIN CATEGORÍAS DISPONIBLES
+                        </div>
+                      ) : beverageTypes.map(type => (
+                        <div key={type.id} className="px-3 py-1 d-flex align-items-center gap-2 dropdown-item-custom" onClick={(e) => handleBebidaTypeToggle(type.id, e)} style={{ cursor: 'pointer' }}>
+                          <Form.Check type="checkbox" checked={selectedBebidaTypes.includes(type.id)} readOnly />
+                          <span className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>{type.nombre.toUpperCase()}</span>
+                        </div>
+                      ))}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </div>
+              </div>
+            </Col>
+          )}
+
+          <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'DUPLICADOS' ? 8 : 4}>
+            <div className="info-pill-new w-100">
+              <span className="pill-icon-sober text-success p-1"><FaSyncAlt size={12}/></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">EFECTIVIDAD DE ENTREGA</span>
-                <span className="pill-date-input-v2 d-block">{stats.totals.efectividad.toFixed(2)}%</span>
+                <span className="pill-label">SINCRO DEMANDA</span>
+                <div className="fw-black sincro-val">
+                  {selectedReportType === 'EFICIENCIA' ? eficienciaMetadata?.lastUpdated : selectedReportType === 'BEBIDAS' ? bebidasMetadata?.lastUpdated : selectedReportType === 'DUPLICADOS' ? duplicadosMetadata?.lastUpdated : volumenMetadata?.lastUpdated || 'SIN DATOS'}
+                </div>
               </div>
             </div>
           </Col>
@@ -239,122 +692,58 @@ const SupervisorPage: FC = () => {
 
       <div className="admin-section-table flex-grow-1 overflow-hidden p-0">
         <div className="h-100 overflow-auto custom-scrollbar p-3">
-          {loading ? (
-            <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
-          ) : (
-            <>
-              <Row className="g-2 mb-3">
-                {[
-                  { label: 'PREVENTA (HOY)', value: stats.totals.tPrev, icon: <FaShoppingCart />, color: '#adb5bd' },
-                  { label: 'TRÁNSITO (SALIDA)', value: stats.totals.tTrans, icon: <FaTruck />, color: '#6c757d' },
-                  { label: 'RECHAZO (RETORNO)', value: stats.totals.tRech, icon: <FaUndoAlt />, color: '#F40009' },
-                  { label: 'VENTA (LOGRO REAL)', value: stats.totals.tVenta, icon: <FaHandHoldingUsd />, color: '#FFFFFF' }
-                ].map((kpi, i) => (
-                  <Col key={i} xs={6} md={3}>
-                    <div className="dash-kpi-card" style={{ borderLeft: `3px solid ${kpi.color}` }}>
-                      <div className="dash-kpi-icon" style={{ color: kpi.color }}>{kpi.icon}</div>
-                      <div className="dash-kpi-data">
-                        <div className="dash-kpi-value">{kpi.value}</div>
-                        <div className="dash-kpi-label">{kpi.label}</div>
-                      </div>
-                    </div>
-                  </Col>
-                ))}
-              </Row>
-
-              <div className="dash-chart-box mb-4">
-                <div className="dash-chart-header"><FaChartLine className="me-2 text-danger" /> DESEMPEÑO POR CATEGORÍA DE PRODUCTO</div>
-                <div style={{ height: 300 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={stats.chartData}>
-                      <CartesianGrid stroke={GRID_COLOR} vertical={false} />
-                      <XAxis dataKey="name" fontSize={10} stroke={TEXT_COLOR} tickLine={false} axisLine={false} />
-                      <YAxis fontSize={10} stroke={TEXT_COLOR} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{ backgroundColor: '#000', border: 'none', color: '#fff' }} />
-                      <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                      <Bar name="PREVENTA (HOY)" dataKey="PREVENTA" fill="#adb5bd" radius={0} />
-                      <Bar name="VENTA (LOGRO)" dataKey="VENTA" fill="#F40009" radius={0} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div className="dash-chart-box mb-4">
-                <div className="dash-chart-header"><FaUserTie className="me-2 text-danger" /> RENDIMIENTO POR PREVENTISTA</div>
-                <GenericTable 
-                  data={sortedPreventistas} 
-                  columns={[
-                    { accessorKey: 'sede', header: 'SEDE' },
-                    { accessorKey: 'nombre', header: 'PREVENTISTA' },
-                    { 
-                      header: <SortableHeader label="PREVENTA (U)" sortKey="prevHoy" config={sortConfig1} onSort={handleSort1} />,
-                      render: (p: any) => <span>{p.prevHoy} U</span>
-                    },
-                    { 
-                      header: <SortableHeader label="UNIDADES" sortKey="ventaReal" config={sortConfig1} onSort={handleSort1} />,
-                      render: (p: any) => <span className="fw-bold text-success">{p.ventaReal} U</span> 
-                    },
-                    { 
-                      header: <SortableHeader label="INGRESOS" sortKey="ventaRealMoney" config={sortConfig1} onSort={handleSort1} />,
-                      render: (p: any) => <span className="fw-bold">S/ {p.ventaRealMoney.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> 
-                    }
-                  ]} 
-                />
-              </div>
-
-              <div className="dash-chart-box">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <div className="dash-chart-header mb-0"><FaBox className="me-2 text-danger" /> AUDITORÍA DETALLADA (FILTRABLE)</div>
-                  <div className="d-flex align-items-center gap-2 px-2" style={{ background: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', height: '32px' }}>
-                    <FaSearch size={12} opacity={0.5} />
-                    <Form.Control size="sm" placeholder="Buscar..." className="border-0 bg-transparent p-0 shadow-none" style={{ fontSize: '0.75rem', width: '180px' }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                  </div>
-                </div>
-                <GenericTable 
-                  data={sortedLog} 
-                  columns={[
-                    { accessorKey: 'sede', header: 'SEDE' },
-                    { accessorKey: 'sap', header: 'SAP' },
-                    { accessorKey: 'producto', header: 'PRODUCTO' },
-                    { accessorKey: 'preventista', header: 'PREVENTISTA' },
-                    { 
-                      header: 'TIPO', 
-                      render: (l: any) => <Badge bg={l.tipo.includes('VENTA') ? 'success' : 'secondary'}>{l.tipo}</Badge> 
-                    },
-                    { 
-                      header: <SortableHeader label="CANTIDAD (U)" sortKey="cant" config={sortConfig2} onSort={handleSort2} />,
-                      render: (l: any) => <span>{l.cant} U</span>
-                    }
-                  ]} 
-                />
-              </div>
-            </>
+          {loadingMasterData || loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
+            <div className="d-flex flex-column gap-3">
+              {selectedReportType === 'VOLUMEN' && renderVolumenReport()}
+              {selectedReportType === 'EFICIENCIA' && renderEficienciaReport()}
+              {selectedReportType === 'BEBIDAS' && renderBebidasReport()}
+              {selectedReportType === 'DUPLICADOS' && renderDuplicadosReport()}
+            </div>
           )}
         </div>
       </div>
 
       <style>{`
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 4px; height: 40px; overflow: hidden; }
-        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); padding: 0 10px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); }
-        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; }
-        .pill-label { font-size: 0.45rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; color: var(--theme-text-primary); }
-        .pill-date-input-v2, .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 2px 0 !important; margin-top: -2px; width: 100% !important; }
+        .admin-layout-container { background: var(--theme-background-primary); min-height: 100%; }
+        .fw-black { font-weight: 900 !important; }
+        .l-height-1 { letter-spacing: 0.5px; font-size: 0.8rem; color: var(--theme-text-primary); }
+        .sub-label { font-size: 0.55rem; color: var(--theme-text-secondary); opacity: 0.7; }
         
-        .pill-date-input-v2::-webkit-calendar-picker-indicator { 
-          filter: invert(var(--theme-calendar-invert, 1)); 
-          cursor: pointer;
-          transform: scale(1.5);
-          margin-right: 10px;
-          opacity: 0.8;
-        }
+        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 36px; position: relative; }
+        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 28px; justify-content: center; z-index: 2; }
+        .pill-content { padding: 0 8px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; z-index: 1; }
+        .pill-label { font-size: 0.4rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; color: var(--theme-text-primary); margin-bottom: -2px; }
+        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
+        .sincro-val { font-size: 0.65rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .dash-kpi-card { background: var(--theme-background-secondary); padding: 10px; border: 1px solid var(--theme-border-default); display: flex; align-items: center; gap: 8px; height: 100%; }
-        .dash-kpi-icon { font-size: 1rem; opacity: 0.8; }
-        .dash-kpi-value { font-size: 1.1rem; font-weight: 900; color: var(--theme-text-primary); line-height: 1; }
-        .dash-kpi-label { font-size: 0.5rem; font-weight: 800; opacity: 0.5; text-uppercase: uppercase; margin-top: 2px; color: var(--theme-text-primary); }
-        
+        .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 8px 15px; cursor: pointer; transition: background 0.2s ease; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent !important; }
+        .dropdown-item-custom:hover { background: rgba(244, 0, 9, 0.15) !important; }
+
+        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; }
+        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 10px !important; border-radius: 0 !important; }
+        .loc-header-compact .accordion-button:not(.collapsed) { background: transparent !important; color: inherit !important; box-shadow: none !important; }
+        .loc-header-compact .accordion-button:after { display: none; }
+        .loc-avatar { width: 38px; height: 38px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; }
+        .badge-industrial { padding: 6px 10px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 50px; }
+        .b-label { font-size: 0.5rem; font-weight: 800; }
+
+        .mesa-title-bar { background: var(--theme-icon-bg); border-left: 4px solid var(--color-red-primary); }
+        .m-label { font-size: 0.7rem; color: var(--theme-text-primary); }
+        .m-stats { font-size: 0.6rem; color: var(--theme-text-secondary); text-transform: uppercase; }
+
+        .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 0; }
+        .r-label { font-size: 0.7rem; color: var(--theme-text-primary); }
+        .r-val { font-size: 0.75rem; }
+        .r-unit { font-size: 0.55rem; opacity: 0.7; }
+        .chevron-icon { font-size: 0.6rem; transition: transform 0.2s ease; color: var(--theme-text-secondary); }
+        .chevron-icon.active { transform: rotate(90deg); color: var(--color-red-primary); }
+
+        .p-name { font-size: 0.65rem; color: var(--theme-text-primary); }
+        .p-sap { font-size: 0.55rem; color: #00d1ff; }
+        .p-badge { font-size: 0.6rem; border-radius: 0; font-weight: 900; }
+
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
-        .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); margin-bottom: 10px; text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; }
+        .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; margin-bottom: 10px; }
       `}</style>
     </div>
   );

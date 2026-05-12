@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
-import { FaGlassMartiniAlt, FaCalendarAlt, FaWarehouse, FaChevronDown, FaChevronUp, FaSortAlphaDown, FaSortNumericDown } from 'react-icons/fa';
+import { FaGlassMartiniAlt, FaCalendarAlt, FaWarehouse, FaChevronDown, FaChevronUp, FaSortAlphaDown } from 'react-icons/fa';
 import SearchInput from '../components/SearchInput';
 import { matchSearchTerms } from '../utils/searchUtils';
 
