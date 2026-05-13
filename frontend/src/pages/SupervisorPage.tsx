@@ -22,6 +22,7 @@ const SupervisorPage: FC = () => {
   const [bebidasMetadata, setBebidasMetadata] = useState<any>(null);
   const [duplicadosReport, setDuplicadosReport] = useState<any[]>([]);
   const [duplicadosMetadata, setDuplicadosMetadata] = useState<any>(null);
+  const [maestroData, setMaestroData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [selectedSedeId, setSelectedSedeId] = useState<string>('GLOBAL');
@@ -82,8 +83,19 @@ const SupervisorPage: FC = () => {
       if (selectedReportType === 'DUPLICADOS') setLoading(false);
     });
 
-    return () => { unsubVolumen(); unsubEficiencia(); unsubBebidas(); unsubDuplicados(); };
+    const maestroRef = ref(rtdb, 'maestro/data');
+    const unsubMaestro = onValue(maestroRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setMaestroData(snapshot.val());
+      }
+    });
+
+    return () => { unsubVolumen(); unsubEficiencia(); unsubBebidas(); unsubDuplicados(); unsubMaestro(); };
   }, [selectedReportType]);
+
+  const maestroMap = useMemo(() => {
+    return maestroData.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
+  }, [maestroData]);
 
   const availableSemanas = useMemo(() => {
     const semanas = new Set<string>();
@@ -467,58 +479,65 @@ const SupervisorPage: FC = () => {
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
-                {Object.values(loc.clientes).map((cliente: any) => (
-                  <div key={cliente.codigo} className="mesa-section mb-3">
-                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2" style={{ borderLeftColor: '#ffc107' }}>
-                      <div className="d-flex flex-column">
-                        <span className="fw-black m-label">{cliente.nombre}</span>
-                        <span className="fw-bold text-secondary" style={{ fontSize: '0.55rem' }}>CÓDIGO: {cliente.codigo}</span>
+                {Object.values(loc.clientes).map((cliente: any) => {
+                  const masterClient = maestroMap[String(cliente.codigo)];
+                  const rutaCom = masterClient ? (masterClient['Ruta com'] || masterClient['RUTA COM'] || 'SIN RUTA') : 'CARGANDO...';
+                  return (
+                    <div key={cliente.codigo} className="mesa-section mb-3">
+                      <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2" style={{ borderLeftColor: '#ffc107' }}>
+                        <div className="d-flex flex-column flex-md-row align-items-md-center gap-md-3">
+                          <span className="fw-black m-label">{cliente.nombre}</span>
+                          <div className="d-flex gap-2 align-items-center">
+                            <Badge bg="dark" className="p-badge text-warning border border-warning border-opacity-50">RUTA: {rutaCom}</Badge>
+                            <span className="fw-bold text-secondary d-label">CÓDIGO: {cliente.codigo}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="px-3">
+                        {cliente.duplas.map((dupla: any, idx: number) => (
+                          <div key={idx} className="duplicado-comparativo-card mb-3">
+                            <Row className="g-0 border border-warning border-opacity-25 shadow-sm">
+                              <Col xs={6} className="border-end border-secondary border-opacity-25">
+                                <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
+                                  <span className="fw-black text-warning dup-doc-id"># {dupla.doc1.id}</span>
+                                  <Badge bg="secondary" className="fw-bold dup-doc-hora">{dupla.doc1.hora}</Badge>
+                                </div>
+                                <div className="p-2 bg-transparent">
+                                  {dupla.doc1.items.map((item: any, i: number) => (
+                                    <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                      <div className="d-flex flex-column min-width-0">
+                                        <span className="fw-bold text-truncate dup-item-name">{item.nombre}</span>
+                                        <span className="dup-item-sap">{item.sap}</span>
+                                      </div>
+                                      <span className="fw-black ms-2 dup-item-cant">{item.cant} {item.med}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </Col>
+                              <Col xs={6}>
+                                <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
+                                  <span className="fw-black text-warning dup-doc-id"># {dupla.doc2.id}</span>
+                                  <Badge bg="secondary" className="fw-bold dup-doc-hora">{dupla.doc2.hora}</Badge>
+                                </div>
+                                <div className="p-2 bg-transparent">
+                                  {dupla.doc2.items.map((item: any, i: number) => (
+                                    <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                      <div className="d-flex flex-column min-width-0">
+                                        <span className="fw-bold text-truncate dup-item-name">{item.nombre}</span>
+                                        <span className="dup-item-sap">{item.sap}</span>
+                                      </div>
+                                      <span className="fw-black ms-2 dup-item-cant">{item.cant} {item.med}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </Col>
+                            </Row>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div className="px-3">
-                      {cliente.duplas.map((dupla: any, idx: number) => (
-                        <div key={idx} className="duplicado-comparativo-card mb-3">
-                          <Row className="g-0 border border-warning border-opacity-25 shadow-sm">
-                            <Col xs={6} className="border-end border-secondary border-opacity-25">
-                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
-                                <span className="fw-black text-warning" style={{ fontSize: '0.65rem' }}># {dupla.doc1.id}</span>
-                                <Badge bg="secondary" className="fw-bold" style={{ fontSize: '0.55rem' }}>{dupla.doc1.hora}</Badge>
-                              </div>
-                              <div className="p-2 bg-transparent">
-                                {dupla.doc1.items.map((item: any, i: number) => (
-                                  <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
-                                    <div className="d-flex flex-column min-width-0">
-                                      <span className="fw-bold text-truncate" style={{ fontSize: '0.6rem', color: 'var(--theme-text-primary)' }}>{item.nombre}</span>
-                                      <span style={{ fontSize: '0.5rem', opacity: 0.6 }}>{item.sap}</span>
-                                    </div>
-                                    <span className="fw-black ms-2" style={{ fontSize: '0.65rem', color: 'var(--color-red-primary)' }}>{item.cant} {item.med}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </Col>
-                            <Col xs={6}>
-                              <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
-                                <span className="fw-black text-warning" style={{ fontSize: '0.65rem' }}># {dupla.doc2.id}</span>
-                                <Badge bg="secondary" className="fw-bold" style={{ fontSize: '0.55rem' }}>{dupla.doc2.hora}</Badge>
-                              </div>
-                              <div className="p-2 bg-transparent">
-                                {dupla.doc2.items.map((item: any, i: number) => (
-                                  <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
-                                    <div className="d-flex flex-column min-width-0">
-                                      <span className="fw-bold text-truncate" style={{ fontSize: '0.6rem', color: 'var(--theme-text-primary)' }}>{item.nombre}</span>
-                                      <span style={{ fontSize: '0.5rem', opacity: 0.6 }}>{item.sap}</span>
-                                    </div>
-                                    <span className="fw-black ms-2" style={{ fontSize: '0.65rem', color: 'var(--color-red-primary)' }}>{item.cant} {item.med}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </Col>
-                          </Row>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </Accordion.Body>
             </Accordion.Item>
           ))}
@@ -527,6 +546,12 @@ const SupervisorPage: FC = () => {
       <style>{`
         .duplicado-comparativo-card { background: var(--theme-background-primary); border-radius: 4px; overflow: hidden; }
         .last-child-no-border:last-child { border-bottom: none !important; }
+        .d-label { font-size: 0.55rem; }
+        .dup-doc-id { font-size: 0.65rem; }
+        .dup-doc-hora { font-size: 0.55rem; }
+        .dup-item-name { font-size: 0.6rem; color: var(--theme-text-primary); }
+        .dup-item-sap { font-size: 0.5rem; opacity: 0.6; }
+        .dup-item-cant { font-size: 0.65rem; color: var(--color-red-primary); }
       `}</style>
     </div>
   );
@@ -788,6 +813,13 @@ const SupervisorPage: FC = () => {
           .p-name { font-size: 0.85rem; }
           .p-sap { font-size: 0.75rem; }
           .p-badge { font-size: 0.8rem; }
+
+          .d-label { font-size: 0.8rem !important; }
+          .dup-doc-id { font-size: 0.9rem !important; }
+          .dup-doc-hora { font-size: 0.8rem !important; }
+          .dup-item-name { font-size: 0.85rem !important; }
+          .dup-item-sap { font-size: 0.75rem !important; }
+          .dup-item-cant { font-size: 0.9rem !important; }
         }
       `}</style>
     </div>
