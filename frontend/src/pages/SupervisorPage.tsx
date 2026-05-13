@@ -742,8 +742,28 @@ const SupervisorPage: FC = () => {
         .p-sap { font-size: 0.55rem; color: #00d1ff; }
         .p-badge { font-size: 0.6rem; border-radius: 0; font-weight: 900; }
 
+        .r-dot-leader { flex-grow: 1; border-bottom: 2px dotted var(--theme-border-default); margin: 0 15px; opacity: 0.2; align-self: center; margin-bottom: 4px; }
+        .p-dot-leader { flex-grow: 1; border-bottom: 1px dotted var(--theme-border-default); margin: 0 10px; opacity: 0.15; align-self: center; margin-bottom: 3px; }
+
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
         .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; margin-bottom: 10px; }
+
+        @media (min-width: 992px) {
+          .volumen-compact-view {
+            max-width: 1350px;
+            margin: 0 auto;
+          }
+          .l-height-1 { font-size: 1.1rem; }
+          .sub-label { font-size: 0.7rem; }
+          .m-label { font-size: 0.9rem; }
+          .m-stats { font-size: 0.8rem; }
+          .r-label { font-size: 1rem; }
+          .r-val { font-size: 1.1rem; }
+          .r-unit { font-size: 0.75rem; }
+          .p-name { font-size: 0.85rem; }
+          .p-sap { font-size: 0.75rem; }
+          .p-badge { font-size: 0.8rem; }
+        }
       `}</style>
     </div>
   );
