@@ -189,7 +189,7 @@ const SupervisorPage: FC = () => {
   const toggleRuta = (rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] }));
 
   const renderVolumenReport = () => (
-    <div className="volumen-compact-view">
+    <div className="report-container-stable">
       {filteredVolumenData.length === 0 ? (
         <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE VOLUMEN.</div>
       ) : (
@@ -202,7 +202,7 @@ const SupervisorPage: FC = () => {
                     <div className="loc-avatar">{loc.id}</div>
                     <div>
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">RESUMEN DE LOCALIDAD</div>
+                      <div className="fw-bold sub-label">VOLUMEN</div>
                     </div>
                   </div>
                   <div className="d-flex gap-2">
@@ -231,11 +231,12 @@ const SupervisorPage: FC = () => {
                             <Col xs={12} key={rutaName}>
                               <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
                                 <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => toggleRuta(rutaKey)}>
-                                  <div className="d-flex align-items-center gap-2">
+                                  <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
                                     <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
-                                    <span className="fw-black r-label">RUTA {rutaName}</span>
+                                    <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+                                    <div className="r-dot-leader d-none d-md-block"></div>
                                   </div>
-                                  <div className="d-flex gap-3 align-items-center">
+                                  <div className="d-flex gap-3 align-items-center ps-2">
                                     <div className="d-flex flex-column align-items-end"><span className="fw-black text-primary r-val">{ruta.totalCF.toFixed(2)} <span className="r-unit">CF</span></span></div>
                                     <div className="d-flex flex-column align-items-end" style={{ minWidth: '60px' }}><span className="fw-black text-success r-val">{ruta.totalUC.toFixed(2)} <span className="r-unit">CU</span></span></div>
                                   </div>
@@ -245,8 +246,14 @@ const SupervisorPage: FC = () => {
                                     <ListGroup variant="flush">
                                       {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
                                         <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
-                                          <div className="d-flex flex-column"><span className="fw-bold p-name">{p.nombre}</span><span className="fw-bold p-sap">SAP: {sap}</span></div>
-                                          <div className="d-flex gap-2 align-items-center">
+                                          <div className="d-flex flex-column flex-grow-1 overflow-hidden">
+                                            <div className="d-flex align-items-center gap-2">
+                                              <span className="fw-bold p-name text-nowrap">{p.nombre}</span>
+                                              <div className="p-dot-leader d-none d-md-block"></div>
+                                            </div>
+                                            <span className="fw-bold p-sap">SAP: {sap}</span>
+                                          </div>
+                                          <div className="d-flex gap-2 align-items-center ps-2">
                                             <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
                                             <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
                                           </div>
@@ -272,7 +279,7 @@ const SupervisorPage: FC = () => {
   );
 
   const renderBebidasReport = () => (
-    <div className="volumen-compact-view">
+    <div className="report-container-stable">
       {filteredBebidasData.length === 0 ? (
         <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE BEBIDAS.</div>
       ) : (
@@ -285,7 +292,7 @@ const SupervisorPage: FC = () => {
                     <div className="loc-avatar">{loc.id}</div>
                     <div>
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">VOLUMEN POR CATEGORÍA</div>
+                      <div className="fw-bold sub-label">BEBIDAS</div>
                     </div>
                   </div>
                   <div className="d-flex gap-2">
@@ -311,11 +318,12 @@ const SupervisorPage: FC = () => {
                             <Col xs={12} key={rutaName}>
                               <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
                                 <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => toggleRuta(rutaKey)}>
-                                  <div className="d-flex align-items-center gap-2">
+                                  <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
                                     <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
-                                    <span className="fw-black r-label">RUTA {rutaName}</span>
+                                    <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+                                    <div className="r-dot-leader d-none d-md-block"></div>
                                   </div>
-                                  <div className="d-flex gap-3 align-items-center">
+                                  <div className="d-flex gap-3 align-items-center ps-2">
                                     <div className="d-flex flex-column align-items-end"><span className="fw-black text-primary r-val">{ruta.totalCF.toFixed(2)} <span className="r-unit">CF</span></span></div>
                                     <div className="d-flex flex-column align-items-end" style={{ minWidth: '60px' }}><span className="fw-black text-success r-val">{ruta.totalUC.toFixed(2)} <span className="r-unit">CU</span></span></div>
                                   </div>
@@ -325,8 +333,14 @@ const SupervisorPage: FC = () => {
                                     <ListGroup variant="flush">
                                       {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
                                         <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
-                                          <div className="d-flex flex-column"><span className="fw-bold p-name">{p.nombre}</span><span className="fw-bold p-sap">SAP: {sap}</span></div>
-                                          <div className="d-flex gap-2 align-items-center">
+                                          <div className="d-flex flex-column flex-grow-1 overflow-hidden">
+                                            <div className="d-flex align-items-center gap-2">
+                                              <span className="fw-bold p-name text-nowrap">{p.nombre}</span>
+                                              <div className="p-dot-leader d-none d-md-block"></div>
+                                            </div>
+                                            <span className="fw-bold p-sap">SAP: {sap}</span>
+                                          </div>
+                                          <div className="d-flex gap-2 align-items-center ps-2">
                                             <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
                                             <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
                                           </div>
@@ -352,7 +366,7 @@ const SupervisorPage: FC = () => {
   );
 
   const renderEficienciaReport = () => (
-    <div className="volumen-compact-view">
+    <div className="report-container-stable">
       {filteredEficienciaData.length === 0 ? (
         <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE EFICIENCIA PARA LOS FILTROS SELECCIONADOS.</div>
       ) : (
@@ -365,7 +379,7 @@ const SupervisorPage: FC = () => {
                     <div className="loc-avatar">{loc.id}</div>
                     <div>
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">EFECTIVIDAD DE COMPRA</div>
+                      <div className="fw-bold sub-label">EFICIENCIA</div>
                     </div>
                   </div>
                   <div className="d-flex gap-2">
@@ -401,11 +415,12 @@ const SupervisorPage: FC = () => {
                             <Col xs={12} key={rutaName}>
                               <div className="ruta-card-compact border-0 shadow-none">
                                 <div className="ruta-main-row d-flex justify-content-between align-items-center p-2">
-                                  <div className="d-flex align-items-center gap-2">
+                                  <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
                                     <div style={{ width: '12px' }}></div>
-                                    <span className="fw-black r-label">RUTA {rutaName}</span>
+                                    <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+                                    <div className="r-dot-leader d-none d-md-block"></div>
                                   </div>
-                                  <div className="d-flex gap-3 align-items-center">
+                                  <div className="d-flex gap-3 align-items-center ps-2">
                                     <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-primary r-val">{ruta.stats.prog} <span className="r-unit">P</span></span></div>
                                     <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-success r-val">{ruta.stats.efec} <span className="r-unit">E</span></span></div>
                                     <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-danger r-val">{sinVis} <span className="r-unit">SV</span></span></div>
@@ -429,7 +444,7 @@ const SupervisorPage: FC = () => {
   );
 
   const renderDuplicadosReport = () => (
-    <div className="volumen-compact-view">
+    <div className="report-container-stable">
       {filteredDuplicadosData.length === 0 ? (
         <div className="text-center p-5 text-muted small fw-black">NO SE DETECTARON PEDIDOS DUPLICADOS.</div>
       ) : (
@@ -442,7 +457,7 @@ const SupervisorPage: FC = () => {
                     <div className="loc-avatar bg-warning text-dark"><FaExclamationTriangle /></div>
                     <div>
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">CARRITOS IDÉNTICOS DETECTADOS</div>
+                      <div className="fw-bold sub-label">DUPLICADOS</div>
                     </div>
                   </div>
                   <Badge bg="danger" className="badge-industrial">
@@ -690,10 +705,10 @@ const SupervisorPage: FC = () => {
         </Row>
       </div>
 
-      <div className="admin-section-table flex-grow-1 overflow-hidden p-0">
+      <div className="admin-section-table flex-grow-1 p-0 overflow-hidden">
         <div className="h-100 overflow-auto custom-scrollbar p-3">
           {loadingMasterData || loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
-            <div className="d-flex flex-column gap-3">
+            <div className="report-main-wrapper">
               {selectedReportType === 'VOLUMEN' && renderVolumenReport()}
               {selectedReportType === 'EFICIENCIA' && renderEficienciaReport()}
               {selectedReportType === 'BEBIDAS' && renderBebidasReport()}
@@ -704,7 +719,7 @@ const SupervisorPage: FC = () => {
       </div>
 
       <style>{`
-        .admin-layout-container { background: var(--theme-background-primary); min-height: 100%; }
+        .admin-layout-container { background: var(--theme-background-primary); height: 100vh; display: flex; flex-direction: column; }
         .fw-black { font-weight: 900 !important; }
         .l-height-1 { letter-spacing: 0.5px; font-size: 0.8rem; color: var(--theme-text-primary); }
         .sub-label { font-size: 0.55rem; color: var(--theme-text-secondary); opacity: 0.7; }
@@ -717,11 +732,14 @@ const SupervisorPage: FC = () => {
         .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
         .sincro-val { font-size: 0.75rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 
+        .report-main-wrapper { display: flex; flex-direction: column; gap: 1rem; width: 100%; align-items: center; }
+        .report-container-stable { width: 100%; display: block; }
+
         .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 8px 15px; cursor: pointer; transition: background 0.2s ease; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent !important; }
         .dropdown-item-custom:hover { background: rgba(244, 0, 9, 0.15) !important; }
 
         .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; }
-        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 10px !important; border-radius: 0 !important; }
+        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 10px !important; border-radius: 0 !important; width: 100%; }
         .loc-header-compact .accordion-button:not(.collapsed) { background: transparent !important; color: inherit !important; box-shadow: none !important; }
         .loc-header-compact .accordion-button:after { display: none; }
         .loc-avatar { width: 38px; height: 38px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; }
@@ -732,7 +750,7 @@ const SupervisorPage: FC = () => {
         .m-label { font-size: 0.7rem; color: var(--theme-text-primary); }
         .m-stats { font-size: 0.6rem; color: var(--theme-text-secondary); text-transform: uppercase; }
 
-        .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 0; }
+        .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 0; width: 100%; }
         .r-label { font-size: 0.7rem; color: var(--theme-text-primary); }
         .r-val { font-size: 0.75rem; }
         .r-unit { font-size: 0.55rem; opacity: 0.7; }
@@ -757,9 +775,8 @@ const SupervisorPage: FC = () => {
           .pill-select-v2 { font-size: 1.05rem; }
           .sincro-val { font-size: 0.95rem; }
 
-          .volumen-compact-view {
+          .report-container-stable {
             max-width: 1350px;
-            margin: 0 auto;
           }
           .l-height-1 { font-size: 1.1rem; }
           .sub-label { font-size: 0.7rem; }
