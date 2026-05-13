@@ -681,7 +681,7 @@ const SupervisorPage: FC = () => {
               <span className="pill-icon-sober text-success p-1"><FaSyncAlt className="pill-main-icon"/></span>
               <div className="pill-content flex-grow-1">
                 <span className="pill-label">DEMANDA</span>
-                <div className="fw-black sincro-val">
+                <div className="sincro-val">
                   {selectedReportType === 'EFICIENCIA' ? eficienciaMetadata?.lastUpdated : selectedReportType === 'BEBIDAS' ? bebidasMetadata?.lastUpdated : selectedReportType === 'DUPLICADOS' ? duplicadosMetadata?.lastUpdated : volumenMetadata?.lastUpdated || 'SIN DATOS'}
                 </div>
               </div>
@@ -713,9 +713,9 @@ const SupervisorPage: FC = () => {
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; z-index: 2; }
         .pill-main-icon { font-size: 14px; }
         .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; z-index: 1; }
-        .pill-label { font-size: 0.5rem; font-weight: 800; opacity: 0.6; text-transform: uppercase; color: var(--theme-text-primary); margin-bottom: -1px; }
-        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 800; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
-        .sincro-val { font-size: 0.75rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pill-label { font-size: 0.5rem; font-weight: 600; opacity: 0.6; text-transform: uppercase; color: var(--theme-text-primary); margin-bottom: -1px; }
+        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
+        .sincro-val { font-size: 0.75rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 
         .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 8px 15px; cursor: pointer; transition: background 0.2s ease; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent !important; }
         .dropdown-item-custom:hover { background: rgba(244, 0, 9, 0.15) !important; }
