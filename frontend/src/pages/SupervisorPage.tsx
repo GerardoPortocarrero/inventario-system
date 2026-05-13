@@ -197,7 +197,7 @@ const SupervisorPage: FC = () => {
           {filteredVolumenData.map(loc => (
             <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
               <Accordion.Header className="loc-header-compact">
-                <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-3">
                     <div className="loc-avatar">{loc.id}</div>
                     <div>
@@ -280,7 +280,7 @@ const SupervisorPage: FC = () => {
           {filteredBebidasData.map(loc => (
             <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
               <Accordion.Header className="loc-header-compact">
-                <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-3">
                     <div className="loc-avatar">{loc.id}</div>
                     <div>
@@ -360,7 +360,7 @@ const SupervisorPage: FC = () => {
           {filteredEficienciaData.map((loc: any) => (
             <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
               <Accordion.Header className="loc-header-compact">
-                <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-3">
                     <div className="loc-avatar">{loc.id}</div>
                     <div>
@@ -437,7 +437,7 @@ const SupervisorPage: FC = () => {
           {filteredDuplicadosData.map(loc => (
             <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
               <Accordion.Header className="loc-header-compact">
-                <div className="d-flex justify-content-between align-items-center w-100 pe-3">
+                <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-3">
                     <div className="loc-avatar bg-warning text-dark"><FaExclamationTriangle /></div>
                     <div>
@@ -523,7 +523,7 @@ const SupervisorPage: FC = () => {
           {/* 1. Sede */}
           <Col xs={12} md={2}>
             <div className="info-pill-new w-100">
-              <span className="pill-icon-sober text-danger p-1"><FaWarehouse size={12}/></span>
+              <span className="pill-icon-sober text-danger p-1"><FaWarehouse className="pill-main-icon"/></span>
               <div className="pill-content flex-grow-1">
                 <span className="pill-label">SEDE</span>
                 <Form.Select value={selectedSedeId} onChange={(e) => setSelectedSedeId(e.target.value)} className="pill-select-v2 w-100">
@@ -537,7 +537,7 @@ const SupervisorPage: FC = () => {
           {/* 2. Reporte */}
           <Col xs={12} md={2}>
             <div className="info-pill-new w-100">
-              <span className="pill-icon-sober text-primary p-1"><FaFilter size={12}/></span>
+              <span className="pill-icon-sober text-primary p-1"><FaFilter className="pill-main-icon"/></span>
               <div className="pill-content flex-grow-1">
                 <span className="pill-label">REPORTE</span>
                 <Form.Select value={selectedReportType} onChange={(e) => setSelectedReportType(e.target.value as ReportType)} className="pill-select-v2 w-100">
@@ -566,7 +566,7 @@ const SupervisorPage: FC = () => {
               {/* 4. Semanas (Multi-Select con estilo de Dropdown Limpio) */}
               <Col xs={8} md={3}>
                 <div className="info-pill-new w-100">
-                  <span className="pill-icon-sober text-info p-1"><FaCalendarAlt size={12}/></span>
+                  <span className="pill-icon-sober text-info p-1"><FaCalendarAlt className="pill-main-icon"/></span>
                   <div className="pill-content flex-grow-1 ps-2">
                     <span className="pill-label">SEMANAS ({selectedSemanas.length})</span>
                     <Dropdown autoClose="outside" className="w-100 border-0 shadow-none">
@@ -619,7 +619,7 @@ const SupervisorPage: FC = () => {
           {selectedReportType === 'BEBIDAS' && (
             <Col xs={12} md={4}>
               <div className="info-pill-new w-100">
-                <span className="pill-icon-sober text-info p-1"><FaGlassMartiniAlt size={12}/></span>
+                <span className="pill-icon-sober text-info p-1"><FaGlassMartiniAlt className="pill-main-icon"/></span>
                 <div className="pill-content flex-grow-1 ps-2">
                   <span className="pill-label">CATEGORÍAS ({selectedBebidaTypes.length})</span>
                   <Dropdown autoClose="outside" className="w-100 border-0 shadow-none">
@@ -678,9 +678,9 @@ const SupervisorPage: FC = () => {
 
           <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'DUPLICADOS' ? 8 : 4}>
             <div className="info-pill-new w-100">
-              <span className="pill-icon-sober text-success p-1"><FaSyncAlt size={12}/></span>
+              <span className="pill-icon-sober text-success p-1"><FaSyncAlt className="pill-main-icon"/></span>
               <div className="pill-content flex-grow-1">
-                <span className="pill-label">SINCRO DEMANDA</span>
+                <span className="pill-label">DEMANDA</span>
                 <div className="fw-black sincro-val">
                   {selectedReportType === 'EFICIENCIA' ? eficienciaMetadata?.lastUpdated : selectedReportType === 'BEBIDAS' ? bebidasMetadata?.lastUpdated : selectedReportType === 'DUPLICADOS' ? duplicadosMetadata?.lastUpdated : volumenMetadata?.lastUpdated || 'SIN DATOS'}
                 </div>
@@ -709,12 +709,13 @@ const SupervisorPage: FC = () => {
         .l-height-1 { letter-spacing: 0.5px; font-size: 0.8rem; color: var(--theme-text-primary); }
         .sub-label { font-size: 0.55rem; color: var(--theme-text-secondary); opacity: 0.7; }
         
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 36px; position: relative; }
-        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 28px; justify-content: center; z-index: 2; }
-        .pill-content { padding: 0 8px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; z-index: 1; }
-        .pill-label { font-size: 0.4rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; color: var(--theme-text-primary); margin-bottom: -2px; }
-        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 700; font-size: 0.75rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
-        .sincro-val { font-size: 0.65rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
+        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; z-index: 2; }
+        .pill-main-icon { font-size: 14px; }
+        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; z-index: 1; }
+        .pill-label { font-size: 0.5rem; font-weight: 800; opacity: 0.6; text-transform: uppercase; color: var(--theme-text-primary); margin-bottom: -1px; }
+        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 800; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
+        .sincro-val { font-size: 0.75rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 8px 15px; cursor: pointer; transition: background 0.2s ease; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent !important; }
         .dropdown-item-custom:hover { background: rgba(244, 0, 9, 0.15) !important; }
@@ -749,6 +750,13 @@ const SupervisorPage: FC = () => {
         .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; margin-bottom: 10px; }
 
         @media (min-width: 992px) {
+          .info-pill-new { height: 48px; }
+          .pill-icon-sober { min-width: 40px; }
+          .pill-main-icon { font-size: 18px; }
+          .pill-label { font-size: 0.65rem; }
+          .pill-select-v2 { font-size: 1.05rem; }
+          .sincro-val { font-size: 0.95rem; }
+
           .volumen-compact-view {
             max-width: 1350px;
             margin: 0 auto;
