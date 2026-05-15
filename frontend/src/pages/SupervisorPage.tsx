@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Row, Col, Form, Badge, Accordion, ListGroup, Dropdown } from 'react-bootstrap';
 import { rtdb } from '../api/firebase';
 import { ref, onValue } from 'firebase/database';
@@ -9,6 +9,79 @@ import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, Fa
 import GlobalSpinner from '../components/GlobalSpinner';
 
 type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'BEBIDAS' | 'DUPLICADOS';
+
+// --- COMPONENTES MEMOIZADOS PARA MANTENER EL DISEÑO Y GANAR FLUIDEZ ---
+
+const RutaVolumenBebidaItem = memo(({ 
+  rutaName, ruta, isExpanded, onToggle, rutaKey 
+}: { 
+  rutaName: string, ruta: any, isExpanded: boolean, onToggle: (key: string) => void, rutaKey: string 
+}) => {
+  return (
+    <Col xs={12}>
+      <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
+        <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => onToggle(rutaKey)}>
+          <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+            <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
+            <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+            <div className="r-dot-leader d-none d-md-block"></div>
+          </div>
+          <div className="d-flex gap-3 align-items-center ps-2">
+            <div className="d-flex flex-column align-items-end"><span className="fw-black text-primary r-val">{ruta.totalCF.toFixed(2)} <span className="r-unit">CF</span></span></div>
+            <div className="d-flex flex-column align-items-end" style={{ minWidth: '60px' }}><span className="fw-black text-success r-val">{ruta.totalUC.toFixed(2)} <span className="r-unit">CU</span></span></div>
+          </div>
+        </div>
+        {isExpanded && (
+          <div className="ruta-details-list p-2 pt-0 border-top border-secondary border-opacity-10">
+            <ListGroup variant="flush">
+              {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
+                <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
+                  <div className="d-flex flex-column flex-grow-1 overflow-hidden">
+                    <div className="d-flex align-items-center gap-2">
+                      <span className="fw-bold p-name text-nowrap">{p.nombre}</span>
+                      <div className="p-dot-leader d-none d-md-block"></div>
+                    </div>
+                    <span className="fw-bold p-sap">SAP: {sap}</span>
+                  </div>
+                  <div className="d-flex gap-2 align-items-center ps-2">
+                    <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
+                    <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
+                  </div>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          </div>
+        )}
+      </div>
+    </Col>
+  );
+});
+
+const EficienciaRutaItem = memo(({ 
+  rutaName, ruta, sinVis, efPorc, porcColor 
+}: { 
+  rutaName: string, ruta: any, sinVis: number, efPorc: number, porcColor: string 
+}) => {
+  return (
+    <Col xs={12}>
+      <div className="ruta-card-compact border-0 shadow-none">
+        <div className="ruta-main-row d-flex justify-content-between align-items-center p-2">
+          <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+            <div style={{ width: '12px' }}></div>
+            <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+            <div className="r-dot-leader d-none d-md-block"></div>
+          </div>
+          <div className="d-flex gap-3 align-items-center ps-2">
+            <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-primary r-val">{ruta.stats.prog} <span className="r-unit">P</span></span></div>
+            <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-success r-val">{ruta.stats.efec} <span className="r-unit">E</span></span></div>
+            <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-danger r-val">{sinVis} <span className="r-unit">SV</span></span></div>
+            <div className="d-flex flex-column align-items-end" style={{ minWidth: '55px' }}><span className="fw-black r-val" style={{ color: porcColor }}>{efPorc.toFixed(0)} <span className="r-unit">%</span></span></div>
+          </div>
+        </div>
+      </div>
+    </Col>
+  );
+});
 
 const SupervisorPage: FC = () => {
   const { sedes, loadingMasterData, beverageTypes } = useData();
@@ -43,6 +116,13 @@ const SupervisorPage: FC = () => {
 
   useEffect(() => {
     setLoading(true);
+    let reportsToLoad = 4;
+    let loadedCount = 0;
+    const checkLoaded = () => {
+      loadedCount++;
+      if (loadedCount >= reportsToLoad) setLoading(false);
+    };
+
     const volumenRef = ref(rtdb, 'reportes/volumen');
     const unsubVolumen = onValue(volumenRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -50,7 +130,7 @@ const SupervisorPage: FC = () => {
         setVolumenReport(data.data || []);
         setVolumenMetadata(data.metadata || null);
       }
-      if (selectedReportType === 'VOLUMEN') setLoading(false);
+      checkLoaded();
     });
 
     const eficienciaRef = ref(rtdb, 'reportes/eficiencia');
@@ -60,7 +140,7 @@ const SupervisorPage: FC = () => {
         setEficienciaReport(data.data || []);
         setEficienciaMetadata(data.metadata || null);
       }
-      if (selectedReportType === 'EFICIENCIA') setLoading(false);
+      checkLoaded();
     });
 
     const bebidasRef = ref(rtdb, 'reportes/bebidas');
@@ -70,7 +150,7 @@ const SupervisorPage: FC = () => {
         setBebidasReport(data.data || []);
         setBebidasMetadata(data.metadata || null);
       }
-      if (selectedReportType === 'BEBIDAS') setLoading(false);
+      checkLoaded();
     });
 
     const duplicadosRef = ref(rtdb, 'reportes/duplicados');
@@ -80,7 +160,7 @@ const SupervisorPage: FC = () => {
         setDuplicadosReport(data.data || []);
         setDuplicadosMetadata(data.metadata || null);
       }
-      if (selectedReportType === 'DUPLICADOS') setLoading(false);
+      checkLoaded();
     });
 
     const maestroRef = ref(rtdb, 'maestro/data');
@@ -91,7 +171,7 @@ const SupervisorPage: FC = () => {
     });
 
     return () => { unsubVolumen(); unsubEficiencia(); unsubBebidas(); unsubDuplicados(); unsubMaestro(); };
-  }, [selectedReportType]);
+  }, []);
 
   const maestroMap = useMemo(() => {
     return maestroData.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
@@ -198,7 +278,7 @@ const SupervisorPage: FC = () => {
     }).filter(Boolean);
   }, [eficienciaReport, selectedSedeId, sedes, selectedDia, selectedSemanas]);
 
-  const toggleRuta = (rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] }));
+  const toggleRuta = useCallback((rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] })), []);
 
   const renderVolumenReport = () => (
     <div className="report-container-stable">
@@ -236,48 +316,14 @@ const SupervisorPage: FC = () => {
                     </div>
                     <div className="px-3">
                       <Row className="g-2">
-                        {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => {
-                          const rutaKey = `${loc.id}-${mesaName}-${rutaName}`;
-                          const isExpanded = expandedRutas[rutaKey];
-                          return (
-                            <Col xs={12} key={rutaName}>
-                              <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
-                                <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => toggleRuta(rutaKey)}>
-                                  <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
-                                    <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
-                                    <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
-                                    <div className="r-dot-leader d-none d-md-block"></div>
-                                  </div>
-                                  <div className="d-flex gap-3 align-items-center ps-2">
-                                    <div className="d-flex flex-column align-items-end"><span className="fw-black text-primary r-val">{ruta.totalCF.toFixed(2)} <span className="r-unit">CF</span></span></div>
-                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '60px' }}><span className="fw-black text-success r-val">{ruta.totalUC.toFixed(2)} <span className="r-unit">CU</span></span></div>
-                                  </div>
-                                </div>
-                                {isExpanded && (
-                                  <div className="ruta-details-list p-2 pt-0 border-top border-secondary border-opacity-10">
-                                    <ListGroup variant="flush">
-                                      {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
-                                        <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
-                                          <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-                                            <div className="d-flex align-items-center gap-2">
-                                              <span className="fw-bold p-name text-nowrap">{p.nombre}</span>
-                                              <div className="p-dot-leader d-none d-md-block"></div>
-                                            </div>
-                                            <span className="fw-bold p-sap">SAP: {sap}</span>
-                                          </div>
-                                          <div className="d-flex gap-2 align-items-center ps-2">
-                                            <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
-                                            <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
-                                          </div>
-                                        </ListGroup.Item>
-                                      ))}
-                                    </ListGroup>
-                                  </div>
-                                )}
-                              </div>
-                            </Col>
-                          );
-                        })}
+                        {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => (
+                          <RutaVolumenBebidaItem 
+                            key={`${loc.id}-${mesaName}-${rutaName}`}
+                            rutaName={rutaName} ruta={ruta}
+                            isExpanded={!!expandedRutas[`${loc.id}-${mesaName}-${rutaName}`]}
+                            onToggle={toggleRuta} rutaKey={`${loc.id}-${mesaName}-${rutaName}`}
+                          />
+                        ))}
                       </Row>
                     </div>
                   </div>
@@ -323,48 +369,14 @@ const SupervisorPage: FC = () => {
                     </div>
                     <div className="px-3">
                       <Row className="g-2">
-                        {Object.entries(tipo.rutas).map(([rutaName, ruta]: [string, any]) => {
-                          const rutaKey = `bebidas-${loc.id}-${tipoId}-${rutaName}`;
-                          const isExpanded = expandedRutas[rutaKey];
-                          return (
-                            <Col xs={12} key={rutaName}>
-                              <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
-                                <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => toggleRuta(rutaKey)}>
-                                  <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
-                                    <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
-                                    <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
-                                    <div className="r-dot-leader d-none d-md-block"></div>
-                                  </div>
-                                  <div className="d-flex gap-3 align-items-center ps-2">
-                                    <div className="d-flex flex-column align-items-end"><span className="fw-black text-primary r-val">{ruta.totalCF.toFixed(2)} <span className="r-unit">CF</span></span></div>
-                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '60px' }}><span className="fw-black text-success r-val">{ruta.totalUC.toFixed(2)} <span className="r-unit">CU</span></span></div>
-                                  </div>
-                                </div>
-                                {isExpanded && (
-                                  <div className="ruta-details-list p-2 pt-0 border-top border-secondary border-opacity-10">
-                                    <ListGroup variant="flush">
-                                      {Object.entries(ruta.productos).map(([sap, p]: [string, any]) => (
-                                        <ListGroup.Item key={sap} className="bg-transparent border-0 px-1 py-1 d-flex justify-content-between align-items-center">
-                                          <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-                                            <div className="d-flex align-items-center gap-2">
-                                              <span className="fw-bold p-name text-nowrap">{p.nombre}</span>
-                                              <div className="p-dot-leader d-none d-md-block"></div>
-                                            </div>
-                                            <span className="fw-bold p-sap">SAP: {sap}</span>
-                                          </div>
-                                          <div className="d-flex gap-2 align-items-center ps-2">
-                                            <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
-                                            <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
-                                          </div>
-                                        </ListGroup.Item>
-                                      ))}
-                                    </ListGroup>
-                                  </div>
-                                )}
-                              </div>
-                            </Col>
-                          );
-                        })}
+                        {Object.entries(tipo.rutas).map(([rutaName, ruta]: [string, any]) => (
+                          <RutaVolumenBebidaItem 
+                            key={`bebidas-${loc.id}-${tipoId}-${rutaName}`}
+                            rutaName={rutaName} ruta={ruta}
+                            isExpanded={!!expandedRutas[`bebidas-${loc.id}-${tipoId}-${rutaName}`]}
+                            onToggle={toggleRuta} rutaKey={`bebidas-${loc.id}-${tipoId}-${rutaName}`}
+                          />
+                        ))}
                       </Row>
                     </div>
                   </div>
@@ -419,30 +431,15 @@ const SupervisorPage: FC = () => {
                     </div>
                     <div className="px-3">
                       <Row className="g-2">
-                        {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => {
-                          const sinVis = ruta.stats.prog - ruta.stats.efec;
-                          const efPorc = (ruta.stats.efec / ruta.stats.prog) * 100;
-                          const porcColor = efPorc < 70 ? 'var(--color-red-primary)' : efPorc < 85 ? '#ff8800' : '#00ff88';
-                          return (
-                            <Col xs={12} key={rutaName}>
-                              <div className="ruta-card-compact border-0 shadow-none">
-                                <div className="ruta-main-row d-flex justify-content-between align-items-center p-2">
-                                  <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
-                                    <div style={{ width: '12px' }}></div>
-                                    <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
-                                    <div className="r-dot-leader d-none d-md-block"></div>
-                                  </div>
-                                  <div className="d-flex gap-3 align-items-center ps-2">
-                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-primary r-val">{ruta.stats.prog} <span className="r-unit">P</span></span></div>
-                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-success r-val">{ruta.stats.efec} <span className="r-unit">E</span></span></div>
-                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '45px' }}><span className="fw-black text-danger r-val">{sinVis} <span className="r-unit">SV</span></span></div>
-                                    <div className="d-flex flex-column align-items-end" style={{ minWidth: '55px' }}><span className="fw-black r-val" style={{ color: porcColor }}>{efPorc.toFixed(0)} <span className="r-unit">%</span></span></div>
-                                  </div>
-                                </div>
-                              </div>
-                            </Col>
-                          );
-                        })}
+                        {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => (
+                          <EficienciaRutaItem 
+                            key={`eficiencia-${loc.id}-${mesaName}-${rutaName}`}
+                            rutaName={rutaName} ruta={ruta}
+                            sinVis={ruta.stats.prog - ruta.stats.efec}
+                            efPorc={(ruta.stats.efec / ruta.stats.prog) * 100}
+                            porcColor={(ruta.stats.efec / ruta.stats.prog) * 100 < 70 ? 'var(--color-red-primary)' : (ruta.stats.efec / ruta.stats.prog) * 100 < 85 ? '#ff8800' : '#00ff88'}
+                          />
+                        ))}
                       </Row>
                     </div>
                   </div>
