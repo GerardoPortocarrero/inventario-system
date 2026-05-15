@@ -107,6 +107,9 @@ const SupervisorPage: FC = () => {
   const [selectedBebidaTypes, setSelectedBebidaTypes] = useState<string[]>([]);
   const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
 
+  // Estado para controlar qué sede está abierta en el acordeón (Lazy Rendering técnico)
+  const [activeLocId, setActiveLocId] = useState<string | null>(null);
+
   // Inicializar tipos de bebida
   useEffect(() => {
     if (beverageTypes.length > 0 && selectedBebidaTypes.length === 0) {
@@ -174,7 +177,9 @@ const SupervisorPage: FC = () => {
   }, []);
 
   const maestroMap = useMemo(() => {
-    return maestroData.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
+    const map: Record<string, any> = {};
+    maestroData.forEach(m => { map[String(m.Codigo)] = m; });
+    return map;
   }, [maestroData]);
 
   const availableSemanas = useMemo(() => {
@@ -285,7 +290,10 @@ const SupervisorPage: FC = () => {
       {filteredVolumenData.length === 0 ? (
         <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE VOLUMEN.</div>
       ) : (
-        <Accordion defaultActiveKey={filteredVolumenData[0]?.id}>
+        <Accordion 
+          activeKey={activeLocId} 
+          onSelect={(k) => setActiveLocId(k as string)}
+        >
           {filteredVolumenData.map(loc => (
             <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
               <Accordion.Header className="loc-header-compact">
@@ -308,7 +316,7 @@ const SupervisorPage: FC = () => {
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
-                {Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
+                {activeLocId === loc.id && Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
                   <div key={mesaName} className="mesa-section mb-3">
                     <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2">
                       <span className="fw-black m-label">MESA: {mesaName.toUpperCase()}</span>
@@ -341,7 +349,10 @@ const SupervisorPage: FC = () => {
       {filteredBebidasData.length === 0 ? (
         <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE BEBIDAS.</div>
       ) : (
-        <Accordion defaultActiveKey={filteredBebidasData[0]?.id}>
+        <Accordion 
+          activeKey={activeLocId} 
+          onSelect={(k) => setActiveLocId(k as string)}
+        >
           {filteredBebidasData.map(loc => (
             <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
               <Accordion.Header className="loc-header-compact">
@@ -361,7 +372,7 @@ const SupervisorPage: FC = () => {
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
-                {Object.entries(loc.tipos).map(([tipoId, tipo]: [string, any]) => (
+                {activeLocId === loc.id && Object.entries(loc.tipos).map(([tipoId, tipo]: [string, any]) => (
                   <div key={tipoId} className="mesa-section mb-3">
                     <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2" style={{ borderLeftColor: 'var(--theme-icon-color)' }}>
                       <span className="fw-black m-label"><FaGlassMartiniAlt className="me-2"/>{tipo.nombre}</span>
@@ -394,7 +405,10 @@ const SupervisorPage: FC = () => {
       {filteredEficienciaData.length === 0 ? (
         <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE EFICIENCIA PARA LOS FILTROS SELECCIONADOS.</div>
       ) : (
-        <Accordion defaultActiveKey={filteredEficienciaData[0]?.id}>
+        <Accordion 
+          activeKey={activeLocId} 
+          onSelect={(k) => setActiveLocId(k as string)}
+        >
           {filteredEficienciaData.map((loc: any) => (
             <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
               <Accordion.Header className="loc-header-compact">
@@ -423,7 +437,7 @@ const SupervisorPage: FC = () => {
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
-                {Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
+                {activeLocId === loc.id && Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
                   <div key={mesaName} className="mesa-section mb-3">
                     <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2">
                       <span className="fw-black m-label">MESA: {mesaName.toUpperCase()}</span>
