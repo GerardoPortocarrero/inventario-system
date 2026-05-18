@@ -20,10 +20,10 @@ const RutaVolumenBebidaItem = memo(({
   return (
     <Col xs={12}>
       <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
-        <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => onToggle(rutaKey)}>
+        <div className="ruta-main-row d-flex justify-content-between align-items-center" onClick={() => onToggle(rutaKey)}>
           <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
             <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
-            <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+            <span className="r-label text-nowrap">RUTA {rutaName}</span>
             <div className="r-dot-leader d-none d-md-block"></div>
           </div>
           <div className="d-flex gap-3 align-items-center ps-2">
@@ -65,10 +65,10 @@ const EficienciaRutaItem = memo(({
   return (
     <Col xs={12}>
       <div className="ruta-card-compact border-0 shadow-none">
-        <div className="ruta-main-row d-flex justify-content-between align-items-center p-2">
+        <div className="ruta-main-row d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
             <div style={{ width: '12px' }}></div>
-            <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+            <span className="r-label text-nowrap">RUTA {rutaName}</span>
             <div className="r-dot-leader d-none d-md-block"></div>
           </div>
           <div className="d-flex gap-3 align-items-center ps-2">
@@ -230,14 +230,24 @@ const SupervisorPage: FC = () => {
     if (selectedBebidaTypes.length === 0) return [];
     return data.map(loc => {
       const newTipos: Record<string, any> = {};
+      let totalCF = 0;
+      let totalUC = 0;
       Object.entries(loc.tipos || {}).forEach(([tipoId, tipo]: [string, any]) => {
-        if (selectedBebidaTypes.includes(tipoId)) newTipos[tipoId] = tipo;
+        if (selectedBebidaTypes.includes(tipoId)) {
+          newTipos[tipoId] = tipo;
+          totalCF += tipo.totalCF || 0;
+          totalUC += tipo.totalUC || 0;
+        }
       });
-      return Object.keys(newTipos).length > 0 ? { 
+      if (Object.keys(newTipos).length === 0) return null;
+      const sede = sedes.find(s => String(s.codigo).trim() === String(loc.id).trim());
+      return { 
         ...loc, 
         tipos: newTipos,
-        nombre: sedes.find(s => String(s.codigo).trim() === String(loc.id).trim())?.nombre.toUpperCase() || `SEDE ${loc.id}`
-      } : null;
+        totalCF,
+        totalUC,
+        nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${loc.id}`
+      };
     }).filter(Boolean);
   }, [bebidasReport, selectedSedeId, sedes, selectedBebidaTypes]);
 
@@ -347,7 +357,7 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredVolumenData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-1">
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -406,7 +416,7 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredBebidasData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-1">
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -418,7 +428,10 @@ const SupervisorPage: FC = () => {
                   </div>
                   <div className="d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
-                      <span className="b-label text-white-50">Sede</span><span className="fw-black b-val">{loc.id}</span>
+                      <span className="b-label">CF</span><span className="fw-black b-val">{loc.totalCF.toFixed(1)}</span>
+                    </Badge>
+                    <Badge bg="success" className="badge-industrial">
+                      <span className="b-label">CU</span><span className="fw-black b-val">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
                   </div>
                 </div>
@@ -462,7 +475,7 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredEficienciaData.map((loc: any) => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-1">
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -525,7 +538,7 @@ const SupervisorPage: FC = () => {
       ) : (
         <Accordion defaultActiveKey={filteredDuplicadosData[0]?.id}>
           {filteredDuplicadosData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-1">
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -613,7 +626,7 @@ const SupervisorPage: FC = () => {
         .dup-doc-id { font-size: 0.65rem; }
         .dup-doc-hora { font-size: 0.55rem; }
         .dup-item-name { font-size: 0.6rem; color: var(--theme-text-primary); }
-        .dup-item-sap { font-size: 0.5rem; opacity: 0.6; }
+        .dup-item-sap { font-size: 0.5rem; color: #00d1ff; opacity: 0.9; font-weight: 700; }
         .dup-item-cant { font-size: 0.65rem; color: var(--color-red-primary); }
       `}</style>
     </div>
@@ -808,8 +821,8 @@ const SupervisorPage: FC = () => {
 
       <style>{`
         .fw-black { font-weight: 900 !important; }
-        .l-height-1 { letter-spacing: 0.2px; font-size: 0.8rem; color: var(--theme-text-primary); line-height: 1.1; }
-        .sub-label-new { font-size: 0.7rem; color: var(--theme-text-secondary); opacity: 0.9; letter-spacing: 1px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; margin-left: 2px; }
+        .l-height-1 { letter-spacing: 0.2px; font-size: 1rem; color: var(--theme-text-primary); line-height: 1; }
+        .sub-label-new { font-size: 0.85rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; line-height: 1; }
         
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; z-index: 2; }
@@ -819,13 +832,13 @@ const SupervisorPage: FC = () => {
         .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
         .sincro-val { font-size: 0.75rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 
-        .report-main-wrapper { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; align-items: center; }
+        .report-main-wrapper { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; align-items: center; }
         .report-container-stable { width: 100%; display: block; }
 
         .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 8px 15px; cursor: pointer; transition: background 0.2s ease; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent !important; }
         .dropdown-item-custom:hover { background: rgba(244, 0, 9, 0.15) !important; }
 
-        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; margin-bottom: 2px !important; }
+        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; margin-bottom: .5rem !important; }
         .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 2px 8px !important; border-radius: 0 !important; width: 100%; min-height: 28px; }
         .loc-header-compact .accordion-button:not(.collapsed) { background: transparent !important; color: inherit !important; box-shadow: none !important; }
         .loc-header-compact .accordion-button:after { display: none; }
@@ -833,9 +846,6 @@ const SupervisorPage: FC = () => {
         .badge-industrial { padding: 1px 5px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 42px; height: 26px; justify-content: center; }
         .b-label { font-size: 0.45rem; font-weight: 800; line-height: 1; margin-bottom: -2px; opacity: 0.8; }
         .b-val { font-size: 1rem !important; line-height: 1; }
-
-        .l-height-1 { letter-spacing: 0.2px; font-size: 1rem; color: var(--theme-text-primary); line-height: 1; }
-        .sub-label-new { font-size: 0.85rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; margin-left: 5px; line-height: 1; }
 
         .mesa-title-bar { background: var(--theme-icon-bg); border-left: 4px solid var(--color-red-primary); }
         .m-label { font-size: 0.95rem; font-weight: 900; color: var(--theme-text-primary); }
@@ -870,9 +880,9 @@ const SupervisorPage: FC = () => {
             max-width: 1400px;
           }
           .l-height-1 { font-size: 1.35rem; }
-          .sub-label-new { font-size: 1.15rem; padding-left: 12px; margin-left: 8px; }
+          .sub-label-new { font-size: 1.15rem; padding-left: 12px; }
           .loc-avatar { width: 34px; height: 34px; font-size: 1.2rem; }
-          .loc-header-compact .accordion-button { padding: 2px 12px !important; min-height: 36px; }
+          .loc-header-compact .accordion-button { padding: 4px 0px !important; min-height: 36px; }
           .b-val { font-size: 1.2rem !important; }
           .badge-industrial { height: 32px; min-width: 52px; }
           
@@ -883,7 +893,7 @@ const SupervisorPage: FC = () => {
           .dup-doc-id { font-size: 0.9rem !important; }
           .dup-doc-hora { font-size: 0.8rem !important; }
           .dup-item-name { font-size: 0.85rem !important; }
-          .dup-item-sap { font-size: 0.75rem !important; }
+          .dup-item-sap { font-size: 0.75rem !important; color: #00d1ff !important; opacity: 1 !important; }
           .dup-item-cant { font-size: 0.9rem !important; }
         }
       `}</style>
