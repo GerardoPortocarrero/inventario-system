@@ -218,26 +218,35 @@ const SupervisorPage: FC = () => {
   };
 
   const filteredVolumenData = useMemo(() => {
-    if (selectedSedeId === 'GLOBAL') return volumenReport;
-    return volumenReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    const raw = selectedSedeId === 'GLOBAL' ? volumenReport : volumenReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
+    return raw.map(loc => ({
+      ...loc,
+      nombre: sedes.find(s => String(s.codigo).trim() === String(loc.id).trim())?.nombre.toUpperCase() || `SEDE ${loc.id}`
+    }));
   }, [volumenReport, selectedSedeId, sedes]);
 
   const filteredBebidasData = useMemo(() => {
-    let data = selectedSedeId === 'GLOBAL' ? bebidasReport : bebidasReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    let data = selectedSedeId === 'GLOBAL' ? bebidasReport : bebidasReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
     if (selectedBebidaTypes.length === 0) return [];
     return data.map(loc => {
       const newTipos: Record<string, any> = {};
       Object.entries(loc.tipos || {}).forEach(([tipoId, tipo]: [string, any]) => {
         if (selectedBebidaTypes.includes(tipoId)) newTipos[tipoId] = tipo;
       });
-      return Object.keys(newTipos).length > 0 ? { ...loc, tipos: newTipos } : null;
+      return Object.keys(newTipos).length > 0 ? { 
+        ...loc, 
+        tipos: newTipos,
+        nombre: sedes.find(s => String(s.codigo).trim() === String(loc.id).trim())?.nombre.toUpperCase() || `SEDE ${loc.id}`
+      } : null;
     }).filter(Boolean);
   }, [bebidasReport, selectedSedeId, sedes, selectedBebidaTypes]);
 
   const filteredDuplicadosData = useMemo(() => {
-    if (selectedSedeId === 'GLOBAL') return duplicadosReport;
-    const targetCodigo = String(sedes.find(s => s.id === selectedSedeId)?.codigo || '');
-    return duplicadosReport.filter(loc => String(loc.id) === targetCodigo);
+    const raw = selectedSedeId === 'GLOBAL' ? duplicadosReport : duplicadosReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
+    return raw.map(loc => ({
+      ...loc,
+      nombre: sedes.find(s => String(s.codigo).trim() === String(loc.id).trim())?.nombre.toUpperCase() || `SEDE ${loc.id}`
+    }));
   }, [duplicadosReport, selectedSedeId, sedes]);
 
   const handleBebidaTypeToggle = (typeId: string, e: React.MouseEvent) => {
@@ -278,14 +287,19 @@ const SupervisorPage: FC = () => {
         if (Object.keys(newMesas).length > 0) {
           const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
           const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
-          return { ...loc, mesas: newMesas, totalProg, totalEfec };
+          const sede = sedes.find(s => String(s.codigo).trim() === String(loc.id).trim());
+          return { 
+            ...loc, 
+            mesas: newMesas, totalProg, totalEfec,
+            nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${loc.id}`
+          };
         }
         return null;
       }).filter(Boolean);
     }
 
-    const targetCodigo = String(sedes.find(s => s.id === selectedSedeId)?.codigo || '');
-    const locData = eficienciaReport.find(loc => String(loc.id) === targetCodigo);
+    const targetCodigo = String(sedes.find(s => s.id === selectedSedeId)?.codigo || '').trim();
+    const locData = eficienciaReport.find(loc => String(loc.id).trim() === targetCodigo);
     
     if (!locData || selectedSemanas.length === 0) return [];
 
@@ -310,7 +324,12 @@ const SupervisorPage: FC = () => {
     if (Object.keys(newMesas).length > 0) {
       const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
       const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
-      return [{ ...locData, mesas: newMesas, totalProg, totalEfec }];
+      const sede = sedes.find(s => String(s.codigo).trim() === String(locData.id).trim());
+      return [{ 
+        ...locData, 
+        mesas: newMesas, totalProg, totalEfec,
+        nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${locData.id}`
+      }];
     }
     
     return [];
@@ -333,17 +352,17 @@ const SupervisorPage: FC = () => {
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
-                    <div className="d-flex flex-column flex-md-row align-items-md-center gap-1 gap-md-3">
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
                       <div className="fw-black sub-label-new">VOLUMEN</div>
                     </div>
                   </div>
                   <div className="d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
-                      <span className="b-label">CF</span><span className="fw-black fs-6">{loc.totalCF.toFixed(1)}</span>
+                      <span className="b-label">CF</span><span className="fw-black b-val">{loc.totalCF.toFixed(1)}</span>
                     </Badge>
                     <Badge bg="success" className="badge-industrial">
-                      <span className="b-label">CU</span><span className="fw-black fs-6">{loc.totalUC.toFixed(2)}</span>
+                      <span className="b-label">CU</span><span className="fw-black b-val">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
                   </div>
                 </div>
@@ -392,14 +411,14 @@ const SupervisorPage: FC = () => {
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
-                    <div className="d-flex flex-column flex-md-row align-items-md-center gap-1 gap-md-3">
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
                       <div className="fw-black sub-label-new">BEBIDAS</div>
                     </div>
                   </div>
                   <div className="d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
-                      <span className="b-label text-white-50">Sede</span><span className="fw-black fs-6">{loc.id}</span>
+                      <span className="b-label text-white-50">Sede</span><span className="fw-black b-val">{loc.id}</span>
                     </Badge>
                   </div>
                 </div>
@@ -448,23 +467,23 @@ const SupervisorPage: FC = () => {
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
-                    <div className="d-flex flex-column flex-md-row align-items-md-center gap-1 gap-md-3">
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
                       <div className="fw-black sub-label-new">EFICIENCIA</div>
                     </div>
                   </div>
                   <div className="d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
-                      <span className="b-label">PROG</span><span className="fw-black fs-6">{loc.totalProg}</span>
+                      <span className="b-label">PROG</span><span className="fw-black b-val">{loc.totalProg}</span>
                     </Badge>
                     <Badge bg="success" className="badge-industrial">
-                      <span className="b-label">EFEC</span><span className="fw-black fs-6">{loc.totalEfec}</span>
+                      <span className="b-label">EFEC</span><span className="fw-black b-val">{loc.totalEfec}</span>
                     </Badge>
                     <Badge bg="danger" className="badge-industrial">
-                      <span className="b-label text-nowrap">S. VISITA</span><span className="fw-black fs-6">{loc.totalProg - loc.totalEfec}</span>
+                      <span className="b-label text-nowrap">S. VISITA</span><span className="fw-black b-val">{loc.totalProg - loc.totalEfec}</span>
                     </Badge>
                     <Badge bg="dark" className="badge-industrial border border-secondary">
-                      <span className="b-label text-info">EF (%)</span><span className="fw-black fs-6 text-info">{((loc.totalEfec / loc.totalProg) * 100).toFixed(0)}%</span>
+                      <span className="b-label text-info">EF (%)</span><span className="fw-black b-val text-info">{((loc.totalEfec / loc.totalProg) * 100).toFixed(0)}%</span>
                     </Badge>
                   </div>
                 </div>
@@ -511,14 +530,14 @@ const SupervisorPage: FC = () => {
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar bg-warning text-dark"><FaExclamationTriangle /></div>
-                    <div className="d-flex flex-column flex-md-row align-items-md-center gap-1 gap-md-3">
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
                       <div className="fw-black sub-label-new">DUPLICADOS</div>
                     </div>
                   </div>
                   <Badge bg="danger" className="badge-industrial">
                     <span className="b-label">CONFLICTOS</span>
-                    <span className="fw-black fs-6">{Object.keys(loc.clientes).length}</span>
+                    <span className="fw-black b-val">{Object.keys(loc.clientes).length}</span>
                   </Badge>
                 </div>
               </Accordion.Header>
@@ -806,22 +825,26 @@ const SupervisorPage: FC = () => {
         .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 8px 15px; cursor: pointer; transition: background 0.2s ease; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent !important; }
         .dropdown-item-custom:hover { background: rgba(244, 0, 9, 0.15) !important; }
 
-        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; }
-        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 8px !important; border-radius: 0 !important; width: 100%; }
+        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; margin-bottom: 2px !important; }
+        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 2px 8px !important; border-radius: 0 !important; width: 100%; min-height: 28px; }
         .loc-header-compact .accordion-button:not(.collapsed) { background: transparent !important; color: inherit !important; box-shadow: none !important; }
         .loc-header-compact .accordion-button:after { display: none; }
-        .loc-avatar { width: 42px; height: 42px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; flex-shrink: 0; }
-        .badge-industrial { padding: 4px 8px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 45px; }
-        .b-label { font-size: 0.45rem; font-weight: 800; }
+        .loc-avatar { width: 28px; height: 28px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem; flex-shrink: 0; border-radius: 1px; }
+        .badge-industrial { padding: 1px 5px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 42px; height: 26px; justify-content: center; }
+        .b-label { font-size: 0.45rem; font-weight: 800; line-height: 1; margin-bottom: -2px; opacity: 0.8; }
+        .b-val { font-size: 1rem !important; line-height: 1; }
+
+        .l-height-1 { letter-spacing: 0.2px; font-size: 1rem; color: var(--theme-text-primary); line-height: 1; }
+        .sub-label-new { font-size: 0.85rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; margin-left: 5px; line-height: 1; }
 
         .mesa-title-bar { background: var(--theme-icon-bg); border-left: 4px solid var(--color-red-primary); }
-        .m-label { font-size: 0.85rem; color: var(--theme-text-primary); }
-        .m-stats { font-size: 0.75rem; color: var(--theme-text-secondary); text-transform: uppercase; }
+        .m-label { font-size: 0.95rem; font-weight: 900; color: var(--theme-text-primary); }
+        .m-stats { font-size: 0.8rem; font-weight: 800; color: var(--theme-text-secondary); text-transform: uppercase; }
 
         .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 0; width: 100%; }
-        .r-label { font-size: 0.75rem; color: var(--theme-text-primary); }
-        .r-val { font-size: 0.8rem; }
-        .r-unit { font-size: 0.6rem; opacity: 0.7; }
+        .r-label { font-size: 0.8rem; color: var(--theme-text-primary); }
+        .r-val { font-size: 0.85rem; }
+        .r-unit { font-size: 0.65rem; opacity: 0.7; }
         .chevron-icon { font-size: 0.6rem; transition: transform 0.2s ease; color: var(--theme-text-secondary); }
         .chevron-icon.active { transform: rotate(90deg); color: var(--color-red-primary); }
 
@@ -846,20 +869,15 @@ const SupervisorPage: FC = () => {
           .report-container-stable {
             max-width: 1400px;
           }
-          .l-height-1 { font-size: 1.25rem; }
-          .sub-label-new { font-size: 1rem; padding-left: 12px; margin-left: 5px; }
-          .loc-avatar { width: 52px; height: 52px; font-size: 1.4rem; }
+          .l-height-1 { font-size: 1.35rem; }
+          .sub-label-new { font-size: 1.15rem; padding-left: 12px; margin-left: 8px; }
+          .loc-avatar { width: 34px; height: 34px; font-size: 1.2rem; }
+          .loc-header-compact .accordion-button { padding: 2px 12px !important; min-height: 36px; }
+          .b-val { font-size: 1.2rem !important; }
+          .badge-industrial { height: 32px; min-width: 52px; }
           
           .m-label { font-size: 1.1rem; }
-          .m-stats { font-size: 1rem; }
-          
-          .r-label { font-size: 0.95rem; }
-          .r-val { font-size: 1.05rem; }
-          .r-unit { font-size: 0.75rem; }
-          
-          .p-name { font-size: 0.85rem; }
-          .p-sap { font-size: 0.75rem; }
-          .p-badge { font-size: 0.8rem; }
+          .m-stats { font-size: 0.95rem; }
 
           .d-label { font-size: 0.8rem !important; }
           .dup-doc-id { font-size: 0.9rem !important; }
