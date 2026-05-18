@@ -568,8 +568,8 @@ const SupervisorPage: FC = () => {
   );
 
   return (
-    <div className="admin-layout-container flex-column gap-3" style={{ overflow: 'visible' }}>
-      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem', overflow: 'visible' }}>
+    <div className="admin-layout-container flex-column overflow-hidden gap-3">
+      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem' }}>
         <Row className="g-1 align-items-center">
           {/* 1. Sede */}
           <Col xs={12} md={2}>
@@ -755,7 +755,6 @@ const SupervisorPage: FC = () => {
       </div>
 
       <style>{`
-        .admin-layout-container { background: var(--theme-background-primary); height: 100vh; display: flex; flex-direction: column; }
         .fw-black { font-weight: 900 !important; }
         .l-height-1 { letter-spacing: 0.5px; font-size: 0.8rem; color: var(--theme-text-primary); }
         .sub-label { font-size: 0.55rem; color: var(--theme-text-secondary); opacity: 0.7; }
