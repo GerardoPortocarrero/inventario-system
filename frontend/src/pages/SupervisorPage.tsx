@@ -236,7 +236,8 @@ const SupervisorPage: FC = () => {
 
   const filteredDuplicadosData = useMemo(() => {
     if (selectedSedeId === 'GLOBAL') return duplicadosReport;
-    return duplicadosReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    const targetCodigo = String(sedes.find(s => s.id === selectedSedeId)?.codigo || '');
+    return duplicadosReport.filter(loc => String(loc.id) === targetCodigo);
   }, [duplicadosReport, selectedSedeId, sedes]);
 
   const handleBebidaTypeToggle = (typeId: string, e: React.MouseEvent) => {
@@ -254,33 +255,65 @@ const SupervisorPage: FC = () => {
   };
 
   const filteredEficienciaData = useMemo(() => {
-    let data = selectedSedeId === 'GLOBAL' ? eficienciaReport : eficienciaReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
-    if (selectedSemanas.length === 0) return [];
-    return data.map(loc => {
-      const newMesas: Record<string, any> = {};
-      Object.entries(loc.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
-        const newRutas: Record<string, any> = {};
-        Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
-          const stats = { prog: 0, efec: 0 };
-          selectedSemanas.forEach(sem => {
-            const s = ruta.schedules[`${selectedDia}_${sem}`];
-            if (s) { stats.prog += s.prog; stats.efec += s.efec; }
+    if (selectedSedeId === 'GLOBAL') {
+      if (selectedSemanas.length === 0) return [];
+      return eficienciaReport.map(loc => {
+        const newMesas: Record<string, any> = {};
+        Object.entries(loc.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
+          const newRutas: Record<string, any> = {};
+          Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
+            const stats = { prog: 0, efec: 0 };
+            selectedSemanas.forEach(sem => {
+              const s = ruta.schedules[`${selectedDia}_${sem}`];
+              if (s) { stats.prog += s.prog; stats.efec += s.efec; }
+            });
+            if (stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
           });
-          if (stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
+          if (Object.keys(newRutas).length > 0) {
+            const totalProg = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.prog, 0);
+            const totalEfec = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.efec, 0);
+            newMesas[mesaName] = { rutas: newRutas, totalProg, totalEfec };
+          }
         });
-        if (Object.keys(newRutas).length > 0) {
-          const totalProg = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.prog, 0);
-          const totalEfec = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.efec, 0);
-          newMesas[mesaName] = { rutas: newRutas, totalProg, totalEfec };
+        if (Object.keys(newMesas).length > 0) {
+          const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
+          const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
+          return { ...loc, mesas: newMesas, totalProg, totalEfec };
         }
+        return null;
+      }).filter(Boolean);
+    }
+
+    const targetCodigo = String(sedes.find(s => s.id === selectedSedeId)?.codigo || '');
+    const locData = eficienciaReport.find(loc => String(loc.id) === targetCodigo);
+    
+    if (!locData || selectedSemanas.length === 0) return [];
+
+    const newMesas: Record<string, any> = {};
+    Object.entries(locData.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
+      const newRutas: Record<string, any> = {};
+      Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
+        const stats = { prog: 0, efec: 0 };
+        selectedSemanas.forEach(sem => {
+          const s = ruta.schedules[`${selectedDia}_${sem}`];
+          if (s) { stats.prog += s.prog; stats.efec += s.efec; }
+        });
+        if (stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
       });
-      if (Object.keys(newMesas).length > 0) {
-        const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
-        const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
-        return { ...loc, mesas: newMesas, totalProg, totalEfec };
+      if (Object.keys(newRutas).length > 0) {
+        const totalProg = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.prog, 0);
+        const totalEfec = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.efec, 0);
+        newMesas[mesaName] = { rutas: newRutas, totalProg, totalEfec };
       }
-      return null;
-    }).filter(Boolean);
+    });
+
+    if (Object.keys(newMesas).length > 0) {
+      const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
+      const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
+      return [{ ...locData, mesas: newMesas, totalProg, totalEfec }];
+    }
+    
+    return [];
   }, [eficienciaReport, selectedSedeId, sedes, selectedDia, selectedSemanas]);
 
   const toggleRuta = useCallback((rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] })), []);
