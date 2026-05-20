@@ -557,16 +557,16 @@ const SupervisorPage: FC = () => {
               <Accordion.Body className="bg-transparent p-0 pt-1">
                 {Object.values(loc.clientes).map((cliente: any) => {
                   const masterClient = maestroMap[String(cliente.codigo)];
-                  const rutaCom = masterClient ? (masterClient['Ruta com'] || masterClient['RUTA COM'] || 'SIN RUTA') : 'CARGANDO...';
+                  const rutaCom = masterClient ? (masterClient['Ruta com'] || masterClient['RUTA COM'] || 'SIN RUTA') : '...';
                   return (
                     <div key={cliente.codigo} className="mesa-section mb-2">
-                      <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-1 mb-1" style={{ borderLeftColor: '#ffc107' }}>
-                        <div className="d-flex flex-column flex-md-row align-items-md-center gap-md-3">
-                          <span className="fw-black m-label">{cliente.nombre}</span>
-                          <div className="d-flex gap-2 align-items-center">
-                            <Badge bg="dark" className="p-badge text-warning border border-warning border-opacity-50">RUTA: {rutaCom}</Badge>
-                            <span className="fw-bold text-secondary d-label">CÓDIGO: {cliente.codigo}</span>
-                          </div>
+                      <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-1" style={{ borderLeftColor: '#ffc107' }}>
+                        <div className="d-flex flex-wrap align-items-center gap-2 gap-md-3">
+                          <span className="fw-black m-label text-uppercase mb-0">{cliente.nombre}</span>
+                          <span className="m-label text-secondary opacity-25 d-none d-md-inline mb-0">•</span>
+                          <span className="fw-black m-label text-warning mb-0">RUTA {rutaCom}</span>
+                          <span className="m-label text-secondary opacity-25 d-none d-md-inline mb-0">•</span>
+                          <span className="fw-black m-label text-secondary mb-0">ID {cliente.codigo}</span>
                         </div>
                       </div>
                       <div className="px-2 px-md-3">
