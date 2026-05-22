@@ -20,10 +20,10 @@ const RutaVolumenBebidaItem = memo(({
   return (
     <Col xs={12}>
       <div className={`ruta-card-compact ${isExpanded ? 'expanded' : ''}`}>
-        <div className="ruta-main-row d-flex justify-content-between align-items-center p-2" onClick={() => onToggle(rutaKey)}>
+        <div className="ruta-main-row d-flex justify-content-between align-items-center" onClick={() => onToggle(rutaKey)}>
           <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
             <div className={`chevron-icon ${isExpanded ? 'active' : ''}`}><FaChevronRight /></div>
-            <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+            <span className="r-label text-nowrap">RUTA {rutaName}</span>
             <div className="r-dot-leader d-none d-md-block"></div>
           </div>
           <div className="d-flex gap-3 align-items-center ps-2">
@@ -65,10 +65,10 @@ const EficienciaRutaItem = memo(({
   return (
     <Col xs={12}>
       <div className="ruta-card-compact border-0 shadow-none">
-        <div className="ruta-main-row d-flex justify-content-between align-items-center p-2">
+        <div className="ruta-main-row d-flex justify-content-between align-items-center">
           <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
             <div style={{ width: '12px' }}></div>
-            <span className="fw-black r-label text-nowrap">RUTA {rutaName}</span>
+            <span className="r-label text-nowrap">RUTA {rutaName}</span>
             <div className="r-dot-leader d-none d-md-block"></div>
           </div>
           <div className="d-flex gap-3 align-items-center ps-2">
@@ -218,25 +218,45 @@ const SupervisorPage: FC = () => {
   };
 
   const filteredVolumenData = useMemo(() => {
-    if (selectedSedeId === 'GLOBAL') return volumenReport;
-    return volumenReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    const raw = selectedSedeId === 'GLOBAL' ? volumenReport : volumenReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
+    return raw.map(loc => ({
+      ...loc,
+      nombre: sedes.find(s => String(s.codigo).trim() === String(loc.id).trim())?.nombre.toUpperCase() || `SEDE ${loc.id}`
+    }));
   }, [volumenReport, selectedSedeId, sedes]);
 
   const filteredBebidasData = useMemo(() => {
-    let data = selectedSedeId === 'GLOBAL' ? bebidasReport : bebidasReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    let data = selectedSedeId === 'GLOBAL' ? bebidasReport : bebidasReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
     if (selectedBebidaTypes.length === 0) return [];
     return data.map(loc => {
       const newTipos: Record<string, any> = {};
+      let totalCF = 0;
+      let totalUC = 0;
       Object.entries(loc.tipos || {}).forEach(([tipoId, tipo]: [string, any]) => {
-        if (selectedBebidaTypes.includes(tipoId)) newTipos[tipoId] = tipo;
+        if (selectedBebidaTypes.includes(tipoId)) {
+          newTipos[tipoId] = tipo;
+          totalCF += tipo.totalCF || 0;
+          totalUC += tipo.totalUC || 0;
+        }
       });
-      return Object.keys(newTipos).length > 0 ? { ...loc, tipos: newTipos } : null;
+      if (Object.keys(newTipos).length === 0) return null;
+      const sede = sedes.find(s => String(s.codigo).trim() === String(loc.id).trim());
+      return { 
+        ...loc, 
+        tipos: newTipos,
+        totalCF,
+        totalUC,
+        nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${loc.id}`
+      };
     }).filter(Boolean);
   }, [bebidasReport, selectedSedeId, sedes, selectedBebidaTypes]);
 
   const filteredDuplicadosData = useMemo(() => {
-    if (selectedSedeId === 'GLOBAL') return duplicadosReport;
-    return duplicadosReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
+    const raw = selectedSedeId === 'GLOBAL' ? duplicadosReport : duplicadosReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
+    return raw.map(loc => ({
+      ...loc,
+      nombre: sedes.find(s => String(s.codigo).trim() === String(loc.id).trim())?.nombre.toUpperCase() || `SEDE ${loc.id}`
+    }));
   }, [duplicadosReport, selectedSedeId, sedes]);
 
   const handleBebidaTypeToggle = (typeId: string, e: React.MouseEvent) => {
@@ -254,33 +274,75 @@ const SupervisorPage: FC = () => {
   };
 
   const filteredEficienciaData = useMemo(() => {
-    let data = selectedSedeId === 'GLOBAL' ? eficienciaReport : eficienciaReport.filter(loc => loc.id === sedes.find(s => s.id === selectedSedeId)?.codigo);
-    if (selectedSemanas.length === 0) return [];
-    return data.map(loc => {
-      const newMesas: Record<string, any> = {};
-      Object.entries(loc.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
-        const newRutas: Record<string, any> = {};
-        Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
-          const stats = { prog: 0, efec: 0 };
-          selectedSemanas.forEach(sem => {
-            const s = ruta.schedules[`${selectedDia}_${sem}`];
-            if (s) { stats.prog += s.prog; stats.efec += s.efec; }
+    if (selectedSedeId === 'GLOBAL') {
+      if (selectedSemanas.length === 0) return [];
+      return eficienciaReport.map(loc => {
+        const newMesas: Record<string, any> = {};
+        Object.entries(loc.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
+          const newRutas: Record<string, any> = {};
+          Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
+            const stats = { prog: 0, efec: 0 };
+            selectedSemanas.forEach(sem => {
+              const s = ruta.schedules[`${selectedDia}_${sem}`];
+              if (s) { stats.prog += s.prog; stats.efec += s.efec; }
+            });
+            if (stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
           });
-          if (stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
+          if (Object.keys(newRutas).length > 0) {
+            const totalProg = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.prog, 0);
+            const totalEfec = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.efec, 0);
+            newMesas[mesaName] = { rutas: newRutas, totalProg, totalEfec };
+          }
         });
-        if (Object.keys(newRutas).length > 0) {
-          const totalProg = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.prog, 0);
-          const totalEfec = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.efec, 0);
-          newMesas[mesaName] = { rutas: newRutas, totalProg, totalEfec };
+        if (Object.keys(newMesas).length > 0) {
+          const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
+          const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
+          const sede = sedes.find(s => String(s.codigo).trim() === String(loc.id).trim());
+          return { 
+            ...loc, 
+            mesas: newMesas, totalProg, totalEfec,
+            nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${loc.id}`
+          };
         }
+        return null;
+      }).filter(Boolean);
+    }
+
+    const targetCodigo = String(sedes.find(s => s.id === selectedSedeId)?.codigo || '').trim();
+    const locData = eficienciaReport.find(loc => String(loc.id).trim() === targetCodigo);
+    
+    if (!locData || selectedSemanas.length === 0) return [];
+
+    const newMesas: Record<string, any> = {};
+    Object.entries(locData.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
+      const newRutas: Record<string, any> = {};
+      Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
+        const stats = { prog: 0, efec: 0 };
+        selectedSemanas.forEach(sem => {
+          const s = ruta.schedules[`${selectedDia}_${sem}`];
+          if (s) { stats.prog += s.prog; stats.efec += s.efec; }
+        });
+        if (stats.prog > 0) newRutas[rutaName] = { ...ruta, stats };
       });
-      if (Object.keys(newMesas).length > 0) {
-        const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
-        const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
-        return { ...loc, mesas: newMesas, totalProg, totalEfec };
+      if (Object.keys(newRutas).length > 0) {
+        const totalProg = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.prog, 0);
+        const totalEfec = Object.values(newRutas).reduce((acc, r: any) => acc + r.stats.efec, 0);
+        newMesas[mesaName] = { rutas: newRutas, totalProg, totalEfec };
       }
-      return null;
-    }).filter(Boolean);
+    });
+
+    if (Object.keys(newMesas).length > 0) {
+      const totalProg = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalProg, 0);
+      const totalEfec = Object.values(newMesas).reduce((acc, m: any) => acc + m.totalEfec, 0);
+      const sede = sedes.find(s => String(s.codigo).trim() === String(locData.id).trim());
+      return [{ 
+        ...locData, 
+        mesas: newMesas, totalProg, totalEfec,
+        nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${locData.id}`
+      }];
+    }
+    
+    return [];
   }, [eficienciaReport, selectedSedeId, sedes, selectedDia, selectedSemanas]);
 
   const toggleRuta = useCallback((rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] })), []);
@@ -295,35 +357,35 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredVolumenData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
-                  <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
-                    <div>
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">VOLUMEN</div>
+                      <div className="fw-black sub-label-new">VOLUMEN</div>
                     </div>
                   </div>
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
-                      <span className="b-label">CF</span><span className="fw-black fs-6">{loc.totalCF.toFixed(1)}</span>
+                      <span className="b-label">CF</span><span className="fw-black b-val">{loc.totalCF.toFixed(1)}</span>
                     </Badge>
                     <Badge bg="success" className="badge-industrial">
-                      <span className="b-label">CU</span><span className="fw-black fs-6">{loc.totalUC.toFixed(2)}</span>
+                      <span className="b-label">CU</span><span className="fw-black b-val">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
                   </div>
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
                 {activeLocId === loc.id && Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
-                  <div key={mesaName} className="mesa-section mb-3">
-                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2">
+                  <div key={mesaName} className="mesa-section mb-2">
+                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-1 mb-1">
                       <span className="fw-black m-label">MESA: {mesaName.toUpperCase()}</span>
                       <div className="fw-black m-stats">{mesa.totalCF.toFixed(1)} CF / {mesa.totalUC.toFixed(2)} CU</div>
                     </div>
-                    <div className="px-3">
-                      <Row className="g-2">
+                    <div className="px-2 px-md-3">
+                      <Row className="g-1">
                         {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => (
                           <RutaVolumenBebidaItem 
                             key={`${loc.id}-${mesaName}-${rutaName}`}
@@ -354,32 +416,35 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredBebidasData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
-                  <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
-                    <div>
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">BEBIDAS</div>
+                      <div className="fw-black sub-label-new">BEBIDAS</div>
                     </div>
                   </div>
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
-                      <span className="b-label text-white-50">Sede</span><span className="fw-black fs-6">{loc.id}</span>
+                      <span className="b-label">CF</span><span className="fw-black b-val">{loc.totalCF.toFixed(1)}</span>
+                    </Badge>
+                    <Badge bg="success" className="badge-industrial">
+                      <span className="b-label">CU</span><span className="fw-black b-val">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
                   </div>
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
                 {activeLocId === loc.id && Object.entries(loc.tipos).map(([tipoId, tipo]: [string, any]) => (
-                  <div key={tipoId} className="mesa-section mb-3">
-                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2" style={{ borderLeftColor: 'var(--theme-icon-color)' }}>
+                  <div key={tipoId} className="mesa-section mb-2">
+                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-1 mb-1" style={{ borderLeftColor: 'var(--theme-icon-color)' }}>
                       <span className="fw-black m-label"><FaGlassMartiniAlt className="me-2"/>{tipo.nombre}</span>
                       <div className="fw-black m-stats">{tipo.totalCF.toFixed(1)} CF / {tipo.totalUC.toFixed(2)} CU</div>
                     </div>
-                    <div className="px-3">
-                      <Row className="g-2">
+                    <div className="px-2 px-md-3">
+                      <Row className="g-1">
                         {Object.entries(tipo.rutas).map(([rutaName, ruta]: [string, any]) => (
                           <RutaVolumenBebidaItem 
                             key={`bebidas-${loc.id}-${tipoId}-${rutaName}`}
@@ -410,41 +475,41 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredEficienciaData.map((loc: any) => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
-                  <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
-                    <div>
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">EFICIENCIA</div>
+                      <div className="fw-black sub-label-new">EFICIENCIA</div>
                     </div>
                   </div>
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
-                      <span className="b-label">PROG</span><span className="fw-black fs-6">{loc.totalProg}</span>
+                      <span className="b-label">PROG</span><span className="fw-black b-val">{loc.totalProg}</span>
                     </Badge>
                     <Badge bg="success" className="badge-industrial">
-                      <span className="b-label">EFEC</span><span className="fw-black fs-6">{loc.totalEfec}</span>
+                      <span className="b-label">EFEC</span><span className="fw-black b-val">{loc.totalEfec}</span>
                     </Badge>
                     <Badge bg="danger" className="badge-industrial">
-                      <span className="b-label">S. VISITA</span><span className="fw-black fs-6">{loc.totalProg - loc.totalEfec}</span>
+                      <span className="b-label text-nowrap">S. VISITA</span><span className="fw-black b-val">{loc.totalProg - loc.totalEfec}</span>
                     </Badge>
                     <Badge bg="dark" className="badge-industrial border border-secondary">
-                      <span className="b-label text-info">EF (%)</span><span className="fw-black fs-6 text-info">{((loc.totalEfec / loc.totalProg) * 100).toFixed(0)}%</span>
+                      <span className="b-label text-info">EF (%)</span><span className="fw-black b-val text-info">{((loc.totalEfec / loc.totalProg) * 100).toFixed(0)}%</span>
                     </Badge>
                   </div>
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
                 {activeLocId === loc.id && Object.entries(loc.mesas).map(([mesaName, mesa]: [string, any]) => (
-                  <div key={mesaName} className="mesa-section mb-3">
-                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2">
+                  <div key={mesaName} className="mesa-section mb-2">
+                    <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-1 mb-1">
                       <span className="fw-black m-label">MESA: {mesaName.toUpperCase()}</span>
                       <div className="fw-black m-stats">{mesa.totalProg} P / {mesa.totalEfec} E / {((mesa.totalEfec / mesa.totalProg) * 100).toFixed(1)}% EF</div>
                     </div>
-                    <div className="px-3">
-                      <Row className="g-2">
+                    <div className="px-2 px-md-3">
+                      <Row className="g-1">
                         {Object.entries(mesa.rutas).map(([rutaName, ruta]: [string, any]) => (
                           <EficienciaRutaItem 
                             key={`eficiencia-${loc.id}-${mesaName}-${rutaName}`}
@@ -473,71 +538,75 @@ const SupervisorPage: FC = () => {
       ) : (
         <Accordion defaultActiveKey={filteredDuplicadosData[0]?.id}>
           {filteredDuplicadosData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0 mb-2">
+            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
-                  <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar bg-warning text-dark"><FaExclamationTriangle /></div>
-                    <div>
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
                       <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
-                      <div className="fw-bold sub-label">DUPLICADOS</div>
+                      <div className="fw-black sub-label-new">DUPLICADOS</div>
                     </div>
                   </div>
                   <Badge bg="danger" className="badge-industrial">
                     <span className="b-label">CONFLICTOS</span>
-                    <span className="fw-black fs-6">{Object.keys(loc.clientes).length}</span>
+                    <span className="fw-black b-val">{Object.keys(loc.clientes).length}</span>
                   </Badge>
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
                 {Object.values(loc.clientes).map((cliente: any) => {
                   const masterClient = maestroMap[String(cliente.codigo)];
-                  const rutaCom = masterClient ? (masterClient['Ruta com'] || masterClient['RUTA COM'] || 'SIN RUTA') : 'CARGANDO...';
+                  const rutaCom = masterClient ? (masterClient['Ruta com'] || masterClient['RUTA COM'] || 'SIN RUTA') : '...';
                   return (
-                    <div key={cliente.codigo} className="mesa-section mb-3">
-                      <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-2" style={{ borderLeftColor: '#ffc107' }}>
-                        <div className="d-flex flex-column flex-md-row align-items-md-center gap-md-3">
-                          <span className="fw-black m-label">{cliente.nombre}</span>
-                          <div className="d-flex gap-2 align-items-center">
-                            <Badge bg="dark" className="p-badge text-warning border border-warning border-opacity-50">RUTA: {rutaCom}</Badge>
-                            <span className="fw-bold text-secondary d-label">CÓDIGO: {cliente.codigo}</span>
-                          </div>
+                    <div key={cliente.codigo} className="mesa-section mb-2">
+                      <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-2 mb-1" style={{ borderLeftColor: '#ffc107' }}>
+                        <div className="d-flex flex-wrap align-items-center gap-2 gap-md-3">
+                          <span className="fw-black m-label text-uppercase mb-0">{cliente.nombre}</span>
+                          <span className="m-label text-secondary opacity-25 d-none d-md-inline mb-0">•</span>
+                          <span className="fw-black m-label text-warning mb-0">RUTA {rutaCom}</span>
+                          <span className="m-label text-secondary opacity-25 d-none d-md-inline mb-0">•</span>
+                          <span className="fw-black m-label text-secondary mb-0">ID {cliente.codigo}</span>
                         </div>
                       </div>
-                      <div className="px-3">
+                      <div className="px-2 px-md-3">
                         {cliente.duplas.map((dupla: any, idx: number) => (
-                          <div key={idx} className="duplicado-comparativo-card mb-3">
+                          <div key={idx} className="duplicado-comparativo-card mb-2">
                             <Row className="g-0 border border-warning border-opacity-25 shadow-sm">
                               <Col xs={6} className="border-end border-secondary border-opacity-25">
-                                <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
+                                <div className="p-1 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
                                   <span className="fw-black text-warning dup-doc-id"># {dupla.doc1.id}</span>
                                   <Badge bg="secondary" className="fw-bold dup-doc-hora">{dupla.doc1.hora}</Badge>
                                 </div>
                                 <div className="p-2 bg-transparent">
                                   {dupla.doc1.items.map((item: any, i: number) => (
-                                    <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
-                                      <div className="d-flex flex-column min-width-0">
-                                        <span className="fw-bold text-truncate dup-item-name">{item.nombre}</span>
+                                    <div key={i} className="dup-item-row mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                      <div className="d-flex flex-column min-width-0 flex-grow-1">
+                                        <span className="fw-bold dup-item-name">{item.nombre}</span>
                                         <span className="dup-item-sap">{item.sap}</span>
                                       </div>
-                                      <span className="fw-black ms-2 dup-item-cant">{item.cant} {item.med}</span>
+                                      <div className="dup-item-qty-wrapper ms-md-2 text-end">
+                                        <span className="fw-black dup-item-cant text-nowrap">{item.cant} {item.med}</span>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
                               </Col>
                               <Col xs={6}>
-                                <div className="p-2 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
+                                <div className="p-1 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
                                   <span className="fw-black text-warning dup-doc-id"># {dupla.doc2.id}</span>
                                   <Badge bg="secondary" className="fw-bold dup-doc-hora">{dupla.doc2.hora}</Badge>
                                 </div>
                                 <div className="p-2 bg-transparent">
                                   {dupla.doc2.items.map((item: any, i: number) => (
-                                    <div key={i} className="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
-                                      <div className="d-flex flex-column min-width-0">
-                                        <span className="fw-bold text-truncate dup-item-name">{item.nombre}</span>
+                                    <div key={i} className="dup-item-row mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                      <div className="d-flex flex-column min-width-0 flex-grow-1">
+                                        <span className="fw-bold dup-item-name">{item.nombre}</span>
                                         <span className="dup-item-sap">{item.sap}</span>
                                       </div>
-                                      <span className="fw-black ms-2 dup-item-cant">{item.cant} {item.med}</span>
+                                      <div className="dup-item-qty-wrapper ms-md-2 text-end">
+                                        <span className="fw-black dup-item-cant text-nowrap">{item.cant} {item.med}</span>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -560,16 +629,23 @@ const SupervisorPage: FC = () => {
         .d-label { font-size: 0.55rem; }
         .dup-doc-id { font-size: 0.65rem; }
         .dup-doc-hora { font-size: 0.55rem; }
-        .dup-item-name { font-size: 0.6rem; color: var(--theme-text-primary); }
-        .dup-item-sap { font-size: 0.5rem; opacity: 0.6; }
+        .dup-item-row { display: flex; flex-direction: column; }
+        .dup-item-name { font-size: 0.6rem; color: var(--theme-text-primary); line-height: 1.1; word-break: break-word; }
+        .dup-item-sap { font-size: 0.5rem; color: #00d1ff; opacity: 0.9; font-weight: 700; margin-bottom: 2px; }
         .dup-item-cant { font-size: 0.65rem; color: var(--color-red-primary); }
+        .dup-item-qty-wrapper { border-top: 1px dotted rgba(255,255,255,0.05); padding-top: 2px; margin-top: 1px; }
+
+        @media (min-width: 768px) {
+          .dup-item-row { flex-direction: row; justify-content: space-between; align-items: center; }
+          .dup-item-qty-wrapper { border-top: none; padding-top: 0; margin-top: 0; }
+        }
       `}</style>
     </div>
   );
 
   return (
-    <div className="admin-layout-container flex-column gap-3" style={{ overflow: 'visible' }}>
-      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem', overflow: 'visible' }}>
+    <div className="admin-layout-container flex-column overflow-hidden gap-2 gap-md-3">
+      <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem' }}>
         <Row className="g-1 align-items-center">
           {/* 1. Sede */}
           <Col xs={12} md={2}>
@@ -742,7 +818,7 @@ const SupervisorPage: FC = () => {
       </div>
 
       <div className="admin-section-table flex-grow-1 p-0 overflow-hidden">
-        <div className="h-100 overflow-auto custom-scrollbar p-3">
+        <div className="h-100 overflow-auto custom-scrollbar p-2 p-md-3">
           {loadingMasterData || loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
             <div className="report-main-wrapper">
               {selectedReportType === 'VOLUMEN' && renderVolumenReport()}
@@ -755,10 +831,9 @@ const SupervisorPage: FC = () => {
       </div>
 
       <style>{`
-        .admin-layout-container { background: var(--theme-background-primary); height: 100vh; display: flex; flex-direction: column; }
         .fw-black { font-weight: 900 !important; }
-        .l-height-1 { letter-spacing: 0.5px; font-size: 0.8rem; color: var(--theme-text-primary); }
-        .sub-label { font-size: 0.55rem; color: var(--theme-text-secondary); opacity: 0.7; }
+        .l-height-1 { letter-spacing: 0.2px; font-size: 1rem; color: var(--theme-text-primary); line-height: 1; }
+        .sub-label-new { font-size: 0.85rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; line-height: 1; }
         
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; z-index: 2; }
@@ -768,28 +843,29 @@ const SupervisorPage: FC = () => {
         .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; }
         .sincro-val { font-size: 0.75rem; color: var(--theme-text-primary); margin-top: -2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 
-        .report-main-wrapper { display: flex; flex-direction: column; gap: 1rem; width: 100%; align-items: center; }
+        .report-main-wrapper { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; align-items: center; }
         .report-container-stable { width: 100%; display: block; }
 
         .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 8px 15px; cursor: pointer; transition: background 0.2s ease; border-bottom: 1px solid rgba(255,255,255,0.05); background: transparent !important; }
         .dropdown-item-custom:hover { background: rgba(244, 0, 9, 0.15) !important; }
 
-        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; }
-        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 10px !important; border-radius: 0 !important; width: 100%; }
+        .loc-accordion-item { background: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; border-radius: 0 !important; overflow: hidden; margin-bottom: .5rem !important; }
+        .loc-header-compact .accordion-button { background: transparent !important; box-shadow: none !important; padding: 2px 8px !important; border-radius: 0 !important; width: 100%; min-height: 28px; }
         .loc-header-compact .accordion-button:not(.collapsed) { background: transparent !important; color: inherit !important; box-shadow: none !important; }
         .loc-header-compact .accordion-button:after { display: none; }
-        .loc-avatar { width: 38px; height: 38px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; }
-        .badge-industrial { padding: 6px 10px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 50px; }
-        .b-label { font-size: 0.5rem; font-weight: 800; }
+        .loc-avatar { width: 28px; height: 28px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem; flex-shrink: 0; border-radius: 1px; }
+        .badge-industrial { padding: 1px 5px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 42px; height: 26px; justify-content: center; }
+        .b-label { font-size: 0.45rem; font-weight: 800; line-height: 1; margin-bottom: -2px; opacity: 0.8; }
+        .b-val { font-size: 1rem !important; line-height: 1; }
 
         .mesa-title-bar { background: var(--theme-icon-bg); border-left: 4px solid var(--color-red-primary); }
-        .m-label { font-size: 0.7rem; color: var(--theme-text-primary); }
-        .m-stats { font-size: 0.6rem; color: var(--theme-text-secondary); text-transform: uppercase; }
+        .m-label { font-size: 0.95rem; font-weight: 900; color: var(--theme-text-primary); }
+        .m-stats { font-size: 0.8rem; font-weight: 800; color: var(--theme-text-secondary); text-transform: uppercase; }
 
         .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 0; width: 100%; }
-        .r-label { font-size: 0.7rem; color: var(--theme-text-primary); }
-        .r-val { font-size: 0.75rem; }
-        .r-unit { font-size: 0.55rem; opacity: 0.7; }
+        .r-label { font-size: 0.8rem; color: var(--theme-text-primary); }
+        .r-val { font-size: 0.85rem; }
+        .r-unit { font-size: 0.65rem; opacity: 0.7; }
         .chevron-icon { font-size: 0.6rem; transition: transform 0.2s ease; color: var(--theme-text-secondary); }
         .chevron-icon.active { transform: rotate(90deg); color: var(--color-red-primary); }
 
@@ -803,6 +879,22 @@ const SupervisorPage: FC = () => {
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
         .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; margin-bottom: 10px; }
 
+        .duplicado-comparativo-card { background: var(--theme-background-primary); border-radius: 4px; overflow: hidden; }
+        .last-child-no-border:last-child { border-bottom: none !important; }
+        .d-label { font-size: 0.55rem; }
+        .dup-doc-id { font-size: 0.65rem; }
+        .dup-doc-hora { font-size: 0.55rem; }
+        .dup-item-row { display: flex; flex-direction: column; }
+        .dup-item-name { font-size: 0.6rem; color: var(--theme-text-primary); line-height: 1.1; word-break: break-word; }
+        .dup-item-sap { font-size: 0.5rem; color: #00d1ff; opacity: 0.9; font-weight: 700; margin-bottom: 2px; }
+        .dup-item-cant { font-size: 0.65rem; color: var(--color-red-primary); }
+        .dup-item-qty-wrapper { border-top: 1px dotted rgba(255,255,255,0.05); padding-top: 2px; margin-top: 1px; }
+
+        @media (min-width: 768px) {
+          .dup-item-row { flex-direction: row; justify-content: space-between; align-items: center; }
+          .dup-item-qty-wrapper { border-top: none; padding-top: 0; margin-top: 0; }
+        }
+
         @media (min-width: 992px) {
           .info-pill-new { height: 48px; }
           .pill-icon-sober { min-width: 40px; }
@@ -812,24 +904,23 @@ const SupervisorPage: FC = () => {
           .sincro-val { font-size: 0.95rem; }
 
           .report-container-stable {
-            max-width: 1350px;
+            max-width: 1400px;
           }
-          .l-height-1 { font-size: 1.1rem; }
-          .sub-label { font-size: 0.7rem; }
-          .m-label { font-size: 0.9rem; }
-          .m-stats { font-size: 0.8rem; }
-          .r-label { font-size: 1rem; }
-          .r-val { font-size: 1.1rem; }
-          .r-unit { font-size: 0.75rem; }
-          .p-name { font-size: 0.85rem; }
-          .p-sap { font-size: 0.75rem; }
-          .p-badge { font-size: 0.8rem; }
+          .l-height-1 { font-size: 1.35rem; }
+          .sub-label-new { font-size: 1.15rem; padding-left: 12px; }
+          .loc-avatar { width: 34px; height: 34px; font-size: 1.2rem; }
+          .loc-header-compact .accordion-button { padding: 4px 0px !important; min-height: 36px; }
+          .b-val { font-size: 1.2rem !important; }
+          .badge-industrial { height: 32px; min-width: 52px; }
+          
+          .m-label { font-size: 1.1rem; }
+          .m-stats { font-size: 0.95rem; }
 
           .d-label { font-size: 0.8rem !important; }
           .dup-doc-id { font-size: 0.9rem !important; }
           .dup-doc-hora { font-size: 0.8rem !important; }
           .dup-item-name { font-size: 0.85rem !important; }
-          .dup-item-sap { font-size: 0.75rem !important; }
+          .dup-item-sap { font-size: 0.75rem !important; color: #00d1ff !important; opacity: 1 !important; }
           .dup-item-cant { font-size: 0.9rem !important; }
         }
       `}</style>

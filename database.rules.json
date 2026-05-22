@@ -1,26 +1,30 @@
 {
   "rules": {
-    ".read": "auth != null",
+    "user_roles": {
+      ".read": "root.child('user_roles').child(auth.uid).val() === 'admin'",
+      ".write": "root.child('user_roles').child(auth.uid).val() === 'admin'",
+      "$uid": {
+        ".read": "$uid === auth.uid"
+      }
+    },
     "maestro": {
-      ".write": "auth != null",
+      ".read": "root.child('user_roles').child(auth.uid).val() === 'admin' || root.child('user_roles').child(auth.uid).val() === 'supervisor'",
+      ".write": "root.child('user_roles').child(auth.uid).val() === 'admin'",
       "metadata": {
         ".validate": "newData.hasChildren(['updatedAt', 'rowCount', 'userName'])"
       }
     },
     "demanda": {
-      ".write": "auth != null",
+      ".read": "root.child('user_roles').child(auth.uid).val() === 'admin' || root.child('user_roles').child(auth.uid).val() === 'supervisor'",
+      ".write": "root.child('user_roles').child(auth.uid).val() === 'admin'",
       "metadata": {
         ".validate": "newData.hasChildren(['updatedAt', 'rowCount', 'userName'])"
       }
     },
     "reportes": {
-      ".write": "auth != null",
-      "volumen": {
-        "metadata": {
-          ".validate": "newData.hasChildren(['lastUpdated', 'processedBy'])"
-        }
-      },
-      "bebidas": {
+      ".read": "root.child('user_roles').child(auth.uid).val() === 'admin' || root.child('user_roles').child(auth.uid).val() === 'supervisor'",
+      ".write": "root.child('user_roles').child(auth.uid).val() === 'admin' || root.child('user_roles').child(auth.uid).val() === 'supervisor'",
+      "$reporte_name": {
         "metadata": {
           ".validate": "newData.hasChildren(['lastUpdated', 'processedBy'])"
         }
