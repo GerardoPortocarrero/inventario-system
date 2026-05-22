@@ -1,12 +1,13 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Container, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { db, firebaseConfig } from '../api/firebase';
-import { collection, setDoc, doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db, rtdb, firebaseConfig } from '../api/firebase';
+import { collection, setDoc, doc, onSnapshot, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { ref, set, remove } from 'firebase/database';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecondary } from 'firebase/auth';
 
-import { FaPencilAlt, FaTrash } from 'react-icons/fa';
+import { FaPencilAlt, FaTrash, FaSync } from 'react-icons/fa';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 import SearchInput from '../components/SearchInput';
@@ -18,6 +19,7 @@ import GenericCreationModal from '../components/GenericCreationModal';
 import GenericFilter from '../components/GenericFilter';
 import { useData } from '../context/DataContext';
 import { matchSearchTerms } from '../utils/searchUtils';
+import toast from 'react-hot-toast';
 
 interface UserProfile {
   id: string;
@@ -175,6 +177,9 @@ const AdminUsersPage: FC = () => {
           rolId: data.rolId,
           sedeId: data.sedeId
         });
+        // Sincronización con RTDB para seguridad
+        await set(ref(rtdb, `user_roles/${editingUser.id}`), data.rolId);
+        
         setShowModal(false);
         setEditingUser(null);
       } else {
@@ -184,13 +189,19 @@ const AdminUsersPage: FC = () => {
         
         try {
           const userCred = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
-          await setDoc(doc(db, 'usuarios', userCred.user.uid), {
+          const uid = userCred.user.uid;
+          
+          await setDoc(doc(db, 'usuarios', uid), {
             nombre: data.nombre,
             email: data.email,
             rolId: data.rolId,
             sedeId: data.sedeId,
             activo: true
           });
+          
+          // Sincronización con RTDB para seguridad
+          await set(ref(rtdb, `user_roles/${uid}`), data.rolId);
+          
           await signOutSecondary(secondaryAuth);
           await deleteApp(secondaryApp);
           
@@ -202,6 +213,41 @@ const AdminUsersPage: FC = () => {
           throw error;
         }
       }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const syncAllRolesToRTDB = async () => {
+    if (!window.confirm("¿Sincronizar todos los roles de Firestore a RTDB?")) return;
+    setIsSubmitting(true);
+    try {
+      // Forzamos una lectura fresca de Firestore para asegurar que hay datos
+      const querySnapshot = await getDocs(collection(db, 'usuarios'));
+      if (querySnapshot.empty) {
+        toast.error("No se encontraron usuarios en Firestore");
+        return;
+      }
+
+      let count = 0;
+      // Usamos un array de promesas para que sea más rápido y seguro
+      const syncPromises = querySnapshot.docs.map(docSnap => {
+        const userData = docSnap.data();
+        const uid = docSnap.id;
+        const role = userData.rolId;
+        if (uid && role) {
+          count++;
+          return set(ref(rtdb, `user_roles/${uid}`), role);
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(syncPromises);
+      toast.success(`${count} roles sincronizados correctamente en RTDB`);
+      console.log(`Sincronización exitosa: ${count} usuarios procesados.`);
+    } catch (e: any) {
+      console.error("Error detallado de sincronización:", e);
+      toast.error(`Error: ${e.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -283,6 +329,16 @@ const AdminUsersPage: FC = () => {
                 options={sedes.map(s => ({ value: s.id, label: s.nombre }))}
                 className="flex-shrink-0"
               />
+              <Button 
+                variant="outline-danger" 
+                onClick={syncAllRolesToRTDB} 
+                disabled={isSubmitting}
+                className="flex-shrink-0 d-flex align-items-center gap-2"
+                title="Sincronizar todos los roles con RTDB"
+              >
+                <FaSync className={isSubmitting ? 'spinner-animation' : ''} />
+                <span className="d-md-none">Sync Roles</span>
+              </Button>
             </div>
             <GenericTable 
               data={filteredUsers} 
@@ -310,6 +366,8 @@ const AdminUsersPage: FC = () => {
           <Button variant="danger" onClick={async () => {
             if (deletingUser) {
               await deleteDoc(doc(db, 'usuarios', deletingUser.id));
+              // Sincronización con RTDB para seguridad
+              await remove(ref(rtdb, `user_roles/${deletingUser.id}`));
               setDeletingUser(null);
             }
           }}>{UI_TEXTS.DELETE}</Button>
