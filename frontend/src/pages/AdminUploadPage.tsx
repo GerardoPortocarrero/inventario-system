@@ -331,7 +331,7 @@ const AdminUploadPage: FC = () => {
                   <Col key={type} xs={12} xl={6} className="px-0 m-0">
                     <div className="p-3 p-md-4 h-100 admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                       <div className="d-flex align-items-center mb-3">
-                        <div className={`p-3 me-3 d-flex align-items-center justify-content-center bg-dark`} style={{ border: `1px solid var(--theme-border-default)` }}>
+                        <div className="p-3 me-3 d-flex align-items-center justify-content-center" style={{ backgroundColor: 'var(--theme-icon-bg)', border: '1px solid var(--theme-border-default)' }}>
                           <FaFileExcel className={`text-${type === 'maestro' ? 'danger' : 'primary'} fs-3`} />
                         </div>
                         <div className="flex-grow-1 min-width-0">
@@ -393,7 +393,7 @@ const AdminUploadPage: FC = () => {
                   <label className="small fw-black text-uppercase m-0" style={{ color: 'var(--theme-text-primary)', letterSpacing: '1px' }}>Inteligencia Logística y Reportes</label>
                 </div>
                 {isUploading && (
-                  <div className="mb-4 p-3 bg-dark border" style={{ borderColor: 'var(--theme-border-default)' }}>
+                  <div className="mb-4 p-3 border" style={{ backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)' }}>
                     <div className="d-flex justify-content-between mb-2 small fw-black text-uppercase">
                       <span className="text-secondary">Sincronización Cruda</span>
                       <span className="text-danger">{uploadProgress}%</span>

@@ -571,41 +571,41 @@ const SupervisorPage: FC = () => {
                       </div>
                       <div className="px-2 px-md-3">
                         {cliente.duplas.map((dupla: any, idx: number) => (
-                          <div key={idx} className="duplicado-comparativo-card mb-2">
-                            <Row className="g-0 border border-warning border-opacity-25 shadow-sm">
-                              <Col xs={6} className="border-end border-secondary border-opacity-25">
-                                <div className="p-1 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
-                                  <span className="fw-black text-warning dup-doc-id"># {dupla.doc1.id}</span>
-                                  <Badge bg="secondary" className="fw-bold dup-doc-hora">{dupla.doc1.hora}</Badge>
+                          <div key={idx} className="duplicado-comparativo-card mb-3">
+                            <Row className="g-0">
+                              <Col xs={6} className="border-end border-theme-default">
+                                <div className="dup-doc-header">
+                                  <span className="fw-black"># {dupla.doc1.id}</span>
+                                  <Badge bg="secondary" className="dup-time-badge">{dupla.doc1.hora}</Badge>
                                 </div>
-                                <div className="p-2 bg-transparent">
+                                <div className="p-2">
                                   {dupla.doc1.items.map((item: any, i: number) => (
-                                    <div key={i} className="dup-item-row mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                    <div key={i} className="dup-item-row border-bottom border-theme-default last-child-no-border">
                                       <div className="d-flex flex-column min-width-0 flex-grow-1">
                                         <span className="fw-bold dup-item-name">{item.nombre}</span>
-                                        <span className="dup-item-sap">{item.sap}</span>
+                                        <span className="dup-item-sap">SAP: {item.sap}</span>
                                       </div>
-                                      <div className="dup-item-qty-wrapper ms-md-2 text-end">
-                                        <span className="fw-black dup-item-cant text-nowrap">{item.cant} {item.med}</span>
+                                      <div className="dup-qty-val text-end ms-2">
+                                        {item.cant} <small>{item.med}</small>
                                       </div>
                                     </div>
                                   ))}
                                 </div>
                               </Col>
                               <Col xs={6}>
-                                <div className="p-1 bg-dark text-center border-bottom border-secondary border-opacity-25 d-flex justify-content-center align-items-center gap-2">
-                                  <span className="fw-black text-warning dup-doc-id"># {dupla.doc2.id}</span>
-                                  <Badge bg="secondary" className="fw-bold dup-doc-hora">{dupla.doc2.hora}</Badge>
+                                <div className="dup-doc-header">
+                                  <span className="fw-black"># {dupla.doc2.id}</span>
+                                  <Badge bg="secondary" className="dup-time-badge">{dupla.doc2.hora}</Badge>
                                 </div>
-                                <div className="p-2 bg-transparent">
+                                <div className="p-2">
                                   {dupla.doc2.items.map((item: any, i: number) => (
-                                    <div key={i} className="dup-item-row mb-1 pb-1 border-bottom border-secondary border-opacity-10 last-child-no-border">
+                                    <div key={i} className="dup-item-row border-bottom border-theme-default last-child-no-border">
                                       <div className="d-flex flex-column min-width-0 flex-grow-1">
                                         <span className="fw-bold dup-item-name">{item.nombre}</span>
-                                        <span className="dup-item-sap">{item.sap}</span>
+                                        <span className="dup-item-sap">SAP: {item.sap}</span>
                                       </div>
-                                      <div className="dup-item-qty-wrapper ms-md-2 text-end">
-                                        <span className="fw-black dup-item-cant text-nowrap">{item.cant} {item.med}</span>
+                                      <div className="dup-qty-val text-end ms-2">
+                                        {item.cant} <small>{item.med}</small>
                                       </div>
                                     </div>
                                   ))}
@@ -623,23 +623,6 @@ const SupervisorPage: FC = () => {
           ))}
         </Accordion>
       )}
-      <style>{`
-        .duplicado-comparativo-card { background: var(--theme-background-primary); border-radius: 4px; overflow: hidden; }
-        .last-child-no-border:last-child { border-bottom: none !important; }
-        .d-label { font-size: 0.55rem; }
-        .dup-doc-id { font-size: 0.65rem; }
-        .dup-doc-hora { font-size: 0.55rem; }
-        .dup-item-row { display: flex; flex-direction: column; }
-        .dup-item-name { font-size: 0.6rem; color: var(--theme-text-primary); line-height: 1.1; word-break: break-word; }
-        .dup-item-sap { font-size: 0.5rem; color: #00d1ff; opacity: 0.9; font-weight: 700; margin-bottom: 2px; }
-        .dup-item-cant { font-size: 0.65rem; color: var(--color-red-primary); }
-        .dup-item-qty-wrapper { border-top: 1px dotted rgba(255,255,255,0.05); padding-top: 2px; margin-top: 1px; }
-
-        @media (min-width: 768px) {
-          .dup-item-row { flex-direction: row; justify-content: space-between; align-items: center; }
-          .dup-item-qty-wrapper { border-top: none; padding-top: 0; margin-top: 0; }
-        }
-      `}</style>
     </div>
   );
 
@@ -879,20 +862,22 @@ const SupervisorPage: FC = () => {
         .dash-chart-box { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); padding: 15px; }
         .dash-chart-header { font-size: 0.6rem; font-weight: 900; color: var(--theme-text-secondary); text-transform: uppercase; border-left: 3px solid var(--color-red-primary); padding-left: 8px; margin-bottom: 10px; }
 
-        .duplicado-comparativo-card { background: var(--theme-background-primary); border-radius: 4px; overflow: hidden; }
+        .duplicado-comparativo-card { background: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; overflow: hidden; }
+        .dup-doc-header { background: var(--theme-icon-bg); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--color-red-primary); border-bottom: 1px solid var(--theme-border-default); color: var(--theme-text-primary); font-size: 0.85rem; }
+        .dup-time-badge { font-size: 0.75rem !important; border-radius: 0; font-weight: 800; opacity: 0.8; }
+        
+        .dup-item-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; background: transparent; }
         .last-child-no-border:last-child { border-bottom: none !important; }
-        .d-label { font-size: 0.55rem; }
-        .dup-doc-id { font-size: 0.65rem; }
-        .dup-doc-hora { font-size: 0.55rem; }
-        .dup-item-row { display: flex; flex-direction: column; }
-        .dup-item-name { font-size: 0.6rem; color: var(--theme-text-primary); line-height: 1.1; word-break: break-word; }
-        .dup-item-sap { font-size: 0.5rem; color: #00d1ff; opacity: 0.9; font-weight: 700; margin-bottom: 2px; }
-        .dup-item-cant { font-size: 0.65rem; color: var(--color-red-primary); }
-        .dup-item-qty-wrapper { border-top: 1px dotted rgba(255,255,255,0.05); padding-top: 2px; margin-top: 1px; }
+        
+        .dup-item-name { font-size: 0.65rem; color: var(--theme-text-primary); line-height: 1.1; word-break: break-word; }
+        .dup-item-sap { font-size: 0.55rem; color: #00d1ff; font-weight: 700; margin-top: 1px; display: block; }
+        .theme-light .dup-item-sap { color: #007bff; }
+        
+        .dup-qty-val { font-size: 0.85rem; font-weight: 900; color: var(--color-red-primary); white-space: nowrap; }
+        .border-theme-default { border-color: var(--theme-border-default) !important; }
 
         @media (min-width: 768px) {
-          .dup-item-row { flex-direction: row; justify-content: space-between; align-items: center; }
-          .dup-item-qty-wrapper { border-top: none; padding-top: 0; margin-top: 0; }
+          .dup-item-row { padding: 8px 6px; }
         }
 
         @media (min-width: 992px) {
