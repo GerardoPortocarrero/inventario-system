@@ -98,21 +98,34 @@ const SupervisorPage: FC = () => {
   const [maestroData, setMaestroData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const [selectedSedeId, setSelectedSedeId] = useState<string>('GLOBAL');
-  const [selectedReportType, setSelectedReportType] = useState<ReportType>('VOLUMEN');
+  const [selectedSedeId, setSelectedSedeId] = useState<string>(() => localStorage.getItem('sup_selectedSedeId') || 'GLOBAL');
+  const [selectedReportType, setSelectedReportType] = useState<ReportType>(() => (localStorage.getItem('sup_selectedReportType') as ReportType) || 'VOLUMEN');
   
   // Filtros para Eficiencia
-  const [selectedDia, setSelectedDia] = useState<string>(['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'][new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
-  const [selectedSemanas, setSelectedSemanas] = useState<string[]>([]);
-  const [selectedBebidaTypes, setSelectedBebidaTypes] = useState<string[]>([]);
+  const [selectedDia, setSelectedDia] = useState<string>(() => localStorage.getItem('sup_selectedDia') || ['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'][new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
+  const [selectedSemanas, setSelectedSemanas] = useState<string[]>(() => {
+    const saved = localStorage.getItem('sup_selectedSemanas');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedBebidaTypes, setSelectedBebidaTypes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('sup_selectedBebidaTypes');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
+
+  // Efectos para persistencia
+  useEffect(() => { localStorage.setItem('sup_selectedSedeId', selectedSedeId); }, [selectedSedeId]);
+  useEffect(() => { localStorage.setItem('sup_selectedReportType', selectedReportType); }, [selectedReportType]);
+  useEffect(() => { localStorage.setItem('sup_selectedDia', selectedDia); }, [selectedDia]);
+  useEffect(() => { localStorage.setItem('sup_selectedSemanas', JSON.stringify(selectedSemanas)); }, [selectedSemanas]);
+  useEffect(() => { localStorage.setItem('sup_selectedBebidaTypes', JSON.stringify(selectedBebidaTypes)); }, [selectedBebidaTypes]);
 
   // Estado para controlar qué sede está abierta en el acordeón (Lazy Rendering técnico)
   const [activeLocId, setActiveLocId] = useState<string | null>(null);
 
-  // Inicializar tipos de bebida
+  // Inicializar tipos de bebida solo si no hay persistencia
   useEffect(() => {
-    if (beverageTypes.length > 0 && selectedBebidaTypes.length === 0) {
+    if (beverageTypes.length > 0 && selectedBebidaTypes.length === 0 && !localStorage.getItem('sup_selectedBebidaTypes')) {
       setSelectedBebidaTypes(beverageTypes.map(t => t.id));
     }
   }, [beverageTypes, selectedBebidaTypes.length]);
@@ -198,7 +211,7 @@ const SupervisorPage: FC = () => {
   }, [eficienciaReport]);
 
   useEffect(() => {
-    if (selectedSemanas.length === 0 && availableSemanas.length > 0) {
+    if (selectedSemanas.length === 0 && availableSemanas.length > 0 && !localStorage.getItem('sup_selectedSemanas')) {
       setSelectedSemanas([availableSemanas[availableSemanas.length - 1]]);
     }
   }, [availableSemanas, selectedSemanas.length]);
