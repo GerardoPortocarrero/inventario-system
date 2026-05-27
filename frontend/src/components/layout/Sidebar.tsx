@@ -55,52 +55,22 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
           <hr />
 
-          {/* Enlaces comunes para todos los roles */}
-          <Nav.Item>
-            <Nav.Link as={Link} to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''} onClick={handleLinkClick}>
-              <FaHome className="me-2" />
-              Dashboard
-            </Nav.Link>
-          </Nav.Item>
-
-          {/* Enlaces para Preventista */}
-          {(userRole === 'preventista' || isAdmin) && (
-            <Nav.Item>
-              <Nav.Link as={Link} to="/stock" className={location.pathname === '/stock' ? 'active' : ''} onClick={handleLinkClick}>
-                <FaShoppingCart className="me-2" />
-                Stock
-              </Nav.Link>
-            </Nav.Item>
-          )}
-
-          {/* Enlaces para Almacenero */}
-          {(userRole === 'almacenero' || isAdmin) && (
-            <Nav.Item>
-              <Nav.Link as={Link} to="/almacen" className={location.pathname === '/almacen' ? 'active' : ''} onClick={handleLinkClick}>
-                <FaBoxOpen className="me-2" />
-                Controlador
-              </Nav.Link>
-            </Nav.Item>
-          )}
-
-          {/* Enlaces para Supervisor */}
+          {/* Enlaces para Supervisor / Admin */}
           {(userRole === 'supervisor' || isAdmin) && (
-            <Nav.Item>
-              <Nav.Link as={Link} to="/supervisor" className={location.pathname === '/supervisor' ? 'active' : ''} onClick={handleLinkClick}>
-                <FaClipboardList className="me-2" />
-                Supervisión
-              </Nav.Link>
-            </Nav.Item>
-          )}
-
-          {/* Enlaces para Supervisor / Admin - Carga de Datos */}
-          {(userRole === 'supervisor' || isAdmin) && (
-            <Nav.Item>
-              <Nav.Link as={Link} to="/admin/upload" className={location.pathname === '/admin/upload' ? 'active' : ''} onClick={handleLinkClick}>
-                <FaDatabase className="me-2" />
-                Datos
-              </Nav.Link>
-            </Nav.Item>
+            <>
+              <Nav.Item>
+                <Nav.Link as={Link} to="/supervisor" className={location.pathname === '/supervisor' ? 'active' : ''} onClick={handleLinkClick}>
+                  <FaClipboardList className="me-2" />
+                  Supervisión
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link as={Link} to="/admin/upload" className={location.pathname === '/admin/upload' ? 'active' : ''} onClick={handleLinkClick}>
+                  <FaDatabase className="me-2" />
+                  Datos
+                </Nav.Link>
+              </Nav.Item>
+            </>
           )}
 
           {/* Enlaces para Administrador */}

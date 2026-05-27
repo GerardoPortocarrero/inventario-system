@@ -10,7 +10,7 @@ interface AuthContextType {
   currentUser: User | null;
   userName: string | null;
   userEmail: string | null;
-  userRole: string | null; // El ID del rol (ej. "admin", "preventista")
+  userRole: string | null; // El ID del rol (ej. "admin", "supervisor")
   userSedeId: string | null; // El ID de la sede a la que pertenece el usuario
   login: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;

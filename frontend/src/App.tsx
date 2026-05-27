@@ -11,11 +11,8 @@ import { SPINNER_VARIANTS } from './constants'; // Import SPINNER_VARIANTS
 
 // Importa las páginas
 import LoginPage from './pages/LoginPage';
-import Dashboard from './pages/Dashboard';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import ProfilePage from './pages/ProfilePage';
-import StockPage from './pages/StockPage';
-import AlmacenPage from './pages/AlmacenPage';
 import SupervisorPage from './pages/SupervisorPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminRolesPage from './pages/AdminRolesPage'; // Importa la nueva página de roles
@@ -71,12 +68,9 @@ const App: FC = () => {
             <Container fluid className="py-3 flex-grow-1">
               <Routes>
                 {/* Ruta pública para usuarios autenticados */}
-                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<ProfilePage />} />
 
                 {/* Rutas Protegidas */}
-                <Route path="/stock" element={<ProtectedRoute allowedRoles={['preventista']}><StockPage /></ProtectedRoute>} />
-                <Route path="/almacen" element={<ProtectedRoute allowedRoles={['almacenero']}><AlmacenPage /></ProtectedRoute>} />
                 <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['supervisor']}><SupervisorPage /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />
                 <Route path="/admin/roles" element={<ProtectedRoute allowedRoles={['admin']}><AdminRolesPage /></ProtectedRoute>} />
@@ -87,7 +81,7 @@ const App: FC = () => {
 
                 {/* Página de no autorizado y redirecciones */}
                 <Route path="/unauthorized" element={<UnauthorizedPage />} />
-                <Route path="*" element={<Navigate to="/dashboard" />} />
+                <Route path="*" element={<Navigate to="/supervisor" />} />
               </Routes>
             </Container>
           </div>
