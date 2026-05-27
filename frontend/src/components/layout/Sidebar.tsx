@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Nav } from 'react-bootstrap';
-import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle, FaDatabase } from 'react-icons/fa'; // Importar FaUserCircle y FaDatabase
+import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle, FaDatabase, FaChartLine } from 'react-icons/fa'; // Importar FaUserCircle, FaDatabase y FaChartLine
 import './Sidebar.css';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -62,6 +62,12 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
                 <Nav.Link as={Link} to="/supervisor" className={location.pathname === '/supervisor' ? 'active' : ''} onClick={handleLinkClick}>
                   <FaClipboardList className="me-2" />
                   Supervisión
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link as={Link} to="/analytics-pro" className={location.pathname === '/analytics-pro' ? 'active' : ''} onClick={handleLinkClick}>
+                  <FaChartLine className="me-2" />
+                  Analítica Pro
                 </Nav.Link>
               </Nav.Item>
               <Nav.Item>

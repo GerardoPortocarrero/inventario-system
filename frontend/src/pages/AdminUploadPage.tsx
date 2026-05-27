@@ -5,7 +5,7 @@ import { FaCloudUploadAlt, FaFileExcel, FaHistory, FaExclamationTriangle, FaUser
 import * as XLSX from 'xlsx';
 import { db, rtdb } from '../api/firebase';
 import { ref, set, onValue } from 'firebase/database';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, Timestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import GlobalSpinner from '../components/GlobalSpinner';
@@ -26,6 +26,11 @@ const AdminUploadPage: FC = () => {
   const [processingReports, setProcessingReports] = useState(false);
   const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0 });
 
+  // Estado para la nueva carga histórica de Analítica Pro
+  const [isUploadingHistorica, setIsUploadingHistorica] = useState(false);
+  const [historicaProgress, setHistoricaProgress] = useState(0);
+  const [historicaMsg, setHistoricaMsg] = useState<string | null>(null);
+
   useEffect(() => {
     const types = ['maestro', 'demanda'];
     const unsubs = types.map(type => {
@@ -37,6 +42,68 @@ const AdminUploadPage: FC = () => {
     });
     return () => unsubs.forEach(unsub => unsub());
   }, []);
+
+  const processHistorica = async (file: File) => {
+    if (!file) return;
+    setIsUploadingHistorica(true);
+    setHistoricaProgress(0);
+    setHistoricaMsg('Obteniendo Maestro para conversiones...');
+
+    try {
+      // 1. Obtener Maestro actual de RTDB
+      const maestroSnap = await new Promise<any[]>((res) => onValue(ref(rtdb, 'maestro/data'), (s) => res(s.exists() ? s.val() : []), { onlyOnce: true }));
+      
+      setHistoricaMsg('Iniciando Web Worker (Agregación Inteligente)...');
+      
+      // 2. Iniciar Web Worker
+      const worker = new Worker(new URL('../utils/dataProcessor.worker.ts', import.meta.url), { type: 'module' });
+      const fileArrayBuffer = await file.arrayBuffer();
+      worker.postMessage({ file: fileArrayBuffer, maestroData: maestroSnap });
+
+      worker.onmessage = async (e) => {
+        const { success, results, error, totalRows } = e.data;
+
+        if (!success) {
+          toast.error(`Error en procesamiento: ${error}`);
+          setIsUploadingHistorica(false);
+          return;
+        }
+
+        setHistoricaMsg(`Sincronizando ${results.length} visitas con Firestore...`);
+
+        // 3. Sincronización con Firestore por Batches (500 docs cada uno)
+        const batchSize = 500;
+        const demandaColl = collection(db, 'demanda_historica');
+
+        for (let i = 0; i < results.length; i += batchSize) {
+          const batch = writeBatch(db);
+          const chunk = results.slice(i, i + batchSize);
+
+          chunk.forEach((item: any) => {
+            const docRef = doc(demandaColl, item.id);
+            batch.set(docRef, {
+              ...item,
+              fecha: Timestamp.fromMillis(item.fecha),
+              updatedAt: Timestamp.now()
+            });
+          });
+
+          await batch.commit();
+          const currentProgress = Math.min(Math.round(((i + batchSize) / results.length) * 100), 100);
+          setHistoricaProgress(currentProgress);
+        }
+
+        toast.success(`¡Analítica Pro actualizada! ${results.length} visitas procesadas.`);
+        setIsUploadingHistorica(false);
+        setHistoricaMsg(null);
+        worker.terminate();
+      };
+
+    } catch (err: any) {
+      toast.error(err.message);
+      setIsUploadingHistorica(false);
+    }
+  };
 
   const downloadTemplate = (type: 'maestro' | 'demanda') => {
     const columns = type === 'maestro' ? MAESTRO_COLUMNS : DEMANDA_COLUMNS;
@@ -386,6 +453,41 @@ const AdminUploadPage: FC = () => {
                   </Col>
                 ))}
               </Row>
+
+              {/* SECCIÓN ANALÍTICA PRO: CARGA HISTÓRICA AGREGADA */}
+              <div className="admin-border-industrial p-4 mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid #ffc107 !important' }}>
+                <div className="d-flex align-items-center mb-3">
+                  <div className="p-3 me-3 d-flex align-items-center justify-content-center" style={{ backgroundColor: 'rgba(255, 193, 7, 0.1)', border: '1px solid #ffc107' }}>
+                    <FaDatabase className="text-warning fs-3" />
+                  </div>
+                  <div className="flex-grow-1">
+                    <h6 className="mb-0 fw-black text-uppercase" style={{ letterSpacing: '1px' }}>Carga Histórica: Analítica Pro</h6>
+                    <small className="text-warning fw-bold" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Sistema Acumulativo e Inteligente (Firestore)</small>
+                  </div>
+                </div>
+                
+                <p className="mb-4 text-secondary" style={{ fontSize: '0.8rem' }}>
+                  A diferencia de la carga diaria, este proceso **agrega** la información al historial existente. 
+                  Calcula automáticamente CF/CU y agrupa por cliente/día para análisis de tendencias de largo plazo.
+                </p>
+
+                {isUploadingHistorica ? (
+                  <div className="mb-4 p-3 border" style={{ backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)' }}>
+                    <div className="d-flex justify-content-between mb-2 small fw-black text-uppercase">
+                      <span className="text-secondary">{historicaMsg || 'Procesando...'}</span>
+                      <span className="text-warning">{historicaProgress}%</span>
+                    </div>
+                    <ProgressBar now={historicaProgress} variant="warning" style={{ height: '4px' }} />
+                  </div>
+                ) : (
+                  <Form.Group>
+                    <Form.Label htmlFor="upload-historica" className="btn btn-outline-warning w-100 py-3 fw-black text-uppercase" style={{ fontSize: '0.8rem' }}>
+                      <FaCloudUploadAlt className="me-2 fs-5" /> Iniciar Carga Histórica Inteligente
+                    </Form.Label>
+                    <Form.Control id="upload-historica" type="file" accept=".xlsx, .xls, .csv" hidden onChange={(e: any) => processHistorica(e.target.files?.[0])} disabled={isUploadingHistorica} />
+                  </Form.Group>
+                )}
+              </div>
 
               <div className="admin-border-industrial p-4 mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                 <div className="d-flex align-items-center mb-4 gap-2">

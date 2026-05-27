@@ -20,6 +20,7 @@ import AdminProductsPage from './pages/AdminProductsPage';
 import AdminSedesPage from './pages/AdminSedesPage';
 import AdminTipoBebidaPage from './pages/AdminTipoBebidaPage';
 import AdminUploadPage from './pages/AdminUploadPage';
+import AnalyticsProPage from './pages/AnalyticsProPage';
 
 // Importa los archivos CSS
 import './App.css';
@@ -78,6 +79,7 @@ const App: FC = () => {
                 <Route path="/admin/sedes" element={<ProtectedRoute allowedRoles={['admin']}><AdminSedesPage /></ProtectedRoute>} />
                 <Route path="/admin/beverage-types" element={<ProtectedRoute allowedRoles={['admin']}><AdminTipoBebidaPage /></ProtectedRoute>} />
                 <Route path="/admin/upload" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><AdminUploadPage /></ProtectedRoute>} />
+                <Route path="/analytics-pro" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><AnalyticsProPage /></ProtectedRoute>} />
 
                 {/* Página de no autorizado y redirecciones */}
                 <Route path="/unauthorized" element={<UnauthorizedPage />} />
