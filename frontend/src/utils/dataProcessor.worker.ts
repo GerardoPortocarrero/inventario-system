@@ -1,91 +1,143 @@
 /**
- * Web Worker para el procesamiento pesado de archivos Excel de Demanda.
- * Realiza la agregación por Cliente/Fecha y la conversión a CF/CU.
+ * Web Worker PRO: Motor de Agregación y Cálculo Volumétrico
+ * Soporta limpieza de SAP IDs, normalización de medidas y fallbacks de seguridad.
  */
-
 import * as XLSX from 'xlsx';
 
 self.onmessage = async (e: MessageEvent) => {
-  const { file, maestroData } = e.data;
+  const { file, maestroData, productsData } = e.data;
 
   try {
-    // 1. Leer el archivo (ArrayBuffer)
     const workbook = XLSX.read(file, { type: 'array', cellDates: true });
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    const rows = XLSX.utils.sheet_to_json(worksheet) as any[];
+    const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) as any[];
 
-    // 2. Crear mapa del Maestro para búsqueda rápida
-    // Asumimos que maestroData viene de RTDB como array de objetos
-    const maestroMap = (maestroData || []).reduce((acc: any, item: any) => {
-      acc[String(item.Codigo)] = item;
+    if (rawRows.length === 0) {
+      self.postMessage({ success: true, results: [] });
+      return;
+    }
+
+    // --- MOTOR DE MAPEO ULTRA-ROBUSTO ---
+    const firstRow = rawRows[0];
+    const keys = Object.keys(firstRow);
+    const deepClean = (s: string) => String(s || '').replace(/[\.\$#\[\]\/\s\-_]/g, '').trim().toUpperCase();
+
+    const findKey = (possibilities: string[]) => {
+      const cleanPossibilities = possibilities.map(deepClean);
+      let match = keys.find(k => cleanPossibilities.includes(deepClean(k)));
+      if (match) return match;
+      return keys.find(k => {
+        const ck = deepClean(k);
+        return cleanPossibilities.some(p => ck.includes(p) || p.includes(ck));
+      });
+    };
+
+    const colMap = {
+      solicitante: findKey(['Solicitante', 'Cliente', 'Solic', 'CodCli']),
+      material: findKey(['Material', 'Articulo', 'SKU', 'CodMat', 'Prod']),
+      cantidad: findKey(['Cantidad', 'Cant', 'Qty', 'Ventas', 'Volumen']), 
+      valor: findKey(['Valor', 'Monto', 'Importe', 'Neto', 'Precio']),
+      medida: findKey(['Medida', 'UM', 'Unidad', 'Unit']),
+      status: findKey(['Status', 'Estado', 'Est']),
+      fecha: findKey(['FechaDocumento', 'FechaDoc', 'Fecha', 'Date']),
+      nombreMaterial: findKey(['NombreMaterial', 'TextoBreve', 'Descripcion', 'Desc'])
+    };
+
+    // --- MAPAS DE REFERENCIA (Soporta Array u Objeto) ---
+    const cleanId = (id: any) => String(id || '').trim().replace(/^0+/, '');
+    
+    const toArray = (data: any) => Array.isArray(data) ? data : Object.values(data || {});
+
+    const maestroMap = toArray(maestroData).reduce((acc: any, item: any) => {
+      if (item && item.Codigo) acc[cleanId(item.Codigo)] = item;
       return acc;
     }, {});
 
-    // 3. Agregación Estratégica
+    const productsMap = toArray(productsData).reduce((acc: any, item: any) => {
+      if (item && item.sap) acc[cleanId(item.sap)] = item;
+      return acc;
+    }, {});
+
+    const UNIT_CASE_ML = 5677.92; 
     const dailyAggregates: Record<string, any> = {};
+    let matchedProducts = 0;
+    let totalProcessedRows = 0;
 
-    let skippedRows = 0;
+    // --- PROCESAMIENTO ---
+    rawRows.forEach((row: any) => {
+      totalProcessedRows++;
+      
+      const solicitanteId = cleanId(colMap.solicitante ? row[colMap.solicitante] : '');
+      if (!solicitanteId) return;
 
-    rows.forEach((row: any, index: number) => {
-      const solicitante = String(row.Solicitante || '').trim();
-      if (!solicitante) { skippedRows++; return; }
-
-      const fechaDoc = row['Fecha documento'];
+      const fechaRaw = colMap.fecha ? row[colMap.fecha] : null;
       let dateObj: Date | null = null;
-      let dateKey: string = '';
-
-      if (fechaDoc instanceof Date) {
-        dateObj = fechaDoc;
-      } else if (typeof fechaDoc === 'string') {
-        // Soporte para DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY
-        const parts = fechaDoc.split(/[\.\-\/]/);
+      if (fechaRaw instanceof Date) dateObj = fechaRaw;
+      else if (typeof fechaRaw === 'string') {
+        const parts = fechaRaw.split(/[\.\-\/]/);
         if (parts.length === 3) {
-          // Detectar si es YYYY-MM-DD o DD-MM-YYYY
-          if (parts[0].length === 4) { // YYYY-MM-DD
-            dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-          } else { // DD-MM-YYYY
-            dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-          }
-        } else {
-          dateObj = new Date(fechaDoc);
+          dateObj = parts[0].length === 4 
+            ? new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])) 
+            : new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else dateObj = new Date(fechaRaw);
+      }
+      if (!dateObj || isNaN(dateObj.getTime())) return;
+
+      const dateKey = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
+      const docKey = `${solicitanteId}_${dateKey}`;
+      
+      const parseSapNum = (val: any) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        let str = String(val).trim().toUpperCase().replace(/[A-Z\s]+$/, '');
+        const lastComma = str.lastIndexOf(',');
+        const lastDot = str.lastIndexOf('.');
+        if (lastComma > lastDot) return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+        else if (lastDot > lastComma) {
+          const parts = str.split('.');
+          if (parts.length === 2 && parts[1].length === 3 && lastComma === -1) return parseFloat(str.replace(/\./g, '')) || 0;
+          return parseFloat(str.replace(/,/g, '')) || 0;
         }
+        return parseFloat(str.replace(',', '.')) || 0;
+      };
+
+      const cantidad = parseSapNum(colMap.cantidad ? row[colMap.cantidad] : 0);
+      const valor = parseSapNum(colMap.valor ? row[colMap.valor] : 0);
+      const medida = String((colMap.medida ? row[colMap.medida] : '') || '').toUpperCase();
+      const matId = cleanId(colMap.material ? row[colMap.material] : '');
+
+      const prod = productsMap[matId];
+      const client = maestroMap[solicitanteId];
+      if (prod) matchedProducts++;
+
+      const unitsPerCase = prod ? (parseFloat(prod.unidades) || 1) : 1;
+      const mlPerUnit = prod ? (parseFloat(prod.mililitros) || 0) : 0;
+      
+      const isCase = (medida === 'CAJ' || medida === 'CJ' || medida === 'CS' || medida === 'CASE' || medida.includes('CJ'));
+
+      // 1. Unidades Base (para cálculos consistentes)
+      const totalUnits = isCase ? (cantidad * unitsPerCase) : cantidad;
+
+      // 2. CF (Caja Física): SOLO si el producto tiene volumen (líquido)
+      // Esto filtra envases/auxiliares que SAP reporta en líneas aparte.
+      let cf = 0;
+      if (mlPerUnit > 0) {
+        cf = isCase ? cantidad : (cantidad / unitsPerCase);
       }
 
-      if (!dateObj || isNaN(dateObj.getTime())) {
-        skippedRows++;
-        return;
-      }
+      // 3. CU (Caja Unitaria): Volumen total / Estándar 5677.92
+      const cu = (totalUnits * mlPerUnit) / UNIT_CASE_ML;
 
-      dateKey = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
-
-      const docKey = `${solicitante}_${dateKey}`;
-      const material = String(row.Material);
-      const cantidad = parseFloat(row.Cantidad) || 0;
-      const valor = parseFloat(row.Valor) || 0;
-
-      // Obtener factores de conversión del Maestro
-      const clienteMaestro = maestroMap[solicitante];
-      // Nota: Si el factor no está en el cliente, podríamos necesitar una tabla de materiales,
-      // pero según lo conversado, el Maestro tiene la info de transformación.
-      const factorCF = parseFloat(clienteMaestro?.CF) || 0;
-      const factorCU = parseFloat(clienteMaestro?.CU) || 0;
-
-      const cf = cantidad * factorCF;
-      const cu = cantidad * factorCU;
-
+      // --- AGREGACIÓN ---
       if (!dailyAggregates[docKey]) {
         dailyAggregates[docKey] = {
           id: docKey,
-          solicitante,
-          nombreCliente: clienteMaestro?.Cliente || 'Desconocido',
-          fecha: dateObj.getTime(), // Guardamos como timestamp para Firestore
-          totalValor: 0,
-          totalCF: 0,
-          totalCU: 0,
+          solicitante: solicitanteId,
+          nombreCliente: client?.Cliente || (colMap.solicitante ? row[colMap.solicitante] : 'Cliente Desconocido'),
+          fecha: dateObj.getTime(),
+          totalValor: 0, totalCF: 0, totalCU: 0,
           materiales: [],
-          ruta: clienteMaestro?.Ruta || 'S/R',
-          subCanal: clienteMaestro?.SubCanal || 'S/C'
+          ruta: client?.Ruta || 'S/R',
+          subCanal: client?.SubCanal || 'S/C'
         };
       }
 
@@ -94,20 +146,26 @@ self.onmessage = async (e: MessageEvent) => {
       agg.totalCF += cf;
       agg.totalCU += cu;
       
-      // Añadir material al desglose de la visita
-      agg.materiales.push({
-        sku: material,
-        descripcion: row['Nombre material'] || 'Sin descripción',
-        cantidad,
-        cf,
-        cu,
-        valor
-      });
+      const existingMat = agg.materiales.find((m: any) => m.sku === matId);
+      if (existingMat) {
+        existingMat.cantidad += cantidad;
+        existingMat.cf += cf;
+        existingMat.cu += cu;
+        existingMat.valor += valor;
+      } else {
+        agg.materiales.push({
+          sku: matId,
+          descripcion: (colMap.nombreMaterial ? row[colMap.nombreMaterial] : '') || 'Sin nombre',
+          cantidad, cf, cu, valor
+        });
+      }
     });
 
-    // 4. Enviar resultados
-    const results = Object.values(dailyAggregates);
-    self.postMessage({ success: true, results, totalRows: rows.length });
+    self.postMessage({ 
+      success: true, 
+      results: Object.values(dailyAggregates),
+      metrics: { totalRows: totalProcessedRows, matchedProducts }
+    });
 
   } catch (error: any) {
     self.postMessage({ success: false, error: error.message });
