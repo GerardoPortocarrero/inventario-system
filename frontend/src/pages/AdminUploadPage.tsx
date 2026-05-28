@@ -66,37 +66,45 @@ const AdminUploadPage: FC = () => {
         if (!success) {
           toast.error(`Error en procesamiento: ${error}`);
           setIsUploadingHistorica(false);
+          worker.terminate();
           return;
         }
 
-        setHistoricaMsg(`Sincronizando ${results.length} visitas con Firestore...`);
+        try {
+          setHistoricaMsg(`Sincronizando ${results.length} visitas con Firestore...`);
 
-        // 3. Sincronización con Firestore por Batches (500 docs cada uno)
-        const batchSize = 500;
-        const demandaColl = collection(db, 'demanda_historica');
+          // 3. Sincronización con Firestore por Batches (500 docs cada uno)
+          const batchSize = 500;
+          const demandaColl = collection(db, 'demanda_historica');
 
-        for (let i = 0; i < results.length; i += batchSize) {
-          const batch = writeBatch(db);
-          const chunk = results.slice(i, i + batchSize);
+          for (let i = 0; i < results.length; i += batchSize) {
+            const batch = writeBatch(db);
+            const chunk = results.slice(i, i + batchSize);
 
-          chunk.forEach((item: any) => {
-            const docRef = doc(demandaColl, item.id);
-            batch.set(docRef, {
-              ...item,
-              fecha: Timestamp.fromMillis(item.fecha),
-              updatedAt: Timestamp.now()
+            chunk.forEach((item: any) => {
+              const docRef = doc(demandaColl, item.id);
+              batch.set(docRef, {
+                ...item,
+                fecha: Timestamp.fromMillis(item.fecha),
+                updatedAt: Timestamp.now()
+              });
             });
-          });
 
-          await batch.commit();
-          const currentProgress = Math.min(Math.round(((i + batchSize) / results.length) * 100), 100);
-          setHistoricaProgress(currentProgress);
+            await batch.commit();
+            const currentProgress = Math.min(Math.round(((i + chunk.length) / results.length) * 100), 100);
+            setHistoricaProgress(currentProgress);
+          }
+
+          toast.success(`¡Analítica Pro actualizada! ${results.length} visitas procesadas.`);
+          setIsUploadingHistorica(false);
+          setHistoricaMsg(null);
+        } catch (syncErr: any) {
+          console.error('Error sincronizando con Firestore:', syncErr);
+          toast.error(`Error de base de datos: ${syncErr.message}`);
+          setIsUploadingHistorica(false);
+        } finally {
+          worker.terminate();
         }
-
-        toast.success(`¡Analítica Pro actualizada! ${results.length} visitas procesadas.`);
-        setIsUploadingHistorica(false);
-        setHistoricaMsg(null);
-        worker.terminate();
       };
 
     } catch (err: any) {

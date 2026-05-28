@@ -25,33 +25,39 @@ self.onmessage = async (e: MessageEvent) => {
     // 3. Agregación Estratégica
     const dailyAggregates: Record<string, any> = {};
 
-    rows.forEach((row: any) => {
-      // Excluir rechazos (Status 'C')
-      if (String(row.Status).toUpperCase() === 'C') return;
+    let skippedRows = 0;
 
-      const solicitante = String(row.Solicitante);
-      const fechaDoc = row['Fecha documento']; // Puede ser string 'DD.MM.YYYY' o Date
-      
-      let dateObj: Date;
-      let dateKey: string;
+    rows.forEach((row: any, index: number) => {
+      const solicitante = String(row.Solicitante || '').trim();
+      if (!solicitante) { skippedRows++; return; }
+
+      const fechaDoc = row['Fecha documento'];
+      let dateObj: Date | null = null;
+      let dateKey: string = '';
 
       if (fechaDoc instanceof Date) {
         dateObj = fechaDoc;
-        dateKey = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
       } else if (typeof fechaDoc === 'string') {
-        const parts = fechaDoc.split('.');
+        // Soporte para DD.MM.YYYY, DD/MM/YYYY, DD-MM-YYYY
+        const parts = fechaDoc.split(/[\.\-\/]/);
         if (parts.length === 3) {
-          dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-          dateKey = `${parts[2]}${parts[1].padStart(2, '0')}${parts[0].padStart(2, '0')}`;
+          // Detectar si es YYYY-MM-DD o DD-MM-YYYY
+          if (parts[0].length === 4) { // YYYY-MM-DD
+            dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+          } else { // DD-MM-YYYY
+            dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+          }
         } else {
           dateObj = new Date(fechaDoc);
-          dateKey = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
         }
-      } else {
-        return; // Fecha inválida
       }
 
-      if (isNaN(dateObj.getTime())) return;
+      if (!dateObj || isNaN(dateObj.getTime())) {
+        skippedRows++;
+        return;
+      }
+
+      dateKey = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
 
       const docKey = `${solicitante}_${dateKey}`;
       const material = String(row.Material);

@@ -49,9 +49,13 @@ const AnalyticsProPage: FC = () => {
     };
   }, []);
 
-  // --- MÉTRICAS ---
+  // --- MÉTRICAS CENTRALIZADAS ---
   const rfmResults = useMemo(() => {
     if (demandaData.length === 0) return [];
+    // Adaptamos los datos agregados para el calculador de RFM si es necesario
+    // Pero como ya vienen agregados por visita, el calculador puede usarlos directamente
+    // Nota: analyticsUtils.ts espera formato crudo, aquí tenemos formato visita.
+    // Usamos el calculador local por ahora para mantener la compatibilidad con el formato "visita" de Firestore
     const clientMap: Record<string, any> = {};
     const now = new Date();
 
@@ -72,12 +76,12 @@ const AnalyticsProPage: FC = () => {
     }));
 
     const count = results.length;
+    if (count === 0) return [];
+    
     results.sort((a, b) => a.recency - b.recency);
     results.forEach((r, i) => { r.rScore = 5 - Math.floor(i / Math.ceil(count / 5)); if (r.rScore < 1) r.rScore = 1; });
-
     results.sort((a, b) => a.frequency - b.frequency);
     results.forEach((r, i) => { r.fScore = Math.floor(i / Math.ceil(count / 5)) + 1; if (r.fScore > 5) r.fScore = 5; });
-
     results.sort((a, b) => a.monetary - b.monetary);
     results.forEach((r, i) => { r.mScore = Math.floor(i / Math.ceil(count / 5)) + 1; if (r.mScore > 5) r.mScore = 5; });
 
@@ -116,6 +120,19 @@ const AnalyticsProPage: FC = () => {
     return sorted.map(([month, total], i) => { const prevTotal = i > 0 ? sorted[i - 1][1] : 0; const delta = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0; return { month, total, prevTotal, delta }; });
   }, [demandaData]);
 
+  const statsPro = useMemo(() => {
+    const lastMonth = monthlyComparison.length > 0 ? monthlyComparison[monthlyComparison.length - 1] : { delta: 0 };
+    const topProd = productPerformance.length > 0 ? productPerformance[0] : { name: '---', total: 0 };
+    const riskCount = rfmResults.filter(r => r.segment === 'En Riesgo' || r.segment === 'Hibernando').length;
+    
+    return {
+      growth: lastMonth.delta,
+      starProduct: topProd.name,
+      starProductValue: topProd.total,
+      atRisk: riskCount
+    };
+  }, [monthlyComparison, productPerformance, rfmResults]);
+
   const segmentCounts = useMemo(() => {
     const counts: Record<string, number> = { 'Campeón': 0, 'Fiel': 0, 'Nueva Promesa': 0, 'Potencial': 0, 'En Riesgo': 0, 'Hibernando': 0 };
     rfmResults.forEach(r => { if (counts[r.segment] !== undefined) counts[r.segment]++; });
@@ -148,9 +165,6 @@ const AnalyticsProPage: FC = () => {
                   <div className="small fw-black text-danger" style={{ fontSize: '0.7rem' }}>{metadata.updatedAt}</div>
                 </div>
               )}
-              <button className="btn btn-outline-danger btn-sm fw-black rounded-0 px-4 py-2 d-flex align-items-center gap-2" style={{ fontSize: '0.75rem' }}>
-                <FaCloudUploadAlt /> CARGAR DEMANDA
-              </button>
             </div>
           </div>
         </div>
@@ -175,29 +189,78 @@ const AnalyticsProPage: FC = () => {
               <Tab.Pane eventKey="dashboard" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex flex-column gap-3">
                   <Row className="g-3">
-                    <Col xs={12}>
-                      <div className="p-3 border-start border-4 border-info bg-dark bg-opacity-25">
-                        <h6 className="fw-black mb-1 text-info text-uppercase">Motor de Inteligencia Activo</h6>
-                        <p className="small mb-0 text-secondary fw-bold">Los datos procesados se acumulan históricamente.</p>
+                    <Col xs={12} md={4}>
+                      <div className="p-3 bg-dark bg-opacity-50 border border-secondary border-opacity-10 h-100">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div className="text-secondary fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Clientes Analizados</div>
+                            <div className="fw-black fs-3">{rfmResults.length.toLocaleString()}</div>
+                          </div>
+                          <FaUsers className="text-primary opacity-25 fs-4" />
+                        </div>
                       </div>
                     </Col>
-                    {[
-                      { label: 'Clientes Analizados', value: rfmResults.length.toLocaleString(), icon: <FaUsers />, color: 'text-primary' },
-                      { label: 'Visitas Totales', value: demandaData.length.toLocaleString(), icon: <FaHistory />, color: 'text-success' },
-                      { label: 'Venta Total Valor', value: `$${rfmResults.reduce((acc, r) => acc + r.monetary, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: <FaBox />, color: 'text-warning' }
-                    ].map((kpi, i) => (
-                      <Col key={i} xs={12} md={4}>
-                        <div className="p-3 bg-dark bg-opacity-50 border border-secondary border-opacity-10">
-                          <div className="d-flex justify-content-between align-items-start">
-                            <div>
-                              <div className="text-secondary fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>{kpi.label}</div>
-                              <div className="fw-black fs-2">{kpi.value}</div>
-                            </div>
-                            <div className={`${kpi.color} opacity-25 fs-4`}>{kpi.icon}</div>
+                    <Col xs={12} md={4}>
+                      <div className="p-3 bg-dark bg-opacity-50 border border-secondary border-opacity-10 h-100">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div className="text-secondary fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Visitas Totales</div>
+                            <div className="fw-black fs-3">{demandaData.length.toLocaleString()}</div>
                           </div>
+                          <FaHistory className="text-success opacity-25 fs-4" />
                         </div>
-                      </Col>
-                    ))}
+                      </div>
+                    </Col>
+                    <Col xs={12} md={4}>
+                      <div className="p-3 bg-dark bg-opacity-50 border border-secondary border-opacity-10 h-100">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div className="text-secondary fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Venta Histórica</div>
+                            <div className="fw-black fs-3">${rfmResults.reduce((acc, r) => acc + r.monetary, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                          </div>
+                          <FaBox className="text-warning opacity-25 fs-4" />
+                        </div>
+                      </div>
+                    </Col>
+
+                    {/* Fila Pro: Insights Automáticos */}
+                    <Col xs={12} md={4}>
+                      <div className="p-3 bg-dark bg-opacity-50 border border-info border-opacity-25 h-100">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div className="text-info fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Crecimiento Mensual</div>
+                            <div className={`fw-black fs-3 ${statsPro.growth >= 0 ? 'text-success' : 'text-danger'}`}>
+                              {statsPro.growth >= 0 ? '+' : ''}{statsPro.growth.toFixed(1)}%
+                            </div>
+                          </div>
+                          <FaArrowUp className={`${statsPro.growth >= 0 ? 'text-success' : 'text-danger'} opacity-25 fs-4 ${statsPro.growth < 0 ? 'rotate-180' : ''}`} />
+                        </div>
+                      </div>
+                    </Col>
+                    <Col xs={12} md={4}>
+                      <div className="p-3 bg-dark bg-opacity-50 border border-warning border-opacity-25 h-100">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div className="flex-grow-1 min-width-0">
+                            <div className="text-warning fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Producto Líder</div>
+                            <div className="fw-black fs-5 text-truncate">{statsPro.starProduct}</div>
+                            <div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>VENTA: ${statsPro.starProductValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                          </div>
+                          <FaCrown className="text-warning opacity-25 fs-4" />
+                        </div>
+                      </div>
+                    </Col>
+                    <Col xs={12} md={4}>
+                      <div className="p-3 bg-dark bg-opacity-50 border border-danger border-opacity-25 h-100">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div className="text-danger fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Puntos de Riesgo</div>
+                            <div className="fw-black fs-3 text-danger">{statsPro.atRisk}</div>
+                            <div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>CLIENTES A RECUPERAR</div>
+                          </div>
+                          <FaExclamationTriangle className="text-danger opacity-25 fs-4" />
+                        </div>
+                      </div>
+                    </Col>
                   </Row>
                   <Row className="g-3">
                     <Col xs={12} md={7}>

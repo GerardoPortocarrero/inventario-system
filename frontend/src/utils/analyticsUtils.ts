@@ -27,15 +27,10 @@ export const calculateRFM = (demanda: any[], maestro: any[]): RFMResult[] => {
   demanda.forEach(d => {
     const clientId = String(d.Solicitante);
     const dateStr = d['Fecha documento'];
-    const docId = String(d.Documento);
+    const docId = String(d.Documento || Math.random());
     const value = parseFloat(d.Valor) || 0;
-    const status = String(d.Status).toUpperCase();
-
-    // Only process effective orders (exclude rejections if Status is 'C' or similar, but docs say process effective ones)
-    if (status === 'C') return;
 
     // Parse date (assuming DD.MM.YYYY or similar common format from SAP exports)
-    // SAP often exports as DD.MM.YYYY
     const parts = dateStr.split('.');
     let date: Date;
     if (parts.length === 3) {
