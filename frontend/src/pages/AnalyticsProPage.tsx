@@ -480,27 +480,29 @@ const AnalyticsProPage: FC = () => {
 
                 <Row className="g-3 mb-4">
                   <Col xs={12} lg={8}>
-                    <div className="admin-border-industrial p-3" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '300px' }}>
-                      <h6 className="fw-black text-uppercase small mb-4">Distribución del Valor por Segmento</h6>
-                      <ResponsiveContainer width="100%" height="80%">
-                        <BarChart data={segmentCounts} layout="vertical">
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
-                          <XAxis type="number" hide />
-                          <YAxis dataKey="name" type="category" {...axisStyle} width={100} />
-                          <Tooltip {...chartTooltipStyle} />
-                          <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                            {segmentCounts.map((entry, index) => <Cell key={index} fill={segmentColors[entry.name]} />)}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <div className="admin-border-industrial p-3 d-flex flex-column" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '400px' }}>
+                      <h6 className="fw-black text-uppercase small mb-4 flex-shrink-0">Distribución del Valor por Segmento</h6>
+                      <div className="flex-grow-1">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={segmentCounts} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" {...axisStyle} width={100} />
+                            <Tooltip {...chartTooltipStyle} />
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                              {segmentCounts.map((entry, index) => <Cell key={index} fill={segmentColors[entry.name]} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </Col>
                   <Col xs={12} lg={4}>
-                    <div className="admin-border-industrial p-3 h-100" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
-                      <h6 className="fw-black text-uppercase small mb-3">Resumen de Cartera</h6>
-                      <div className="d-flex flex-column gap-2">
+                    <div className="admin-border-industrial p-3 d-flex flex-column" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '400px' }}>
+                      <h6 className="fw-black text-uppercase small mb-3 flex-shrink-0">Resumen de Cartera</h6>
+                      <div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto custom-scrollbar pe-1">
                         {segmentCounts.map(s => (
-                          <div key={s.name} className="d-flex justify-content-between align-items-center p-2 bg-dark bg-opacity-25 border border-secondary border-opacity-10">
+                          <div key={s.name} className="d-flex justify-content-between align-items-center p-2 bg-dark bg-opacity-25 border border-secondary border-opacity-10 flex-shrink-0">
                             <div className="d-flex align-items-center gap-2">
                               {segmentIcons[s.name]}
                               <span className="fw-black text-uppercase" style={{ fontSize: '0.65rem' }}>{s.name}</span>
