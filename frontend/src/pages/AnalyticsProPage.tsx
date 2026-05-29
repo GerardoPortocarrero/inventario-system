@@ -154,18 +154,42 @@ const AnalyticsProPage: FC = () => {
     return sorted.map(([month, total], i) => { const prevTotal = i > 0 ? sorted[i - 1][1] : 0; const delta = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0; return { month, total, prevTotal, delta }; });
   }, [sedeFilteredData, metric]);
 
+  const routePerformance = useMemo(() => {
+    if (filteredData.length === 0) return [];
+    const routeMap: Record<string, any> = {};
+    filteredData.forEach(d => {
+      const rId = d.ruta || 'S/R';
+      if (!routeMap[rId]) {
+        routeMap[rId] = { ruta: rId, monetary: 0, cf: 0, cu: 0, count: 0, clients: new Set() };
+      }
+      routeMap[rId].monetary += d.totalValor || 0;
+      routeMap[rId].cf += d.totalCF || 0;
+      routeMap[rId].cu += d.totalCU || 0;
+      routeMap[rId].count += 1;
+      routeMap[rId].clients.add(d.solicitante);
+    });
+    return Object.values(routeMap).map((r: any) => ({
+      ...r,
+      clientCount: r.clients.size,
+      currentValue: metric === 'valor' ? r.monetary : metric === 'cf' ? r.cf : r.cu
+    })).sort((a: any, b: any) => b.currentValue - a.currentValue);
+  }, [filteredData, metric]);
+
   const statsPro = useMemo(() => {
     const lastMonth = monthlyComparison.length > 0 ? monthlyComparison[monthlyComparison.length - 1] : { delta: 0 };
     const topProd = productPerformance.length > 0 ? productPerformance[0] : { name: '---', currentValue: 0 };
+    const topRoute = routePerformance.length > 0 ? routePerformance[0] : { ruta: '---', currentValue: 0 };
     const riskCount = rfmResults.filter(r => r.segment === 'En Riesgo' || r.segment === 'Hibernando').length;
     
     return {
       growth: lastMonth.delta,
       starProduct: topProd.name,
       starProductValue: topProd.currentValue,
+      starRoute: topRoute.ruta,
+      starRouteValue: topRoute.currentValue,
       atRisk: riskCount
     };
-  }, [monthlyComparison, productPerformance, rfmResults]);
+  }, [monthlyComparison, productPerformance, routePerformance, rfmResults]);
 
   // --- ANÁLISIS DE AFINIDAD (Market Basket) ---
   const affinityData = useMemo(() => {
@@ -355,12 +379,11 @@ const AnalyticsProPage: FC = () => {
                       <div className="p-3 bg-dark bg-opacity-50 border border-info border-opacity-25 h-100">
                         <div className="d-flex justify-content-between align-items-start">
                           <div>
-                            <div className="text-info fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Crecimiento Mensual ({metric.toUpperCase()})</div>
-                            <div className={`fw-black fs-3 ${statsPro.growth >= 0 ? 'text-success' : 'text-danger'}`}>
-                              {statsPro.growth >= 0 ? '+' : ''}{statsPro.growth.toFixed(1)}%
-                            </div>
+                            <div className="text-info fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Producto Estrella</div>
+                            <div className="fw-black fs-5 text-truncate" style={{ maxWidth: '200px' }}>{statsPro.starProduct}</div>
+                            <div className="text-info fw-bold" style={{ fontSize: '0.65rem' }}>{formatValue(statsPro.starProductValue)} ACUMULADO</div>
                           </div>
-                          <FaArrowUp className={`${statsPro.growth >= 0 ? 'text-success' : 'text-danger'} opacity-25 fs-4 ${statsPro.growth < 0 ? 'rotate-180' : ''}`} />
+                          <FaCrown className="text-info opacity-25 fs-4" />
                         </div>
                       </div>
                     </Col>
@@ -368,18 +391,18 @@ const AnalyticsProPage: FC = () => {
                       <div className="p-3 bg-dark bg-opacity-50 border border-danger border-opacity-25 h-100">
                         <div className="d-flex justify-content-between align-items-start">
                           <div>
-                            <div className="text-danger fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Cartera en Riesgo</div>
-                            <div className="fw-black fs-3 text-danger">{statsPro.atRisk}</div>
-                            <div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>CLIENTES BAJO PROMEDIO</div>
+                            <div className="text-danger fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Ruta Líder (Preventista)</div>
+                            <div className="fw-black fs-3 text-danger">RUTA {statsPro.starRoute}</div>
+                            <div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>{formatValue(statsPro.starRouteValue)} EN {metric.toUpperCase()}</div>
                           </div>
-                          <FaExclamationTriangle className="text-danger opacity-25 fs-4" />
+                          <FaRoute className="text-danger opacity-25 fs-4" />
                         </div>
                       </div>
                     </Col>
                   </Row>
                   
                   <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '350px' }}>
-                    <h6 className="fw-black text-uppercase small mb-4">Tendencia de {metricLabel}</h6>
+                    <h6 className="fw-black text-uppercase small mb-4">Tendencia Temporal de Demanda ({metricLabel})</h6>
                     <ResponsiveContainer width="100%" height="90%">
                       <BarChart data={dailyStats}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
@@ -395,37 +418,46 @@ const AnalyticsProPage: FC = () => {
                   </div>
 
                   <Row className="g-3">
-                    <Col xs={12} md={7}>
-                      <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '350px' }}>
-                        <h6 className="fw-black text-uppercase small mb-4">Distribución por Segmento</h6>
-                        <ResponsiveContainer width="100%" height="90%">
-                          <BarChart data={segmentCounts} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
-                            <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" {...axisStyle} width={100} />
-                            <Tooltip {...chartTooltipStyle} />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                              {segmentCounts.map((entry, index) => <Cell key={index} fill={segmentColors[entry.name]} />)}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
+                    <Col xs={12} lg={7}>
+                      <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '450px', display: 'flex', flexDirection: 'column' }}>
+                        <h6 className="fw-black text-uppercase small mb-4 flex-shrink-0">Ranking Completo de Rutas (Preventistas)</h6>
+                        <div className="custom-scrollbar flex-grow-1" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
+                          <div style={{ height: `${Math.max(routePerformance.length * 40, 400)}px`, width: '100%' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={routePerformance} layout="vertical" margin={{ left: 0, right: 30, top: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="ruta" type="category" {...axisStyle} width={80} tickFormatter={(val) => `${val}`} />
+                                <Tooltip {...chartTooltipStyle} formatter={(val: any) => [formatValue(val), metricLabel]} />
+                                <Bar dataKey="currentValue" fill="var(--color-red-primary)" radius={[0, 4, 4, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
                       </div>
                     </Col>
-                    <Col xs={12} md={5}>
-                      <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10 h-100 overflow-auto custom-scrollbar">
-                        <h6 className="fw-black text-uppercase small mb-3">Top Combinaciones (Market Basket)</h6>
-                        <div className="d-flex flex-column gap-2">
-                          {affinityData.slice(0, 5).map((combo, i) => (
-                            <div key={i} className="p-2 border border-secondary border-opacity-10 bg-dark bg-opacity-50">
-                              <div className="d-flex justify-content-between align-items-center mb-1">
-                                <Badge bg="danger" className="fw-black" style={{ fontSize: '0.6rem' }}>RANK #{i+1}</Badge>
-                                <span className="fw-black text-white" style={{ fontSize: '0.7rem' }}>{combo.count} CO-OCURRENCIAS</span>
+                    <Col xs={12} lg={5}>
+                      <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '450px', display: 'flex', flexDirection: 'column' }}>
+                        <h6 className="fw-black text-uppercase small mb-3 flex-shrink-0">Alertas RFM: Cartera en Riesgo</h6>
+                        <div className="custom-scrollbar flex-grow-1" style={{ overflowY: 'auto' }}>
+                          <div className="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-20 text-center mb-3 flex-shrink-0">
+                            <div className="fw-black fs-2 text-danger">{statsPro.atRisk}</div>
+                            <div className="small fw-black text-danger text-uppercase">Clientes a punto de perderse</div>
+                          </div>
+                          <div className="d-flex flex-column gap-2">
+                            {rfmResults.filter(r => r.segment === 'En Riesgo').map((r, i) => (
+                              <div key={i} className="p-2 border border-secondary border-opacity-10 bg-dark bg-opacity-50 d-flex justify-content-between align-items-center flex-shrink-0">
+                                <div className="min-width-0">
+                                  <div className="fw-black text-white text-truncate" style={{ fontSize: '0.7rem' }}>{r.clientName}</div>
+                                  <div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>{r.recency} DÍAS SIN COMPRAR</div>
+                                </div>
+                                <Badge bg="danger" style={{ fontSize: '0.55rem' }}>{formatValue(r.currentMetricValue)}</Badge>
                               </div>
-                              <div className="small text-secondary fw-bold text-truncate" style={{ fontSize: '0.65rem' }}>{combo.p1}</div>
-                              <div className="small text-secondary fw-bold text-truncate" style={{ fontSize: '0.65rem' }}>+ {combo.p2}</div>
-                            </div>
-                          ))}
-                          {affinityData.length === 0 && <div className="text-center py-4 text-secondary small italic">Sin datos de afinidad suficientes</div>}
+                            ))}
+                            {rfmResults.filter(r => r.segment === 'En Riesgo').length === 0 && (
+                              <div className="text-center py-4 text-secondary small italic">No hay alertas críticas en este periodo</div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </Col>
@@ -433,45 +465,10 @@ const AnalyticsProPage: FC = () => {
                 </div>
               </Tab.Pane>
 
-              {/* ... Clientes, Rutas, Productos Panes ... */}
-
-              <Tab.Pane eventKey="afinidad" className="h-100 overflow-auto custom-scrollbar p-3">
-                <div className="d-flex justify-content-between align-items-end mb-4">
-                  <div>
-                    <h5 className="fw-black mb-1 text-uppercase">Análisis de Afinidad (Market Basket)</h5>
-                    <p className="text-secondary small fw-bold mb-0">Identifica qué productos se venden juntos con mayor frecuencia.</p>
-                  </div>
-                  <Badge bg="danger" className="px-3 py-2 fw-black">TOP 20 COMBOS DETECTADOS</Badge>
-                </div>
-
-                <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
-                  <Table responsive hover variant="dark" className="mb-0 industrial-table-v2">
-                    <thead>
-                      <tr>
-                        <th className="ps-4">PRODUCTO A</th>
-                        <th className="text-center">+</th>
-                        <th>PRODUCTO B</th>
-                        <th className="text-end pe-4">FRECUENCIA (VISITAS)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {affinityData.map((combo, i) => (
-                        <tr key={i}>
-                          <td className="ps-4 fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{combo.p1}</td>
-                          <td className="text-center text-danger fw-black">+</td>
-                          <td className="fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{combo.p2}</td>
-                          <td className="text-end pe-4 fw-black text-info fs-5">{combo.count.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </div>
-              </Tab.Pane>
-
               <Tab.Pane eventKey="clientes" className="h-100 overflow-auto custom-scrollbar p-3">
-                <div className="d-flex justify-content-between align-items-end mb-3">
+                <div className="d-flex justify-content-between align-items-center mb-4">
                   <div className="d-flex align-items-center gap-2">
-                    <h5 className="fw-black mb-0 text-uppercase">Clasificación RFM</h5>
+                    <h5 className="fw-black mb-0 text-uppercase">Clasificación RFM y Segmentación</h5>
                     <OverlayTrigger trigger="click" placement="right" overlay={rfmPopover} rootClose>
                       <button className="btn btn-link p-0 text-info" style={{ lineHeight: 1 }}>
                         <FaInfoCircle size={18} />
@@ -480,6 +477,42 @@ const AnalyticsProPage: FC = () => {
                   </div>
                   <Badge bg="dark" className="border border-secondary px-3 py-2 fw-black">TOTAL: {rfmResults.length} CLIENTES</Badge>
                 </div>
+
+                <Row className="g-3 mb-4">
+                  <Col xs={12} lg={8}>
+                    <div className="admin-border-industrial p-3" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '300px' }}>
+                      <h6 className="fw-black text-uppercase small mb-4">Distribución del Valor por Segmento</h6>
+                      <ResponsiveContainer width="100%" height="80%">
+                        <BarChart data={segmentCounts} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                          <XAxis type="number" hide />
+                          <YAxis dataKey="name" type="category" {...axisStyle} width={100} />
+                          <Tooltip {...chartTooltipStyle} />
+                          <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                            {segmentCounts.map((entry, index) => <Cell key={index} fill={segmentColors[entry.name]} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Col>
+                  <Col xs={12} lg={4}>
+                    <div className="admin-border-industrial p-3 h-100" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+                      <h6 className="fw-black text-uppercase small mb-3">Resumen de Cartera</h6>
+                      <div className="d-flex flex-column gap-2">
+                        {segmentCounts.map(s => (
+                          <div key={s.name} className="d-flex justify-content-between align-items-center p-2 bg-dark bg-opacity-25 border border-secondary border-opacity-10">
+                            <div className="d-flex align-items-center gap-2">
+                              {segmentIcons[s.name]}
+                              <span className="fw-black text-uppercase" style={{ fontSize: '0.65rem' }}>{s.name}</span>
+                            </div>
+                            <span className="fw-black fs-5" style={{ color: segmentColors[s.name] }}>{s.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+
                 <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <Table responsive hover variant="dark" className="mb-0 industrial-table-v2">
                     <thead className="sticky-top bg-dark">
@@ -509,7 +542,46 @@ const AnalyticsProPage: FC = () => {
               </Tab.Pane>
               
               <Tab.Pane eventKey="rutas" className="h-100 overflow-auto custom-scrollbar p-3">
-                <h5 className="fw-black mb-3 text-uppercase">Análisis por Día y Ciclo</h5>
+                <div className="d-flex justify-content-between align-items-end mb-4">
+                  <div>
+                    <h5 className="fw-black mb-1 text-uppercase">Desempeño de Rutas y Preventistas</h5>
+                    <p className="text-secondary small fw-bold mb-0">Análisis comparativo de volumen y efectividad por zona comercial.</p>
+                  </div>
+                </div>
+
+                <div className="admin-border-industrial mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+                  <Table responsive hover variant="dark" className="mb-0 industrial-table-v2">
+                    <thead>
+                      <tr>
+                        <th className="ps-4">RUTA / PREVENTISTA</th>
+                        <th className="text-center">CLIENTES ACTIVOS</th>
+                        <th className="text-center">PEDIDOS TOT.</th>
+                        <th className="text-end">VALOR TOTAL</th>
+                        <th className="text-end">VOL. CF</th>
+                        <th className="text-end pe-4">VOL. CU</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {routePerformance.map((r) => (
+                        <tr key={r.ruta}>
+                          <td className="ps-4">
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="loc-avatar" style={{ backgroundColor: 'var(--color-red-primary)' }}>{r.ruta}</div>
+                              <span className="fw-black fs-5">RUTA {r.ruta}</span>
+                            </div>
+                          </td>
+                          <td className="text-center align-middle fw-black text-info fs-5">{r.clientCount}</td>
+                          <td className="text-center align-middle fw-black">{r.count}</td>
+                          <td className="text-end align-middle fw-black">${r.monetary.toLocaleString()}</td>
+                          <td className="text-end align-middle fw-black text-success">{r.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                          <td className="text-end align-middle fw-black text-warning pe-4">{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+
+                <h5 className="fw-black mb-3 text-uppercase">Ciclo Semanal de Venta (Consolidado)</h5>
                 <Row className="g-3">
                   <Col xs={12} lg={7}>
                     <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '400px' }}>

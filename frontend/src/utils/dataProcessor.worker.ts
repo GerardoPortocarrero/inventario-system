@@ -137,7 +137,7 @@ self.onmessage = async (e: MessageEvent) => {
           totalValor: 0, totalCF: 0, totalCU: 0,
           materiales: [],
           sede: client?.Loc || 'OTRO',
-          ruta: client?.Ruta || 'S/R',
+          ruta: client?.['Ruta com'] || client?.Ruta || 'S/R',
           subCanal: client?.SubCanal || 'S/C'
         };
       }
