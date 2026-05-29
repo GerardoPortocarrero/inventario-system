@@ -192,21 +192,56 @@ const AnalyticsProPage: FC = () => {
   const metricLabel = metric === 'valor' ? 'Valor ($)' : metric === 'cf' ? 'Cajas Físicas (CF)' : 'Cajas Unitarias (CU)';
   const formatValue = (val: number) => metric === 'valor' ? `$${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : val.toLocaleString(undefined, { maximumFractionDigits: 1 });
 
-  const segmentColors: Record<string, string> = { 'Campeón': '#ff0000', 'Fiel': '#ff4d4d', 'Nueva Promesa': '#ff8080', 'Potencial': '#ffa6a6', 'En Riesgo': '#ffcccc', 'Hibernando': '#444444' };
-  const segmentIcons: Record<string, any> = { 'Campeón': <FaCrown className="text-warning" />, 'Fiel': <FaStar className="text-info" />, 'Nueva Promesa': <FaArrowUp className="text-success" />, 'Potencial': <FaUserCheck className="text-primary" />, 'En Riesgo': <FaExclamationTriangle className="text-danger" />, 'Hibernando': <FaBed className="text-secondary" /> };
+  // Configuración común para Tooltips de Recharts (Contraste Dinámico)
+  const chartTooltipStyle = {
+    contentStyle: { 
+      backgroundColor: 'var(--theme-background-secondary)', 
+      border: '1px solid var(--theme-border-default)',
+      borderRadius: '0px',
+      color: 'var(--theme-text-primary)',
+      fontSize: '0.75rem',
+      fontWeight: 'bold'
+    },
+    itemStyle: { color: 'var(--theme-text-primary)' },
+    labelStyle: { color: 'var(--color-red-primary)', fontWeight: 'black', marginBottom: '4px' }
+  };
+
+  const axisStyle = {
+    stroke: 'var(--theme-text-secondary)',
+    fontSize: 10,
+    fontWeight: 'bold'
+  };
+
+  const segmentColors: Record<string, string> = { 
+    'Campeón': 'var(--rfm-campeon)', 
+    'Fiel': 'var(--rfm-fiel)', 
+    'Nueva Promesa': 'var(--rfm-nueva-promesa)', 
+    'Potencial': 'var(--rfm-potencial)', 
+    'En Riesgo': 'var(--rfm-en-riesgo)', 
+    'Hibernando': 'var(--rfm-hibernando)' 
+  };
+
+  const segmentIcons: Record<string, any> = { 
+    'Campeón': <FaCrown style={{ color: 'var(--rfm-campeon)' }} />, 
+    'Fiel': <FaStar style={{ color: 'var(--rfm-fiel)' }} />, 
+    'Nueva Promesa': <FaArrowUp style={{ color: 'var(--rfm-nueva-promesa)' }} />, 
+    'Potencial': <FaUserCheck style={{ color: 'var(--rfm-potencial)' }} />, 
+    'En Riesgo': <FaExclamationTriangle style={{ color: 'var(--rfm-en-riesgo)' }} />, 
+    'Hibernando': <FaBed style={{ color: 'var(--rfm-hibernando)' }} /> 
+  };
 
   const rfmPopover = (
     <Popover id="rfm-popover" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)', maxWidth: '400px' }}>
       <Popover.Header as="h3" style={{ backgroundColor: 'var(--theme-icon-bg)', color: 'var(--color-red-primary)', borderBottom: '1px solid var(--theme-border-default)', fontWeight: 900, fontSize: '0.8rem' }}>
         GLOSARIO DE SEGMENTACIÓN RFM
       </Popover.Header>
-      <Popover.Body style={{ fontSize: '0.75rem' }}>
-        <div className="mb-2"><strong className="text-danger">CAMPEÓN:</strong> Clientes que compran recientemente, con alta frecuencia y gran volumen. Tu activo más valioso.</div>
-        <div className="mb-2"><strong style={{ color: '#ff4d4d' }}>FIEL:</strong> Clientes constantes que compran con buena frecuencia. Responden bien a promociones.</div>
-        <div className="mb-2"><strong style={{ color: '#ff8080' }}>NUEVA PROMESA:</strong> Clientes que empezaron a comprar recientemente y muestran buen volumen inicial.</div>
-        <div className="mb-2"><strong style={{ color: '#ffa6a6' }}>POTENCIAL:</strong> Clientes con actividad media; pueden convertirse en Fieles con el seguimiento correcto.</div>
-        <div className="mb-2"><strong className="text-warning">EN RIESGO:</strong> Clientes que solían ser muy frecuentes pero llevan tiempo sin realizar un pedido. ¡Atención!</div>
-        <div><strong className="text-secondary">HIBERNANDO:</strong> Clientes con muy poca actividad histórica y larga inactividad actual.</div>
+      <Popover.Body style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-campeon)' }}>CAMPEÓN:</strong> Clientes que compran recientemente, con alta frecuencia y gran volumen. Tu activo más valioso.</div>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-fiel)' }}>FIEL:</strong> Clientes constantes que compran con buena frecuencia. Responden bien a promociones.</div>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-nueva-promesa)' }}>NUEVA PROMESA:</strong> Clientes que empezaron a comprar recientemente y muestran buen volumen inicial.</div>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-potencial)' }}>POTENCIAL:</strong> Clientes con actividad media; pueden convertirse en Fieles con el seguimiento correcto.</div>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-en-riesgo)' }}>EN RIESGO:</strong> Clientes que solían ser muy frecuentes pero llevan tiempo sin realizar un pedido. ¡Atención!</div>
+        <div><strong style={{ color: 'var(--rfm-hibernando)' }}>HIBERNANDO:</strong> Clientes con muy poca actividad histórica y larga inactividad actual.</div>
       </Popover.Body>
     </Popover>
   );
@@ -324,10 +359,10 @@ const AnalyticsProPage: FC = () => {
                     <ResponsiveContainer width="100%" height="90%">
                       <BarChart data={dailyStats}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" fontSize={10} />
-                        <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} />
+                        <XAxis dataKey="name" {...axisStyle} />
+                        <YAxis {...axisStyle} />
                         <Tooltip 
-                          contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+                          {...chartTooltipStyle}
                           formatter={(value: any) => [formatValue(value), metricLabel]}
                         />
                         <Bar dataKey="value" fill="var(--color-red-primary)" radius={[4, 4, 0, 0]} />
@@ -343,8 +378,8 @@ const AnalyticsProPage: FC = () => {
                           <BarChart data={segmentCounts} layout="vertical">
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.5)" fontSize={10} width={100} />
-                            <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} />
+                            <YAxis dataKey="name" type="category" {...axisStyle} width={100} />
+                            <Tooltip {...chartTooltipStyle} />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                               {segmentCounts.map((entry, index) => <Cell key={index} fill={segmentColors[entry.name]} />)}
                             </Bar>
@@ -457,7 +492,10 @@ const AnalyticsProPage: FC = () => {
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={dailyStats}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                          <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" fontSize={10} /><YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} /><Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} /><Line type="monotone" dataKey="value" stroke="var(--color-red-primary)" strokeWidth={3} dot={{ fill: 'var(--color-red-primary)', r: 6 }} />
+                          <XAxis dataKey="name" {...axisStyle} />
+                          <YAxis {...axisStyle} />
+                          <Tooltip {...chartTooltipStyle} />
+                          <Line type="monotone" dataKey="value" stroke="var(--color-red-primary)" strokeWidth={3} dot={{ fill: 'var(--color-red-primary)', r: 6 }} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
@@ -510,7 +548,11 @@ const AnalyticsProPage: FC = () => {
                     <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '400px' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={monthlyComparison}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" /><XAxis dataKey="month" stroke="rgba(255,255,255,0.5)" fontSize={10} /><YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} /><Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }} /><Bar dataKey="total" fill="var(--color-red-primary)" radius={[4, 4, 0, 0]} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                          <XAxis dataKey="month" {...axisStyle} />
+                          <YAxis {...axisStyle} />
+                          <Tooltip {...chartTooltipStyle} />
+                          <Bar dataKey="total" fill="var(--color-red-primary)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
