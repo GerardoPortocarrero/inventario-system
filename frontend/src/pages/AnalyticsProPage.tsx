@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Tab, Nav, Badge, Table } from 'react-bootstrap';
-import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp } from 'react-icons/fa';
+import { Row, Col, Tab, Nav, Badge, Table, OverlayTrigger, Popover } from 'react-bootstrap';
+import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle } from 'react-icons/fa';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import { db, rtdb } from '../api/firebase';
@@ -194,6 +194,22 @@ const AnalyticsProPage: FC = () => {
 
   const segmentColors: Record<string, string> = { 'Campeón': '#ff0000', 'Fiel': '#ff4d4d', 'Nueva Promesa': '#ff8080', 'Potencial': '#ffa6a6', 'En Riesgo': '#ffcccc', 'Hibernando': '#444444' };
   const segmentIcons: Record<string, any> = { 'Campeón': <FaCrown className="text-warning" />, 'Fiel': <FaStar className="text-info" />, 'Nueva Promesa': <FaArrowUp className="text-success" />, 'Potencial': <FaUserCheck className="text-primary" />, 'En Riesgo': <FaExclamationTriangle className="text-danger" />, 'Hibernando': <FaBed className="text-secondary" /> };
+
+  const rfmPopover = (
+    <Popover id="rfm-popover" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)', maxWidth: '400px' }}>
+      <Popover.Header as="h3" style={{ backgroundColor: 'var(--theme-icon-bg)', color: 'var(--color-red-primary)', borderBottom: '1px solid var(--theme-border-default)', fontWeight: 900, fontSize: '0.8rem' }}>
+        GLOSARIO DE SEGMENTACIÓN RFM
+      </Popover.Header>
+      <Popover.Body style={{ fontSize: '0.75rem' }}>
+        <div className="mb-2"><strong className="text-danger">CAMPEÓN:</strong> Clientes que compran recientemente, con alta frecuencia y gran volumen. Tu activo más valioso.</div>
+        <div className="mb-2"><strong style={{ color: '#ff4d4d' }}>FIEL:</strong> Clientes constantes que compran con buena frecuencia. Responden bien a promociones.</div>
+        <div className="mb-2"><strong style={{ color: '#ff8080' }}>NUEVA PROMESA:</strong> Clientes que empezaron a comprar recientemente y muestran buen volumen inicial.</div>
+        <div className="mb-2"><strong style={{ color: '#ffa6a6' }}>POTENCIAL:</strong> Clientes con actividad media; pueden convertirse en Fieles con el seguimiento correcto.</div>
+        <div className="mb-2"><strong className="text-warning">EN RIESGO:</strong> Clientes que solían ser muy frecuentes pero llevan tiempo sin realizar un pedido. ¡Atención!</div>
+        <div><strong className="text-secondary">HIBERNANDO:</strong> Clientes con muy poca actividad histórica y larga inactividad actual.</div>
+      </Popover.Body>
+    </Popover>
+  );
 
   if (loading) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
 
@@ -395,7 +411,14 @@ const AnalyticsProPage: FC = () => {
 
               <Tab.Pane eventKey="clientes" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex justify-content-between align-items-end mb-3">
-                  <h5 className="fw-black mb-0 text-uppercase">Clasificación RFM</h5>
+                  <div className="d-flex align-items-center gap-2">
+                    <h5 className="fw-black mb-0 text-uppercase">Clasificación RFM</h5>
+                    <OverlayTrigger trigger="click" placement="right" overlay={rfmPopover} rootClose>
+                      <button className="btn btn-link p-0 text-info" style={{ lineHeight: 1 }}>
+                        <FaInfoCircle size={18} />
+                      </button>
+                    </OverlayTrigger>
+                  </div>
                   <Badge bg="dark" className="border border-secondary px-3 py-2 fw-black">TOTAL: {rfmResults.length} CLIENTES</Badge>
                 </div>
                 <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
