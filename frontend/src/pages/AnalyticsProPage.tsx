@@ -21,6 +21,7 @@ const AnalyticsProPage: FC = () => {
   // --- FILTROS GLOBALES ---
   const [metric, setMetric] = useState<'valor' | 'cf' | 'cu'>('valor');
   const [selectedSede, setSelectedSede] = useState<string>('ALL');
+  const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -59,18 +60,36 @@ const AnalyticsProPage: FC = () => {
     return () => { unsubDemanda(); unsubMaestro(); };
   }, []);
 
-  // --- FILTRADO POR SEDE Y FECHA ---
+  // --- FILTRADO JERÁRQUICO ---
   const sedeFilteredData = useMemo(() => {
     if (selectedSede === 'ALL') return demandaData;
     return demandaData.filter(d => String(d.sede).trim() === String(selectedSede).trim());
   }, [demandaData, selectedSede]);
 
-  const filteredData = useMemo(() => {
+  const availableRoutes = useMemo(() => {
+    const routes = new Set<string>();
+    sedeFilteredData.forEach(d => { if (d.ruta) routes.add(String(d.ruta)); });
+    return Array.from(routes).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [sedeFilteredData]);
+
+  // Si la sede cambia, resetear ruta si no existe en la nueva sede
+  useEffect(() => {
+    if (selectedRoute !== 'ALL' && !availableRoutes.includes(selectedRoute)) {
+      setSelectedRoute('ALL');
+    }
+  }, [selectedSede, availableRoutes]);
+
+  const dateFilteredData = useMemo(() => {
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
     end.setHours(23, 59, 59);
     return sedeFilteredData.filter(d => d.fechaObj >= start && d.fechaObj <= end);
   }, [sedeFilteredData, dateRange]);
+
+  const filteredData = useMemo(() => {
+    if (selectedRoute === 'ALL') return dateFilteredData;
+    return dateFilteredData.filter(d => String(d.ruta) === selectedRoute);
+  }, [dateFilteredData, selectedRoute]);
 
   // --- MÉTRICAS CENTRALIZADAS ---
   const rfmResults = useMemo(() => {
@@ -174,9 +193,9 @@ const AnalyticsProPage: FC = () => {
   }, [sedeFilteredData, metric]);
 
   const routePerformance = useMemo(() => {
-    if (filteredData.length === 0) return [];
+    if (dateFilteredData.length === 0) return [];
     const routeMap: Record<string, any> = {};
-    filteredData.forEach(d => {
+    dateFilteredData.forEach(d => {
       const rId = d.ruta || 'S/R';
       if (!routeMap[rId]) {
         routeMap[rId] = { ruta: rId, monetary: 0, cf: 0, cu: 0, count: 0, clients: new Set() };
@@ -192,7 +211,7 @@ const AnalyticsProPage: FC = () => {
       clientCount: r.clients.size,
       currentValue: metric === 'valor' ? r.monetary : metric === 'cf' ? r.cf : r.cu
     })).sort((a: any, b: any) => b.currentValue - a.currentValue);
-  }, [filteredData, metric]);
+  }, [dateFilteredData, metric]);
 
   const statsPro = useMemo(() => {
     const lastMonth = monthlyComparison.length > 0 ? monthlyComparison[monthlyComparison.length - 1] : { delta: 0 };
@@ -360,6 +379,21 @@ const AnalyticsProPage: FC = () => {
                 <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent text-white border-0 small fw-bold px-2 py-0" style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '120px', cursor: 'pointer' }}>
                   <option value="ALL" className="bg-dark">GLOBAL (TODAS)</option>
                   {sedes.map(s => <option key={s.id} value={s.codigo} className="bg-dark">{s.nombre.toUpperCase()}</option>)}
+                </Form.Select>
+              </div>
+
+              <div className="d-flex align-items-center gap-2 bg-dark p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px' }}>
+                <FaRoute className="text-danger ms-2" size={12} />
+                <Form.Select 
+                  value={selectedRoute} 
+                  onChange={(e) => setSelectedRoute(e.target.value)} 
+                  className="bg-transparent text-white border-0 small fw-bold px-2 py-0" 
+                  style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '100px', cursor: 'pointer' }}
+                >
+                  <option value="ALL" className="bg-dark">TODAS LAS RUTAS</option>
+                  {availableRoutes.map(r => (
+                    <option key={r} value={r} className="bg-dark">RUTA {r}</option>
+                  ))}
                 </Form.Select>
               </div>
               <div className="d-flex bg-dark p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px' }}>
