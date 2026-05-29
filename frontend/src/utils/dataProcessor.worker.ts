@@ -136,6 +136,7 @@ self.onmessage = async (e: MessageEvent) => {
           fecha: dateObj.getTime(),
           totalValor: 0, totalCF: 0, totalCU: 0,
           materiales: [],
+          sede: client?.Loc || 'OTRO',
           ruta: client?.Ruta || 'S/R',
           subCanal: client?.SubCanal || 'S/C'
         };

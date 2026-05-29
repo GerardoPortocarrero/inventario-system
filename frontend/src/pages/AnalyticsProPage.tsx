@@ -1,15 +1,17 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Tab, Nav, Badge, Table, OverlayTrigger, Popover } from 'react-bootstrap';
-import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle } from 'react-icons/fa';
+import { Row, Col, Tab, Nav, Badge, Table, OverlayTrigger, Popover, Form } from 'react-bootstrap';
+import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle, FaMapMarkerAlt } from 'react-icons/fa';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import { db, rtdb } from '../api/firebase';
+import { useData } from '../context/DataContext';
 import { ref, onValue } from 'firebase/database';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line } from 'recharts';
 
 const AnalyticsProPage: FC = () => {
+  const { sedes } = useData();
   const [loading, setLoading] = useState<boolean>(true);
   const [demandaData, setDemandaData] = useState<any[]>([]);
   const [maestroData, setMaestroData] = useState<any[]>([]);
@@ -17,6 +19,7 @@ const AnalyticsProPage: FC = () => {
 
   // --- FILTROS GLOBALES ---
   const [metric, setMetric] = useState<'valor' | 'cf' | 'cu'>('valor');
+  const [selectedSede, setSelectedSede] = useState<string>('ALL');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -45,13 +48,19 @@ const AnalyticsProPage: FC = () => {
     return () => { unsubDemanda(); unsubMaestro(); };
   }, []);
 
-  // --- FILTRADO POR FECHA ---
+  // --- FILTRADO POR SEDE Y FECHA ---
+  const sedeFilteredData = useMemo(() => {
+    if (selectedSede === 'ALL') return demandaData;
+    // selectedSede ahora contiene el 'codigo' (Loc) de la sede
+    return demandaData.filter(d => String(d.sede).trim() === String(selectedSede).trim());
+  }, [demandaData, selectedSede]);
+
   const filteredData = useMemo(() => {
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
     end.setHours(23, 59, 59);
-    return demandaData.filter(d => d.fechaObj >= start && d.fechaObj <= end);
-  }, [demandaData, dateRange]);
+    return sedeFilteredData.filter(d => d.fechaObj >= start && d.fechaObj <= end);
+  }, [sedeFilteredData, dateRange]);
 
   // --- MÉTRICAS CENTRALIZADAS ---
   const rfmResults = useMemo(() => {
@@ -134,16 +143,16 @@ const AnalyticsProPage: FC = () => {
   }, [filteredData, metric]);
 
   const monthlyComparison = useMemo(() => {
-    if (demandaData.length === 0) return [];
+    if (sedeFilteredData.length === 0) return [];
     const monthlyMap: Record<string, number> = {};
-    demandaData.forEach(d => { if (d.fechaObj) { 
+    sedeFilteredData.forEach(d => { if (d.fechaObj) { 
       const key = `${d.fechaObj.getFullYear()}-${String(d.fechaObj.getMonth() + 1).padStart(2, '0')}`; 
       const val = metric === 'valor' ? d.totalValor : metric === 'cf' ? d.totalCF : d.totalCU;
       monthlyMap[key] = (monthlyMap[key] || 0) + (val || 0); 
     } });
     const sorted = Object.entries(monthlyMap).sort((a, b) => a[0].localeCompare(b[0]));
     return sorted.map(([month, total], i) => { const prevTotal = i > 0 ? sorted[i - 1][1] : 0; const delta = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0; return { month, total, prevTotal, delta }; });
-  }, [demandaData, metric]);
+  }, [sedeFilteredData, metric]);
 
   const statsPro = useMemo(() => {
     const lastMonth = monthlyComparison.length > 0 ? monthlyComparison[monthlyComparison.length - 1] : { delta: 0 };
@@ -265,6 +274,21 @@ const AnalyticsProPage: FC = () => {
           </Col>
           <Col xs={12} lg={8}>
             <div className="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
+              <div className="d-flex align-items-center gap-2 bg-dark p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px' }}>
+                <FaMapMarkerAlt className="text-danger ms-2" size={12} />
+                <Form.Select 
+                  value={selectedSede} 
+                  onChange={(e) => setSelectedSede(e.target.value)}
+                  className="bg-transparent text-white border-0 small fw-bold px-2 py-0"
+                  style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '120px', cursor: 'pointer' }}
+                >
+                  <option value="ALL" className="bg-dark">GLOBAL (TODAS)</option>
+                  {sedes.map(s => (
+                    <option key={s.id} value={s.codigo} className="bg-dark">{s.nombre.toUpperCase()}</option>
+                  ))}
+                </Form.Select>
+              </div>
+
               <div className="d-flex bg-dark p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px' }}>
                 {([['valor', '$'], ['cf', 'CF'], ['cu', 'CU']] as const).map(([m, label]) => (
                   <button 
