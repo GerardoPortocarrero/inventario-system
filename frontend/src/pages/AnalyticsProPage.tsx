@@ -23,7 +23,7 @@ const AnalyticsProPage: FC = () => {
   const [selectedSede, setSelectedSede] = useState<string>('ALL');
   const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
 
@@ -159,6 +159,32 @@ const AnalyticsProPage: FC = () => {
     } });
     return Object.entries(daysMap).map(([name, data]: any) => ({ name, value: data.total, count: data.count }));
   }, [filteredData, metric]);
+
+  const timelineStats = useMemo(() => {
+    const start = new Date(dateRange.start + 'T00:00:00');
+    const end = new Date(dateRange.end + 'T00:00:00');
+    
+    const timeMap: Record<string, number> = {};
+    filteredData.forEach(d => {
+      if (d.fechaObj) {
+        const dateKey = d.fechaObj.toISOString().split('T')[0];
+        const val = metric === 'valor' ? d.totalValor : metric === 'cf' ? d.totalCF : d.totalCU;
+        timeMap[dateKey] = (timeMap[dateKey] || 0) + val;
+      }
+    });
+
+    const result = [];
+    const current = new Date(start);
+    while (current <= end) {
+      const dateKey = current.toISOString().split('T')[0];
+      result.push({ 
+        date: dateKey.split('-').slice(1).reverse().join('/'), // DD/MM
+        value: timeMap[dateKey] || 0 
+      });
+      current.setDate(current.getDate() + 1);
+    }
+    return result;
+  }, [filteredData, metric, dateRange]);
 
   const productPerformance = useMemo(() => {
     if (filteredData.length === 0) return [];
@@ -433,7 +459,20 @@ const AnalyticsProPage: FC = () => {
                   </Row>
                   
                   <div className="p-3 border border-secondary border-opacity-10" style={{ height: '350px', backgroundColor: 'var(--theme-background-secondary)' }}>
-                    <h6 className="fw-black text-uppercase small mb-4">Tendencia Temporal de Demanda ({metricLabel})</h6>
+                    <h6 className="fw-black text-uppercase small mb-4">Evolución Histórica de Demanda ({metricLabel})</h6>
+                    <ResponsiveContainer width="100%" height="90%">
+                      <LineChart data={timelineStats}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="date" {...axisStyle} />
+                        <YAxis {...axisStyle} />
+                        <Tooltip {...chartTooltipStyle} formatter={(value: any) => [formatValue(value), metricLabel]} />
+                        <Line type="monotone" dataKey="value" stroke="var(--color-red-primary)" strokeWidth={3} dot={{ fill: 'var(--color-red-primary)', r: 4 }} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="p-3 border border-secondary border-opacity-10" style={{ height: '350px', backgroundColor: 'var(--theme-background-secondary)' }}>
+                    <h6 className="fw-black text-uppercase small mb-4">Tendencia Acumulada por Días de la Semana ({metricLabel})</h6>
                     <ResponsiveContainer width="100%" height="90%">
                       <BarChart data={dailyStats}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
