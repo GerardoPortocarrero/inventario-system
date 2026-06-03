@@ -91,61 +91,110 @@ const AnalyticsProPage: FC = () => {
     return dateFilteredData.filter(d => String(d.ruta) === selectedRoute);
   }, [dateFilteredData, selectedRoute]);
 
+  // Mapeo de Maestro para acceso rápido
+  const maestroMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    maestroData.forEach(m => {
+      const id = String(m.Codigo || m.CODIGO || '').trim();
+      if (id) map[id] = m;
+    });
+    return map;
+  }, [maestroData]);
+
   // --- MÉTRICAS CENTRALIZADAS ---
   const rfmResults = useMemo(() => {
     if (filteredData.length === 0) return [];
     const clientMap: Record<string, any> = {};
     const now = new Date();
+    const dayNamesShort = ['DO', 'LU', 'MA', 'MI', 'JU', 'VI', 'SA'];
 
+    // 1. Agrupar datos de ventas reales
     filteredData.forEach(d => {
-      const solId = d.solicitante;
+      const solId = String(d.solicitante).trim();
       if (!clientMap[solId]) {
-        clientMap[solId] = { clientId: solId, clientName: d.nombreCliente, lastDate: d.fechaObj, frequency: 0, monetary: 0, cf: 0, cu: 0 };
+        clientMap[solId] = { 
+          clientId: solId, 
+          clientName: d.nombreCliente, 
+          lastDate: d.fechaObj, 
+          frequency: 0, 
+          monetary: 0, 
+          cf: 0, 
+          cu: 0,
+          purchaseDates: new Set<string>()
+        };
       }
       clientMap[solId].frequency += 1;
       clientMap[solId].monetary += d.totalValor || 0;
       clientMap[solId].cf += d.totalCF || 0;
       clientMap[solId].cu += d.totalCU || 0;
+      clientMap[solId].purchaseDates.add(d.fechaObj.toISOString().split('T')[0]);
       if (d.fechaObj > clientMap[solId].lastDate) clientMap[solId].lastDate = d.fechaObj;
     });
 
-    const results = Object.values(clientMap).map((c: any) => ({
-      ...c,
-      recency: Math.floor((now.getTime() - c.lastDate.getTime()) / (1000 * 60 * 60 * 24)),
-      currentMetricValue: metric === 'valor' ? c.monetary : metric === 'cf' ? c.cf : c.cu,
-      rScore: 0, fScore: 0, mScore: 0, totalScore: 0, segment: 'Hibernando'
-    }));
+    // 2. Calcular Rango de Fechas para validación de SEG.DIAS
+    const start = new Date(dateRange.start + 'T00:00:00');
+    const end = new Date(dateRange.end + 'T00:00:00');
+    const daysInRange: { date: string, dayName: string }[] = [];
+    let curr = new Date(start);
+    while (curr <= end) {
+      daysInRange.push({ 
+        date: curr.toISOString().split('T')[0], 
+        dayName: dayNamesShort[curr.getDay()] 
+      });
+      curr.setDate(curr.getDate() + 1);
+    }
 
-    const count = results.length;
-    if (count === 0) return [];
-    
-    results.sort((a, b) => a.recency - b.recency);
-    results.forEach((r, i) => { r.rScore = 5 - Math.floor(i / Math.ceil(count / 5)); if (r.rScore < 1) r.rScore = 1; });
-    results.sort((a, b) => a.frequency - b.frequency);
-    results.forEach((r, i) => { r.fScore = Math.floor(i / Math.ceil(count / 5)) + 1; if (r.fScore > 5) r.fScore = 5; });
-    results.sort((a, b) => a.currentMetricValue - b.currentMetricValue);
-    results.forEach((r, i) => { r.mScore = Math.floor(i / Math.ceil(count / 5)) + 1; if (r.mScore > 5) r.mScore = 5; });
+    // 3. Evaluar cada cliente contra su programación operativa
+    const results = Object.values(clientMap).map((c: any) => {
+      const maestro = maestroMap[c.clientId];
+      const segDias = String(maestro?.['SEG.DIAS'] || maestro?.seg_dias || '').toUpperCase();
+      const scheduledDays = segDias.split(',').map(s => s.trim()).filter(Boolean);
+      
+      let missedVisits = 0;
+      let totalScheduledInRange = 0;
 
-    results.forEach(r => {
-      if (r.frequency <= 0 || r.currentMetricValue <= 0) {
-        r.segment = 'Hibernando';
-      } else if (r.rScore >= 4 && r.fScore >= 4) {
-        r.segment = 'Campeón';
-      } else if (r.rScore >= 4 && r.fScore <= 2) {
-        r.segment = 'Nueva Promesa';
-      } else if (r.rScore <= 2 && r.fScore >= 4) {
-        r.segment = 'En Riesgo';
-      } else if (r.rScore <= 2 && r.fScore <= 2) {
-        r.segment = 'Hibernando';
-      } else if (r.fScore >= 3) {
-        r.segment = 'Fiel';
-      } else {
-        r.segment = 'Potencial';
+      if (scheduledDays.length > 0) {
+        daysInRange.forEach(d => {
+          if (scheduledDays.includes(d.dayName)) {
+            totalScheduledInRange++;
+            if (!c.purchaseDates.has(d.date)) {
+              missedVisits++;
+            }
+          }
+        });
       }
+
+      const recency = Math.floor((now.getTime() - c.lastDate.getTime()) / (1000 * 60 * 60 * 24));
+      const currentMetricValue = metric === 'valor' ? c.monetary : metric === 'cf' ? c.cf : c.cu;
+
+      // Lógica de Segmentación basada en CUMPLIMIENTO (Visitas Fallidas)
+      let segment = 'Potencial';
+      if (missedVisits > 0 && totalScheduledInRange > 0) {
+        const hitRate = (totalScheduledInRange - missedVisits) / totalScheduledInRange;
+        if (hitRate <= 0.5) segment = 'En Riesgo';
+        else if (hitRate < 1) segment = 'Inconstante';
+      }
+
+      // Refinar con RFM tradicional para los "buenos"
+      if (segment !== 'En Riesgo') {
+        if (c.frequency >= 4 && recency <= 7) segment = 'Campeón';
+        else if (c.frequency >= 2) segment = 'Fiel';
+        else if (recency > 15) segment = 'Hibernando';
+      }
+
+      return {
+        ...c,
+        recency,
+        currentMetricValue,
+        missedVisits,
+        totalScheduledInRange,
+        segDias,
+        segment
+      };
     });
 
     return results.sort((a, b) => b.currentMetricValue - a.currentMetricValue);
-  }, [filteredData, metric]);
+  }, [filteredData, metric, dateRange, maestroMap]);
 
   const dailyStats = useMemo(() => {
     if (filteredData.length === 0) return [];
