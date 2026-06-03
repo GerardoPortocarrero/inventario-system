@@ -561,8 +561,8 @@ const AdminUploadPage: FC = () => {
                           type="date" 
                           value={deleteDate} 
                           onChange={(e) => setDeleteDate(e.target.value)}
-                          className="bg-dark text-white border-secondary border-opacity-25"
-                          style={{ fontSize: '0.75rem' }}
+                          className="bg-transparent border-secondary border-opacity-25"
+                          style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}
                           disabled={isDeletingDay}
                         />
                         <Button 

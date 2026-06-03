@@ -374,37 +374,37 @@ const AnalyticsProPage: FC = () => {
           </Col>
           <Col xs={12} lg={8}>
             <div className="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
-              <div className="d-flex align-items-center gap-2 bg-dark p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px' }}>
+              <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
                 <FaMapMarkerAlt className="text-danger ms-2" size={12} />
-                <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent text-white border-0 small fw-bold px-2 py-0" style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '120px', cursor: 'pointer' }}>
-                  <option value="ALL" className="bg-dark">GLOBAL (TODAS)</option>
-                  {sedes.map(s => <option key={s.id} value={s.codigo} className="bg-dark">{s.nombre.toUpperCase()}</option>)}
+                <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '120px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}>
+                  <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>GLOBAL (TODAS)</option>
+                  {sedes.map(s => <option key={s.id} value={s.codigo} style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>{s.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
 
-              <div className="d-flex align-items-center gap-2 bg-dark p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px' }}>
+              <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
                 <FaRoute className="text-danger ms-2" size={12} />
                 <Form.Select 
                   value={selectedRoute} 
                   onChange={(e) => setSelectedRoute(e.target.value)} 
-                  className="bg-transparent text-white border-0 small fw-bold px-2 py-0" 
-                  style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '100px', cursor: 'pointer' }}
+                  className="bg-transparent border-0 small fw-bold px-2 py-0" 
+                  style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '100px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
                 >
-                  <option value="ALL" className="bg-dark">TODAS LAS RUTAS</option>
+                  <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>TODAS LAS RUTAS</option>
                   {availableRoutes.map(r => (
-                    <option key={r} value={r} className="bg-dark">RUTA {r}</option>
+                    <option key={r} value={r} style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>RUTA {r}</option>
                   ))}
                 </Form.Select>
               </div>
-              <div className="d-flex bg-dark p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px' }}>
+              <div className="d-flex p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
                 {([['valor', '$'], ['cf', 'CF'], ['cu', 'CU']] as const).map(([m, label]) => (
                   <button key={m} onClick={() => setMetric(m)} className={`btn btn-sm px-3 fw-black ${metric === m ? 'btn-danger' : 'btn-link text-secondary text-decoration-none'}`} style={{ fontSize: '0.7rem' }}>{label}</button>
                 ))}
               </div>
-              <div className="d-flex align-items-center gap-2 bg-dark p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px' }}>
-                <input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="bg-transparent text-white border-0 small fw-bold px-2" style={{ outline: 'none', fontSize: '0.75rem' }} />
+              <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
+                <input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="bg-transparent border-0 small fw-bold px-2" style={{ outline: 'none', fontSize: '0.75rem', color: 'var(--theme-text-primary)' }} />
                 <span className="text-secondary fw-black">AL</span>
-                <input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="bg-transparent text-white border-0 small fw-bold px-2" style={{ outline: 'none', fontSize: '0.75rem' }} />
+                <input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="bg-transparent border-0 small fw-bold px-2" style={{ outline: 'none', fontSize: '0.75rem', color: 'var(--theme-text-primary)' }} />
               </div>
             </div>
           </Col>
@@ -427,12 +427,12 @@ const AnalyticsProPage: FC = () => {
               <Tab.Pane eventKey="dashboard" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex flex-column gap-3">
                   <Row className="g-3">
-                    <Col xs={12} md={4}><div className="p-3 bg-dark bg-opacity-50 border border-secondary border-opacity-10 h-100"><div className="d-flex justify-content-between align-items-start"><div><div className="text-secondary fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Analizando {metricLabel}</div><div className="fw-black fs-3">{formatValue(rfmResults.reduce((acc, r) => acc + (metric === 'valor' ? r.monetary : metric === 'cf' ? r.cf : r.cu), 0))}</div></div><FaBox className="text-warning opacity-25 fs-4" /></div></div></Col>
-                    <Col xs={12} md={4}><div className="p-3 bg-dark bg-opacity-50 border border-info border-opacity-25 h-100"><div className="d-flex justify-content-between align-items-start"><div><div className="text-info fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Producto Estrella</div><div className="fw-black fs-5 text-truncate" style={{ maxWidth: '200px' }}>{statsPro.starProduct}</div><div className="text-info fw-bold" style={{ fontSize: '0.65rem' }}>{formatValue(statsPro.starProductValue)} ACUMULADO</div></div><FaCrown className="text-info opacity-25 fs-4" /></div></div></Col>
-                    <Col xs={12} md={4}><div className="p-3 bg-dark bg-opacity-50 border border-danger border-opacity-25 h-100"><div className="d-flex justify-content-between align-items-start"><div><div className="text-danger fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Ruta Líder (Preventista)</div><div className="fw-black fs-3 text-danger">{statsPro.starRoute}</div><div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>{formatValue(statsPro.starRouteValue)} EN {metric.toUpperCase()}</div></div><FaRoute className="text-danger opacity-25 fs-4" /></div></div></Col>
+                    <Col xs={12} md={4}><div className="p-3 border border-secondary border-opacity-10 h-100" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><div className="d-flex justify-content-between align-items-start"><div><div className="text-secondary fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Analizando {metricLabel}</div><div className="fw-black fs-3">{formatValue(rfmResults.reduce((acc, r) => acc + (metric === 'valor' ? r.monetary : metric === 'cf' ? r.cf : r.cu), 0))}</div></div><FaBox className="text-warning opacity-25 fs-4" /></div></div></Col>
+                    <Col xs={12} md={4}><div className="p-3 border border-info border-opacity-25 h-100" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><div className="d-flex justify-content-between align-items-start"><div><div className="text-info fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Producto Estrella</div><div className="fw-black fs-5 text-truncate" style={{ maxWidth: '200px' }}>{statsPro.starProduct}</div><div className="text-info fw-bold" style={{ fontSize: '0.65rem' }}>{formatValue(statsPro.starProductValue)} ACUMULADO</div></div><FaCrown className="text-info opacity-25 fs-4" /></div></div></Col>
+                    <Col xs={12} md={4}><div className="p-3 border border-danger border-opacity-25 h-100" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><div className="d-flex justify-content-between align-items-start"><div><div className="text-danger fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Ruta Líder (Preventista)</div><div className="fw-black fs-3 text-danger">{statsPro.starRoute}</div><div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>{formatValue(statsPro.starRouteValue)} EN {metric.toUpperCase()}</div></div><FaRoute className="text-danger opacity-25 fs-4" /></div></div></Col>
                   </Row>
                   
-                  <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '350px' }}>
+                  <div className="p-3 border border-secondary border-opacity-10" style={{ height: '350px', backgroundColor: 'var(--theme-background-secondary)' }}>
                     <h6 className="fw-black text-uppercase small mb-4">Tendencia Temporal de Demanda ({metricLabel})</h6>
                     <ResponsiveContainer width="100%" height="90%">
                       <BarChart data={dailyStats}>
@@ -447,7 +447,7 @@ const AnalyticsProPage: FC = () => {
 
                   <Row className="g-3">
                     <Col xs={12} lg={7}>
-                      <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '450px', display: 'flex', flexDirection: 'column' }}>
+                      <div className="p-3 border border-secondary border-opacity-10" style={{ height: '450px', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--theme-background-secondary)' }}>
                         <h6 className="fw-black text-uppercase small mb-4 flex-shrink-0">Ranking Completo de Rutas (Preventistas)</h6>
                         <div className="custom-scrollbar flex-grow-1" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
                           <div style={{ height: `${Math.max(routePerformance.length * 40, 400)}px`, width: '100%' }}>
@@ -465,7 +465,7 @@ const AnalyticsProPage: FC = () => {
                       </div>
                     </Col>
                     <Col xs={12} lg={5}>
-                      <div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '450px', display: 'flex', flexDirection: 'column' }}>
+                      <div className="p-3 border border-secondary border-opacity-10" style={{ height: '450px', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--theme-background-secondary)' }}>
                         <h6 className="fw-black text-uppercase small mb-3 flex-shrink-0">Alertas RFM: Cartera en Riesgo</h6>
                         <div className="custom-scrollbar flex-grow-1" style={{ overflowY: 'auto' }}>
                           <div className="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-20 text-center mb-3 flex-shrink-0">
@@ -474,8 +474,8 @@ const AnalyticsProPage: FC = () => {
                           </div>
                           <div className="d-flex flex-column gap-2">
                             {rfmResults.filter(r => r.segment === 'En Riesgo').map((r, i) => (
-                              <div key={i} className="p-2 border border-secondary border-opacity-10 bg-dark bg-opacity-50 d-flex justify-content-between align-items-center flex-shrink-0">
-                                <div className="min-width-0"><div className="fw-black text-white text-truncate" style={{ fontSize: '0.7rem' }}>{r.clientName}</div><div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>{r.recency} DÍAS SIN COMPRAR</div></div>
+                              <div key={i} className="p-2 border border-secondary border-opacity-10 d-flex justify-content-between align-items-center flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
+                                <div className="min-width-0"><div className="fw-black text-truncate" style={{ fontSize: '0.7rem' }}>{r.clientName}</div><div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>{r.recency} DÍAS SIN COMPRAR</div></div>
                                 <Badge bg="danger" style={{ fontSize: '0.55rem' }}>{formatValue(r.currentMetricValue)}</Badge>
                               </div>
                             ))}
@@ -491,16 +491,16 @@ const AnalyticsProPage: FC = () => {
               <Tab.Pane eventKey="clientes" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <div className="d-flex align-items-center gap-2"><h5 className="fw-black mb-0 text-uppercase">Clasificación RFM y Segmentación</h5><OverlayTrigger trigger="click" placement="right" overlay={rfmPopover} rootClose><button className="btn btn-link p-0 text-info" style={{ lineHeight: 1 }}><FaInfoCircle size={18} /></button></OverlayTrigger></div>
-                  <Badge bg="dark" className="border border-secondary px-3 py-2 fw-black">TOTAL: {rfmResults.length} CLIENTES</Badge>
+                  <Badge bg="secondary" className="border border-secondary px-3 py-2 fw-black">TOTAL: {rfmResults.length} CLIENTES</Badge>
                 </div>
                 <Row className="g-3 mb-4">
                   <Col xs={12} lg={8}><div className="admin-border-industrial p-3 d-flex flex-column" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '400px' }}><h6 className="fw-black text-uppercase small mb-4 flex-shrink-0">Distribución del Valor por Segmento</h6><div className="flex-grow-1"><ResponsiveContainer width="100%" height="100%"><BarChart data={segmentCounts} layout="vertical"><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" /><XAxis type="number" hide /><YAxis dataKey="name" type="category" {...axisStyle} width={100} /><Tooltip {...chartTooltipStyle} /><Bar dataKey="value" radius={[0, 4, 4, 0]}>{segmentCounts.map((entry, index) => <Cell key={index} fill={segmentColors[entry.name]} />)}</Bar></BarChart></ResponsiveContainer></div></div></Col>
-                  <Col xs={12} lg={4}><div className="admin-border-industrial p-3 d-flex flex-column" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '400px' }}><h6 className="fw-black text-uppercase small mb-3 flex-shrink-0">Resumen de Cartera</h6><div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto custom-scrollbar pe-1">{segmentCounts.map(s => (<div key={s.name} className="d-flex justify-content-between align-items-center p-2 bg-dark bg-opacity-25 border border-secondary border-opacity-10 flex-shrink-0"><div className="d-flex align-items-center gap-2">{segmentIcons[s.name]}<span className="fw-black text-uppercase" style={{ fontSize: '0.65rem' }}>{s.name}</span></div><span className="fw-black fs-5" style={{ color: segmentColors[s.name] }}>{s.value}</span></div>))}</div></div></Col>
+                  <Col xs={12} lg={4}><div className="admin-border-industrial p-3 d-flex flex-column" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '400px' }}><h6 className="fw-black text-uppercase small mb-3 flex-shrink-0">Resumen de Cartera</h6><div className="flex-grow-1 d-flex flex-column gap-2 overflow-auto custom-scrollbar pe-1">{segmentCounts.map(s => (<div key={s.name} className="d-flex justify-content-between align-items-center p-2 border border-secondary border-opacity-10 flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}><div className="d-flex align-items-center gap-2">{segmentIcons[s.name]}<span className="fw-black text-uppercase" style={{ fontSize: '0.65rem' }}>{s.name}</span></div><span className="fw-black fs-5" style={{ color: segmentColors[s.name] }}>{s.value}</span></div>))}</div></div></Col>
                 </Row>
                 <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <div className="p-3 border-bottom border-secondary border-opacity-10"><SearchInput searchTerm={clientSearch} onSearchChange={setClientSearch} placeholder="BUSCAR CLIENTE POR NOMBRE O ID..." className="mb-0" /></div>
-                  <Table responsive hover variant="dark" className="mb-0 industrial-table-v2">
-                    <thead className="sticky-top bg-dark">
+                  <Table responsive hover className="mb-0 industrial-table-v2">
+                    <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
                       <tr>
                         <SortHeader label="CLIENTE" sortKey="clientName" currentSort={clientSort} onSort={(k: string) => handleSort(k, clientSort, setClientSort)} />
                         <SortHeader label="SEGMENTO" sortKey="segment" currentSort={clientSort} onSort={(k: string) => handleSort(k, clientSort, setClientSort)} align="center" />
@@ -519,8 +519,8 @@ const AnalyticsProPage: FC = () => {
                 <div className="d-flex justify-content-between align-items-end mb-4"><div><h5 className="fw-black mb-1 text-uppercase">Desempeño de Rutas y Preventistas</h5><p className="text-secondary small fw-bold mb-0">Análisis comparativo de volumen y efectividad.</p></div></div>
                 <div className="admin-border-industrial mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <div className="p-3 border-bottom border-secondary border-opacity-10"><SearchInput searchTerm={routeSearch} onSearchChange={setRouteSearch} placeholder="BUSCAR RUTA..." className="mb-0" /></div>
-                  <Table responsive hover variant="dark" className="mb-0 industrial-table-v2">
-                    <thead>
+                  <Table responsive hover className="mb-0 industrial-table-v2">
+                    <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
                       <tr>
                         <SortHeader label="RUTA / PREVENTISTA" sortKey="ruta" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} />
                         <SortHeader label="CLIENTES ACTIVOS" sortKey="clientCount" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} align="center" />
@@ -538,8 +538,8 @@ const AnalyticsProPage: FC = () => {
               <Tab.Pane eventKey="productos" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <div className="p-3 border-bottom border-secondary border-opacity-10"><SearchInput searchTerm={productSearch} onSearchChange={setProductSearch} placeholder="BUSCAR PRODUCTO POR NOMBRE O SAP..." className="mb-0" /></div>
-                  <Table responsive hover variant="dark" className="mb-0 industrial-table-v2">
-                    <thead className="sticky-top bg-dark">
+                  <Table responsive hover className="mb-0 industrial-table-v2">
+                    <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
                       <tr>
                         <SortHeader label="PRODUCTO" sortKey="name" currentSort={productSort} onSort={(k: string) => handleSort(k, productSort, setProductSort)} />
                         <SortHeader label="TOTAL VALOR ($)" sortKey="valor" currentSort={productSort} onSort={(k: string) => handleSort(k, productSort, setProductSort)} align="end" />
@@ -554,14 +554,22 @@ const AnalyticsProPage: FC = () => {
 
               <Tab.Pane eventKey="afinidad" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex justify-content-between align-items-end mb-4"><div><h5 className="fw-black mb-1 text-uppercase">Análisis de Afinidad (Market Basket)</h5><p className="text-secondary small fw-bold mb-0">Identifica qué productos se venden juntos.</p></div><Badge bg="danger" className="px-3 py-2 fw-black">TOP 20 COMBOS DETECTADOS</Badge></div>
-                <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><Table responsive hover variant="dark" className="mb-0 industrial-table-v2"><thead><tr><th className="ps-4">PRODUCTO A</th><th className="text-center">+</th><th>PRODUCTO B</th><th className="text-end pe-4">FRECUENCIA (VISITAS)</th></tr></thead><tbody>{affinityData.map((combo, i) => (<tr key={i}><td className="ps-4 fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{combo.p1}</td><td className="text-center text-danger fw-black">+</td><td className="fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{combo.p2}</td><td className="text-end pe-4 fw-black text-info fs-5">{combo.count.toLocaleString()}</td></tr>))}</tbody></Table></div>
+                <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><Table responsive hover className="mb-0 industrial-table-v2">
+                  <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
+                    <tr><th className="ps-4">PRODUCTO A</th><th className="text-center">+</th><th>PRODUCTO B</th><th className="text-end pe-4">FRECUENCIA (VISITAS)</th></tr>
+                  </thead>
+                  <tbody>{affinityData.map((combo, i) => (<tr key={i}><td className="ps-4 fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{combo.p1}</td><td className="text-center text-danger fw-black">+</td><td className="fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{combo.p2}</td><td className="text-end pe-4 fw-black text-info fs-5">{combo.count.toLocaleString()}</td></tr>))}</tbody></Table></div>
               </Tab.Pane>
 
               <Tab.Pane eventKey="comparativa" className="h-100 overflow-auto custom-scrollbar p-3">
                 <h5 className="fw-black mb-3 text-uppercase">Análisis Comparativo Mensual</h5>
                 <Row className="g-3">
-                  <Col xs={12} lg={7}><div className="p-3 bg-dark bg-opacity-25 border border-secondary border-opacity-10" style={{ height: '400px' }}><ResponsiveContainer width="100%" height="100%"><BarChart data={monthlyComparison}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" /><XAxis dataKey="month" {...axisStyle} /><YAxis {...axisStyle} /><Tooltip {...chartTooltipStyle} /><Bar dataKey="total" fill="var(--color-red-primary)" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></Col>
-                  <Col xs={12} lg={5}><div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><Table responsive hover variant="dark" className="mb-0 industrial-table-v2"><thead><tr><th className="ps-4">MES</th><th className="text-end">VENTA TOTAL</th><th className="text-end pe-4">DELTA (%)</th></tr></thead><tbody>{monthlyComparison.map((m) => (<tr key={m.month}><td className="ps-4 fw-black text-uppercase">{m.month}</td><td className="text-end fw-black">{formatValue(m.total)}</td><td className="text-end pe-4 align-middle"><Badge bg={m.delta >= 0 ? 'success' : 'danger'} className="fw-black">{m.delta >= 0 ? '+' : ''}{m.delta.toFixed(1)}%</Badge></td></tr>))}</tbody></Table></div></Col>
+                  <Col xs={12} lg={7}><div className="p-3 border border-secondary border-opacity-10" style={{ height: '400px', backgroundColor: 'var(--theme-background-secondary)' }}><ResponsiveContainer width="100%" height="100%"><BarChart data={monthlyComparison}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" /><XAxis dataKey="month" {...axisStyle} /><YAxis {...axisStyle} /><Tooltip {...chartTooltipStyle} /><Bar dataKey="total" fill="var(--color-red-primary)" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></Col>
+                  <Col xs={12} lg={5}><div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><Table responsive hover className="mb-0 industrial-table-v2">
+                    <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
+                      <tr><th className="ps-4">MES</th><th className="text-end">VENTA TOTAL</th><th className="text-end pe-4">DELTA (%)</th></tr>
+                    </thead>
+                    <tbody>{monthlyComparison.map((m) => (<tr key={m.month}><td className="ps-4 fw-black text-uppercase">{m.month}</td><td className="text-end fw-black">{formatValue(m.total)}</td><td className="text-end pe-4 align-middle"><Badge bg={m.delta >= 0 ? 'success' : 'danger'} className="fw-black">{m.delta >= 0 ? '+' : ''}{m.delta.toFixed(1)}%</Badge></td></tr>))}</tbody></Table></div></Col>
                 </Row>
               </Tab.Pane>
             </Tab.Content>

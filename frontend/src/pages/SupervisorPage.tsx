@@ -44,8 +44,8 @@ const RutaVolumenBebidaItem = memo(({
                     <span className="fw-bold p-sap">SAP: {sap}</span>
                   </div>
                   <div className="d-flex gap-2 align-items-center ps-2">
-                    <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
-                    <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
+                    <Badge bg="secondary" className="p-badge border border-secondary border-opacity-25" style={{ backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-primary)' }}>{p.cantU} UND</Badge>
+                    <Badge bg="secondary" className="p-badge border border-secondary border-opacity-25" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>{p.cantC.toFixed(1)} CJ</Badge>
                   </div>
                 </ListGroup.Item>
               ))}
@@ -589,7 +589,7 @@ const SupervisorPage: FC = () => {
                               <Col xs={6} className="border-end border-theme-default">
                                 <div className="dup-doc-header">
                                   <span className="fw-black"># {dupla.doc1.id}</span>
-                                  <Badge bg="secondary" className="dup-time-badge">{dupla.doc1.hora}</Badge>
+                                  <Badge bg="secondary" className="dup-time-badge" style={{ backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)', border: '1px solid var(--theme-border-default)' }}>{dupla.doc1.hora}</Badge>
                                 </div>
                                 <div className="p-2">
                                   {dupla.doc1.items.map((item: any, i: number) => (
@@ -608,7 +608,7 @@ const SupervisorPage: FC = () => {
                               <Col xs={6}>
                                 <div className="dup-doc-header">
                                   <span className="fw-black"># {dupla.doc2.id}</span>
-                                  <Badge bg="secondary" className="dup-time-badge">{dupla.doc2.hora}</Badge>
+                                  <Badge bg="secondary" className="dup-time-badge" style={{ backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)', border: '1px solid var(--theme-border-default)' }}>{dupla.doc2.hora}</Badge>
                                 </div>
                                 <div className="p-2">
                                   {dupla.doc2.items.map((item: any, i: number) => (
