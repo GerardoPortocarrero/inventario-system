@@ -172,19 +172,20 @@ const AnalyticsProPage: FC = () => {
       const recency = Math.floor((now.getTime() - c.lastDate.getTime()) / (1000 * 60 * 60 * 24));
       const currentMetricValue = metric === 'valor' ? c.monetary : metric === 'cf' ? c.cf : c.cu;
 
-      // Lógica de Segmentación basada en CUMPLIMIENTO (Visitas Fallidas)
+      // Lógica de Segmentación Simplificada (Petición Usuario)
       let segment = 'Potencial';
-      if (missedVisits > 0 && totalScheduledInRange > 0) {
+      
+      if (recency > 30) {
+        segment = 'Hibernando';
+      } else if (missedVisits > 0 && totalScheduledInRange > 0) {
         const hitRate = (totalScheduledInRange - missedVisits) / totalScheduledInRange;
         if (hitRate <= 0.5) segment = 'En Riesgo';
-        else if (hitRate < 1) segment = 'Inconstante';
       }
 
-      // Refinar con RFM tradicional para los "buenos"
-      if (segment !== 'En Riesgo') {
+      // Refinar con RFM para los activos
+      if (segment === 'Potencial') {
         if (c.frequency >= 4 && recency <= 7) segment = 'Campeón';
         else if (c.frequency >= 2) segment = 'Fiel';
-        else if (recency > 15) segment = 'Hibernando';
       }
 
       return {
@@ -298,6 +299,18 @@ const AnalyticsProPage: FC = () => {
     const topProd = productPerformance.length > 0 ? productPerformance[0] : { name: '---', currentValue: 0 };
     const topRoute = routePerformance.length > 0 ? routePerformance[0] : { ruta: '---', currentValue: 0 };
     const riskCount = rfmResults.filter(r => r.segment === 'En Riesgo' || r.segment === 'Hibernando').length;
+
+    // Cálculo de Desempeño por Sede para el Resumen
+    const sedePerformanceMap: Record<string, number> = {};
+    dateFilteredData.forEach(d => {
+      const sId = String(d.sede).trim();
+      const val = metric === 'valor' ? d.totalValor : metric === 'cf' ? d.totalCF : d.totalCU;
+      sedePerformanceMap[sId] = (sedePerformanceMap[sId] || 0) + (val || 0);
+    });
+
+    const sedePerformance = Object.entries(sedePerformanceMap)
+      .map(([sede, value]) => ({ sede, value }))
+      .sort((a, b) => b.value - a.value);
     
     return {
       growth: lastMonth.delta,
@@ -305,9 +318,10 @@ const AnalyticsProPage: FC = () => {
       starProductValue: topProd.currentValue,
       starRoute: topRoute.ruta,
       starRouteValue: topRoute.currentValue,
-      atRisk: riskCount
+      atRisk: riskCount,
+      sedePerformance
     };
-  }, [monthlyComparison, productPerformance, routePerformance, rfmResults]);
+  }, [monthlyComparison, productPerformance, routePerformance, rfmResults, dateFilteredData, metric]);
 
   // --- ANÁLISIS DE AFINIDAD (Market Basket) ---
   const affinityData = useMemo(() => {
@@ -332,9 +346,11 @@ const AnalyticsProPage: FC = () => {
   }, [filteredData]);
 
   const segmentCounts = useMemo(() => {
-    const counts: Record<string, number> = { 'Campeón': 0, 'Fiel': 0, 'Nueva Promesa': 0, 'Potencial': 0, 'En Riesgo': 0, 'Hibernando': 0 };
+    const counts: Record<string, number> = { 'Campeón': 0, 'Fiel': 0, 'En Riesgo': 0, 'Hibernando': 0, 'Potencial': 0 };
     rfmResults.forEach(r => { if (counts[r.segment] !== undefined) counts[r.segment]++; });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    return Object.entries(counts)
+      .filter(([name]) => name !== 'Potencial' || counts[name] > 0)
+      .map(([name, value]) => ({ name, value }));
   }, [rfmResults]);
 
   // --- LOGICA DE BUSQUEDA Y ORDENAMIENTO FINAL ---
@@ -430,12 +446,10 @@ const AnalyticsProPage: FC = () => {
     <Popover id="rfm-popover" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)', maxWidth: '400px' }}>
       <Popover.Header as="h3" style={{ backgroundColor: 'var(--theme-icon-bg)', color: 'var(--color-red-primary)', borderBottom: '1px solid var(--theme-border-default)', fontWeight: 900, fontSize: '0.8rem' }}>GLOSARIO DE SEGMENTACIÓN RFM</Popover.Header>
       <Popover.Body style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>
-        <div className="mb-2"><strong style={{ color: 'var(--rfm-campeon)' }}>CAMPEÓN:</strong> Clientes que compran recientemente, con alta frecuencia y gran volumen.</div>
-        <div className="mb-2"><strong style={{ color: 'var(--rfm-fiel)' }}>FIEL:</strong> Clientes constantes que compran con buena frecuencia.</div>
-        <div className="mb-2"><strong style={{ color: 'var(--rfm-nueva-promesa)' }}>NUEVA PROMESA:</strong> Clientes que empezaron a comprar recientemente.</div>
-        <div className="mb-2"><strong style={{ color: 'var(--rfm-potencial)' }}>POTENCIAL:</strong> Clientes con actividad media.</div>
-        <div className="mb-2"><strong style={{ color: 'var(--rfm-en-riesgo)' }}>EN RIESGO:</strong> Clientes que solían ser muy frecuentes pero llevan tiempo sin pedir.</div>
-        <div><strong style={{ color: 'var(--rfm-hibernando)' }}>HIBERNANDO:</strong> Clientes con muy poca actividad histórica.</div>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-campeon)' }}>CAMPEÓN:</strong> Clientes constantes con alta frecuencia y gran volumen reciente.</div>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-fiel)' }}>FIEL:</strong> Clientes que compran regularmente pero con menor volumen.</div>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-en-riesgo)' }}>EN RIESGO:</strong> Clientes programados que han fallado en sus últimas visitas.</div>
+        <div><strong style={{ color: 'var(--rfm-hibernando)' }}>HIBERNANDO:</strong> Clientes que llevan más de 30 días sin realizar pedidos.</div>
       </Popover.Body>
     </Popover>
   );
@@ -571,22 +585,49 @@ const AnalyticsProPage: FC = () => {
                     </Col>
                     <Col xs={12} lg={5}>
                       <div className="p-3 border border-secondary border-opacity-10" style={{ height: '450px', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--theme-background-secondary)' }}>
-                        <h6 className="fw-black text-uppercase small mb-3 flex-shrink-0">Alertas RFM: Cartera en Riesgo</h6>
-                        <div className="custom-scrollbar flex-grow-1" style={{ overflowY: 'auto' }}>
-                          <div className="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-20 text-center mb-3 flex-shrink-0">
-                            <div className="fw-black fs-2 text-danger">{statsPro.atRisk}</div>
-                            <div className="small fw-black text-danger text-uppercase">Clientes a punto de perderse</div>
-                          </div>
-                          <div className="d-flex flex-column gap-2">
-                            {rfmResults.filter(r => r.segment === 'En Riesgo').map((r, i) => (
-                              <div key={i} className="p-2 border border-secondary border-opacity-10 d-flex justify-content-between align-items-center flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
-                                <div className="min-width-0"><div className="fw-black text-truncate" style={{ fontSize: '0.7rem' }}>{r.clientName}</div><div className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>{r.recency} DÍAS SIN COMPRAR</div></div>
-                                <Badge bg="danger" style={{ fontSize: '0.55rem' }}>{formatValue(r.currentMetricValue)}</Badge>
-                              </div>
-                            ))}
-                            {rfmResults.filter(r => r.segment === 'En Riesgo').length === 0 && <div className="text-center py-4 text-secondary small italic">No hay alertas críticas</div>}
-                          </div>
+                        <h6 className="fw-black text-uppercase small mb-4 flex-shrink-0">Desempeño por Sede ({metric.toUpperCase()})</h6>
+                        <div className="flex-grow-1">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart 
+                              data={statsPro.sedePerformance.map(s => ({
+                                ...s,
+                                displaySede: sedes.find(sd => sd.codigo === s.sede)?.nombre || s.sede
+                              }))} 
+                              layout="vertical" 
+                              margin={{ left: 5, right: 40, top: 0, bottom: 0 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                              <XAxis type="number" hide />
+                              <YAxis 
+                                dataKey="displaySede" 
+                                type="category" 
+                                {...axisStyle} 
+                                width={90}
+                                tickFormatter={(val) => val.length > 12 ? `${val.substring(0, 10)}...` : val}
+                              />
+                              <Tooltip 
+                                {...chartTooltipStyle} 
+                                formatter={(val: any) => [formatValue(val), metricLabel]}
+                                labelStyle={{ color: 'var(--color-red-primary)', fontWeight: 'black', textTransform: 'uppercase' }}
+                              />
+                              <Bar 
+                                dataKey="value" 
+                                fill="var(--color-red-primary)" 
+                                radius={[0, 4, 4, 0]} 
+                                barSize={25}
+                              >
+                                {statsPro.sedePerformance.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={index === 0 ? 'var(--color-red-primary)' : 'rgba(244, 0, 9, 0.6)'} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
                         </div>
+                        {statsPro.sedePerformance.length === 0 && (
+                          <div className="position-absolute top-50 start-50 translate-middle text-secondary small italic">
+                            No hay datos de sedes
+                          </div>
+                        )}
                       </div>
                     </Col>
                   </Row>
