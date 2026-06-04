@@ -10,6 +10,11 @@ import { useData } from '../context/DataContext';
 import { ref, onValue } from 'firebase/database';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { es } from 'date-fns/locale/es';
+import "react-datepicker/dist/react-datepicker.css";
+
+registerLocale('es', es);
 
 const AnalyticsProPage: FC = () => {
   const { sedes } = useData();
@@ -477,9 +482,21 @@ const AnalyticsProPage: FC = () => {
                 ))}
               </div>
               <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
-                <input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="bg-transparent border-0 small fw-bold px-2" style={{ outline: 'none', fontSize: '0.75rem', color: 'var(--theme-text-primary)' }} />
+                <DatePicker
+                  selected={new Date(dateRange.start + 'T00:00:00')}
+                  onChange={(date: Date | null) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))}
+                  dateFormat="dd/MM/yyyy"
+                  locale="es"
+                  className="date-picker-industrial"
+                />
                 <span className="text-secondary fw-black">AL</span>
-                <input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="bg-transparent border-0 small fw-bold px-2" style={{ outline: 'none', fontSize: '0.75rem', color: 'var(--theme-text-primary)' }} />
+                <DatePicker
+                  selected={new Date(dateRange.end + 'T00:00:00')}
+                  onChange={(date: Date | null) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))}
+                  dateFormat="dd/MM/yyyy"
+                  locale="es"
+                  className="date-picker-industrial"
+                />
               </div>
             </div>
           </Col>
@@ -677,6 +694,14 @@ const AnalyticsProPage: FC = () => {
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-red-primary); }
+        .date-picker-industrial { background: transparent; border: none; font-weight: 900; font-size: 0.75rem; color: var(--theme-text-primary); text-align: center; width: 100px; outline: none; }
+        .react-datepicker { background-color: var(--theme-background-secondary) !important; border: 1px solid var(--theme-border-default) !important; font-family: inherit !important; }
+        .react-datepicker__header { background-color: var(--theme-background-tertiary) !important; border-bottom: 1px solid var(--theme-border-default) !important; }
+        .react-datepicker__current-month, .react-datepicker__day-name { color: var(--theme-text-primary) !important; font-weight: 900 !important; text-transform: uppercase; }
+        .react-datepicker__day { color: var(--theme-text-secondary) !important; font-weight: 700 !important; }
+        .react-datepicker__day:hover { background-color: var(--color-red-primary) !important; color: white !important; }
+        .react-datepicker__day--selected { background-color: var(--color-red-primary) !important; color: white !important; }
+        .react-datepicker__day--keyboard-selected { background-color: rgba(244, 0, 9, 0.2) !important; }
       `}</style>
     </div>
   );
