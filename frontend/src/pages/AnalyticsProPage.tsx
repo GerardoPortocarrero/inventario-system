@@ -1,7 +1,7 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Row, Col, Tab, Nav, Badge, Table, OverlayTrigger, Popover, Form } from 'react-bootstrap';
-import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle, FaMapMarkerAlt, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle, FaMapMarkerAlt, FaSort, FaSortUp, FaSortDown, FaChevronRight } from 'react-icons/fa';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import SearchInput from '../components/SearchInput';
@@ -41,6 +41,8 @@ const AnalyticsProPage: FC = () => {
   
   const [productSearch, setProductSearch] = useState('');
   const [productSort, setProductSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
+
+  const [expandedRfmRutas, setExpandedRfmRutas] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setLoading(true);
@@ -300,20 +302,34 @@ const AnalyticsProPage: FC = () => {
   const routePerformance = useMemo(() => {
     if (dateFilteredData.length === 0) return [];
     const routeMap: Record<string, any> = {};
+    
+    // Agrupar datos por ruta y cliente
     dateFilteredData.forEach(d => {
       const rId = d.ruta || 'S/R';
+      const cId = String(d.solicitante).trim();
+      
       if (!routeMap[rId]) {
-        routeMap[rId] = { ruta: rId, monetary: 0, cf: 0, cu: 0, count: 0, clients: new Set() };
+        routeMap[rId] = { ruta: rId, monetary: 0, cf: 0, cu: 0, count: 0, clientsMap: {} };
       }
+      
       routeMap[rId].monetary += d.totalValor || 0;
       routeMap[rId].cf += d.totalCF || 0;
       routeMap[rId].cu += d.totalCU || 0;
       routeMap[rId].count += 1;
-      routeMap[rId].clients.add(d.solicitante);
+      
+      if (!routeMap[rId].clientsMap[cId]) {
+        routeMap[rId].clientsMap[cId] = { id: cId, name: d.nombreCliente, valor: 0, cf: 0, cu: 0, count: 0 };
+      }
+      routeMap[rId].clientsMap[cId].valor += d.totalValor || 0;
+      routeMap[rId].clientsMap[cId].cf += d.totalCF || 0;
+      routeMap[rId].clientsMap[cId].cu += d.totalCU || 0;
+      routeMap[rId].clientsMap[cId].count += 1;
     });
+
     return Object.values(routeMap).map((r: any) => ({
       ...r,
-      clientCount: r.clients.size,
+      clientCount: Object.keys(r.clientsMap).length,
+      clients: Object.values(r.clientsMap).sort((a: any, b: any) => b.valor - a.valor),
       currentValue: metric === 'valor' ? r.monetary : metric === 'cf' ? r.cf : r.cu
     })).sort((a: any, b: any) => b.currentValue - a.currentValue);
   }, [dateFilteredData, metric]);
@@ -434,6 +450,10 @@ const AnalyticsProPage: FC = () => {
       key,
       dir: prev?.key === key && prev?.dir === 'asc' ? 'desc' : 'asc'
     }));
+  };
+
+  const toggleRoute = (id: string) => {
+    setExpandedRfmRutas(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const SortHeader = ({ label, sortKey, currentSort, onSort, align = 'start' }: any) => {
@@ -700,7 +720,66 @@ const AnalyticsProPage: FC = () => {
                         <SortHeader label="VOL. CU" sortKey="cu" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} align="end" />
                       </tr>
                     </thead>
-                    <tbody>{finalRoutePerformance.map((r) => (<tr key={r.ruta}><td className="ps-4"><div className="d-flex align-items-center gap-3"><div className="loc-avatar" style={{ backgroundColor: 'var(--color-red-primary)' }}>{r.ruta}</div><span className="fw-black fs-5">{r.ruta}</span></div></td><td className="text-center align-middle fw-black text-info fs-5">{r.clientCount}</td><td className="text-center align-middle fw-black">{r.count}</td><td className="text-end align-middle fw-black">${r.monetary.toLocaleString()}</td><td className="text-end align-middle fw-black text-success">{r.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td className="text-end align-middle fw-black text-warning pe-4">{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td></tr>))}</tbody>
+                    <tbody>{finalRoutePerformance.map((r) => (
+                      <Fragment key={r.ruta}>
+                        <tr 
+                          onClick={() => toggleRoute(r.ruta)} 
+                          style={{ cursor: 'pointer' }}
+                          className={expandedRfmRutas[r.ruta] ? 'bg-danger bg-opacity-10' : ''}
+                        >
+                          <td className="ps-4">
+                            <div className="d-flex align-items-center gap-3">
+                              <div className={`chevron-icon ${expandedRfmRutas[r.ruta] ? 'active' : ''}`} style={{ transition: 'transform 0.2s' }}>
+                                <FaChevronRight style={{ transform: expandedRfmRutas[r.ruta] ? 'rotate(90deg)' : 'none' }} />
+                              </div>
+                              <div className="loc-avatar" style={{ backgroundColor: 'var(--color-red-primary)', width: '32px', height: '32px', fontSize: '0.7rem' }}>{r.ruta}</div>
+                              <span className="fw-black fs-6">RUTA {r.ruta}</span>
+                            </div>
+                          </td>
+                          <td className="text-center align-middle fw-black text-info">{r.clientCount}</td>
+                          <td className="text-center align-middle fw-black">{r.count}</td>
+                          <td className="text-end align-middle fw-black">${r.monetary.toLocaleString()}</td>
+                          <td className="text-end align-middle fw-black text-success">{r.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                          <td className="text-end align-middle fw-black text-warning pe-4">{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                        </tr>
+                        {expandedRfmRutas[r.ruta] && (
+                          <tr>
+                            <td colSpan={6} className="p-0 border-0">
+                              <div className="p-3 bg-dark bg-opacity-25 border-start border-danger border-4 ms-4 my-2 me-4">
+                                <h6 className="fw-black text-uppercase small mb-3 text-danger">Detalle de Clientes en Ruta {r.ruta}</h6>
+                                <Table responsive hover size="sm" className="mb-0 industrial-table-v2 border-0">
+                                  <thead>
+                                    <tr>
+                                      <th className="ps-0" style={{ fontSize: '0.6rem' }}>CLIENTE</th>
+                                      <th className="text-center" style={{ fontSize: '0.6rem' }}>PEDIDOS</th>
+                                      <th className="text-end" style={{ fontSize: '0.6rem' }}>VALOR ($)</th>
+                                      <th className="text-end" style={{ fontSize: '0.6rem' }}>VOL (CF)</th>
+                                      <th className="text-end pe-0" style={{ fontSize: '0.6rem' }}>VOL (CU)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {r.clients.map((c: any) => (
+                                      <tr key={c.id}>
+                                        <td className="ps-0 py-2">
+                                          <div className="d-flex flex-column">
+                                            <span className="fw-bold text-uppercase" style={{ fontSize: '0.7rem' }}>{c.name}</span>
+                                            <span className="text-secondary" style={{ fontSize: '0.6rem' }}>SAP: {c.id}</span>
+                                          </div>
+                                        </td>
+                                        <td className="text-center align-middle fw-bold" style={{ fontSize: '0.75rem' }}>{c.count}</td>
+                                        <td className="text-end align-middle fw-black text-info" style={{ fontSize: '0.75rem' }}>${c.valor.toLocaleString()}</td>
+                                        <td className="text-end align-middle fw-bold text-success" style={{ fontSize: '0.75rem' }}>{c.cf.toFixed(1)}</td>
+                                        <td className="text-end align-middle fw-bold text-warning pe-0" style={{ fontSize: '0.75rem' }}>{c.cu.toFixed(1)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </Table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    ))}</tbody>
                   </Table>
                 </div>
               </Tab.Pane>
