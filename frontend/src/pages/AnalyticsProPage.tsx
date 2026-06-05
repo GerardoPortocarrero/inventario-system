@@ -149,7 +149,12 @@ const AnalyticsProPage: FC = () => {
       curr.setDate(curr.getDate() + 1);
     }
 
-    // 3. Evaluar cada cliente contra su programación operativa
+    // Cálculo de promedios para segmentación inteligente
+    const allMetrics = Object.values(clientMap).map((c: any) => metric === 'valor' ? c.monetary : metric === 'cf' ? c.cf : c.cu);
+    const avgVolume = allMetrics.length > 0 ? allMetrics.reduce((a, b) => a + b, 0) / allMetrics.length : 0;
+    const avgFrequency = Object.values(clientMap).length > 0 ? Object.values(clientMap).reduce((a: any, b: any) => a + b.frequency, 0) / Object.values(clientMap).length : 0;
+
+    // 3. Evaluar cada cliente contra su programación operativa y métricas de volumen/frecuencia
     const results = Object.values(clientMap).map((c: any) => {
       const maestro = maestroMap[c.clientId];
       const segDias = String(maestro?.['SEG.DIAS'] || maestro?.seg_dias || '').toUpperCase();
@@ -170,28 +175,29 @@ const AnalyticsProPage: FC = () => {
       }
 
       const recency = Math.floor((now.getTime() - c.lastDate.getTime()) / (1000 * 60 * 60 * 24));
-      const currentMetricValue = metric === 'valor' ? c.monetary : metric === 'cf' ? c.cf : c.cu;
+      const volume = metric === 'valor' ? c.monetary : metric === 'cf' ? c.cf : c.cu;
+      const hitRate = totalScheduledInRange > 0 ? (totalScheduledInRange - missedVisits) / totalScheduledInRange : 1;
 
-      // Lógica de Segmentación Simplificada (Petición Usuario)
-      let segment = 'Potencial';
-      
+      // LÓGICA ESTRICTA (4 SEGMENTOS)
+      let segment = 'Fiel'; // Fallback por defecto
+
       if (recency > 30) {
         segment = 'Hibernando';
-      } else if (missedVisits > 0 && totalScheduledInRange > 0) {
-        const hitRate = (totalScheduledInRange - missedVisits) / totalScheduledInRange;
-        if (hitRate <= 0.5) segment = 'En Riesgo';
-      }
-
-      // Refinar con RFM para los activos
-      if (segment === 'Potencial') {
-        if (c.frequency >= 4 && recency <= 7) segment = 'Campeón';
-        else if (c.frequency >= 2) segment = 'Fiel';
+      } else if (hitRate <= 0.5 || (c.frequency < avgFrequency && volume < avgVolume * 0.5)) {
+        segment = 'En Riesgo';
+      } else if (c.frequency >= avgFrequency && volume >= avgVolume) {
+        segment = 'Campeón';
+      } else if (volume >= avgVolume * 1.5) {
+        // "Si tiene mucho volumen y poca frecuencia ponlo en campeon"
+        segment = 'Campeón';
+      } else {
+        segment = 'Fiel';
       }
 
       return {
         ...c,
         recency,
-        currentMetricValue,
+        currentMetricValue: volume,
         missedVisits,
         totalScheduledInRange,
         segDias,
