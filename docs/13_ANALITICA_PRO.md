@@ -11,8 +11,8 @@ El módulo se centra en siete análisis fundamentales:
 
 ### 2.1 Clasificación de Clientes (Volumen y RFM)
 - **Métrica:** Ranking de clientes por total acumulado (CF/CU).
-- **Segmentación RFM (Recencia, Frecuencia, Valor):** Clasificación automática en Campeones, En Riesgo, Nuevas Promesas e Hibernando.
-- **Propósito:** Identificar quiénes son los activos más valiosos y a quiénes se corre el riesgo de perder.
+- **Segmentación RFM (Recencia, Frecuencia, Valor):** Clasificación automática en Campeones, Poco Frecuente, Nuevas Promesas e Hibernando.
+- **Propósito:** Identificar quiénes son los activos más valiosos y a quiénes se les detecta un comportamiento poco habitual.
 
 ### 2.2 Análisis de Fidelidad y Frecuencia
 - **Métrica:** Conteo de pedidos únicos y cálculo de días promedio entre compras.

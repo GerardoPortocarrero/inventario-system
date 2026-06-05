@@ -44,6 +44,13 @@ const AnalyticsProPage: FC = () => {
 
   useEffect(() => {
     setLoading(true);
+    let masterLoaded = false;
+    let firestoreLoaded = false;
+
+    const checkLoading = () => {
+      if (masterLoaded && firestoreLoaded) setLoading(false);
+    };
+
     const demandaQuery = query(collection(db, 'demanda_historica'), orderBy('fecha', 'desc'));
     const unsubDemanda = onSnapshot(demandaQuery, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -54,12 +61,23 @@ const AnalyticsProPage: FC = () => {
       if (data.length > 0) {
         setMetadata({ updatedAt: (data[0] as any).updatedAt?.toDate().toLocaleString() });
       }
+      firestoreLoaded = true;
+      checkLoading();
+    }, (error) => {
+      console.error("Error loading demanda:", error);
+      firestoreLoaded = true;
+      checkLoading();
     });
 
     const maestroRef = ref(rtdb, 'maestro/data');
     const unsubMaestro = onValue(maestroRef, (snapshot) => {
       if (snapshot.exists()) setMaestroData(snapshot.val() || []);
-      setLoading(false);
+      masterLoaded = true;
+      checkLoading();
+    }, (error) => {
+      console.error("Error loading maestro:", error);
+      masterLoaded = true;
+      checkLoading();
     });
 
     return () => { unsubDemanda(); unsubMaestro(); };
@@ -184,7 +202,7 @@ const AnalyticsProPage: FC = () => {
       if (recency > 30) {
         segment = 'Hibernando';
       } else if (hitRate <= 0.5 || (c.frequency < avgFrequency && volume < avgVolume * 0.5)) {
-        segment = 'En Riesgo';
+        segment = 'Poco Frecuente';
       } else if (c.frequency >= avgFrequency && volume >= avgVolume) {
         segment = 'Campeón';
       } else if (volume >= avgVolume * 1.5) {
@@ -304,7 +322,7 @@ const AnalyticsProPage: FC = () => {
     const lastMonth = monthlyComparison.length > 0 ? monthlyComparison[monthlyComparison.length - 1] : { delta: 0 };
     const topProd = productPerformance.length > 0 ? productPerformance[0] : { name: '---', currentValue: 0 };
     const topRoute = routePerformance.length > 0 ? routePerformance[0] : { ruta: '---', currentValue: 0 };
-    const riskCount = rfmResults.filter(r => r.segment === 'En Riesgo' || r.segment === 'Hibernando').length;
+    const riskCount = rfmResults.filter(r => r.segment === 'Poco Frecuente' || r.segment === 'Hibernando').length;
 
     // Cálculo de Desempeño por Sede para el Resumen
     const sedePerformanceMap: Record<string, number> = {};
@@ -352,7 +370,7 @@ const AnalyticsProPage: FC = () => {
   }, [filteredData]);
 
   const segmentCounts = useMemo(() => {
-    const counts: Record<string, number> = { 'Campeón': 0, 'Fiel': 0, 'En Riesgo': 0, 'Hibernando': 0, 'Potencial': 0 };
+    const counts: Record<string, number> = { 'Campeón': 0, 'Fiel': 0, 'Poco Frecuente': 0, 'Hibernando': 0, 'Potencial': 0 };
     rfmResults.forEach(r => { if (counts[r.segment] !== undefined) counts[r.segment]++; });
     return Object.entries(counts)
       .filter(([name]) => name !== 'Potencial' || counts[name] > 0)
@@ -445,8 +463,8 @@ const AnalyticsProPage: FC = () => {
 
   const axisStyle = { stroke: 'var(--theme-text-secondary)', fontSize: 10, fontWeight: 'bold' };
 
-  const segmentColors: Record<string, string> = { 'Campeón': 'var(--rfm-campeon)', 'Fiel': 'var(--rfm-fiel)', 'Nueva Promesa': 'var(--rfm-nueva-promesa)', 'Potencial': 'var(--rfm-potencial)', 'En Riesgo': 'var(--rfm-en-riesgo)', 'Hibernando': 'var(--rfm-hibernando)' };
-  const segmentIcons: Record<string, any> = { 'Campeón': <FaCrown style={{ color: 'var(--rfm-campeon)' }} />, 'Fiel': <FaStar style={{ color: 'var(--rfm-fiel)' }} />, 'Nueva Promesa': <FaArrowUp style={{ color: 'var(--rfm-nueva-promesa)' }} />, 'Potencial': <FaUserCheck style={{ color: 'var(--rfm-potencial)' }} />, 'En Riesgo': <FaExclamationTriangle style={{ color: 'var(--rfm-en-riesgo)' }} />, 'Hibernando': <FaBed style={{ color: 'var(--rfm-hibernando)' }} /> };
+  const segmentColors: Record<string, string> = { 'Campeón': 'var(--rfm-campeon)', 'Fiel': 'var(--rfm-fiel)', 'Nueva Promesa': 'var(--rfm-nueva-promesa)', 'Potencial': 'var(--rfm-potencial)', 'Poco Frecuente': 'var(--rfm-en-riesgo)', 'Hibernando': 'var(--rfm-hibernando)' };
+  const segmentIcons: Record<string, any> = { 'Campeón': <FaCrown style={{ color: 'var(--rfm-campeon)' }} />, 'Fiel': <FaStar style={{ color: 'var(--rfm-fiel)' }} />, 'Nueva Promesa': <FaArrowUp style={{ color: 'var(--rfm-nueva-promesa)' }} />, 'Potencial': <FaUserCheck style={{ color: 'var(--rfm-potencial)' }} />, 'Poco Frecuente': <FaExclamationTriangle style={{ color: 'var(--rfm-en-riesgo)' }} />, 'Hibernando': <FaBed style={{ color: 'var(--rfm-hibernando)' }} /> };
 
   const rfmPopover = (
     <Popover id="rfm-popover" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)', maxWidth: '400px' }}>
@@ -454,7 +472,7 @@ const AnalyticsProPage: FC = () => {
       <Popover.Body style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>
         <div className="mb-2"><strong style={{ color: 'var(--rfm-campeon)' }}>CAMPEÓN:</strong> Clientes constantes con alta frecuencia y gran volumen reciente.</div>
         <div className="mb-2"><strong style={{ color: 'var(--rfm-fiel)' }}>FIEL:</strong> Clientes que compran regularmente pero con menor volumen.</div>
-        <div className="mb-2"><strong style={{ color: 'var(--rfm-en-riesgo)' }}>EN RIESGO:</strong> Clientes programados que han fallado en sus últimas visitas.</div>
+        <div className="mb-2"><strong style={{ color: 'var(--rfm-en-riesgo)' }}>POCO FRECUENTE:</strong> Clientes con baja consistencia en sus pedidos programados.</div>
         <div><strong style={{ color: 'var(--rfm-hibernando)' }}>HIBERNANDO:</strong> Clientes que llevan más de 30 días sin realizar pedidos.</div>
       </Popover.Body>
     </Popover>

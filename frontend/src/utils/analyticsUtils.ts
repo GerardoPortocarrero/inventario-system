@@ -10,7 +10,7 @@ export interface RFMResult {
   fScore: number;
   mScore: number;
   totalScore: number;
-  segment: 'Campeón' | 'En Riesgo' | 'Nueva Promesa' | 'Hibernando' | 'Fiel' | 'Potencial' | 'Necesita Atención';
+  segment: 'Campeón' | 'Poco Frecuente' | 'Nueva Promesa' | 'Hibernando' | 'Fiel' | 'Potencial' | 'Necesita Atención';
 }
 
 export const calculateRFM = (demanda: any[], maestro: any[]): RFMResult[] => {
@@ -111,7 +111,7 @@ export const calculateRFM = (demanda: any[], maestro: any[]): RFMResult[] => {
     } else if (r.rScore >= 4 && r.fScore <= 2) {
       r.segment = 'Nueva Promesa';
     } else if (r.rScore <= 2 && r.fScore >= 4) {
-      r.segment = 'En Riesgo';
+      r.segment = 'Poco Frecuente';
     } else if (r.rScore <= 2 && r.fScore <= 2) {
       r.segment = 'Hibernando';
     } else if (r.fScore >= 3) {
