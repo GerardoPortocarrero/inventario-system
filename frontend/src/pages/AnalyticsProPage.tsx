@@ -546,11 +546,7 @@ const AnalyticsProPage: FC = () => {
                   ))}
                 </Form.Select>
               </div>
-              <div className="d-flex p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
-                {([['valor', '$'], ['cf', 'CF'], ['cu', 'CU']] as const).map(([m, label]) => (
-                  <button key={m} onClick={() => setMetric(m)} className={`btn btn-sm px-3 fw-black ${metric === m ? 'btn-danger' : 'btn-link text-secondary text-decoration-none'}`} style={{ fontSize: '0.7rem' }}>{label}</button>
-                ))}
-              </div>
+              
               <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
                 <DatePicker
                   selected={new Date(dateRange.start + 'T00:00:00')}
@@ -608,6 +604,27 @@ const AnalyticsProPage: FC = () => {
             <Tab.Content className="flex-grow-1 overflow-hidden position-relative">
               <Tab.Pane eventKey="dashboard" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex flex-column gap-3">
+                  
+                  {/* SELECTOR DE MÉTRICA EXCLUSIVO PARA DASHBOARD */}
+                  <div className="d-flex justify-content-between align-items-center p-3 border-start border-danger border-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+                    <div>
+                      <h6 className="fw-black mb-0 text-uppercase" style={{ letterSpacing: '0.5px' }}>Dimensión del Análisis</h6>
+                      <span className="text-secondary small fw-bold">Seleccione la unidad de medida para los gráficos</span>
+                    </div>
+                    <div className="d-flex p-1 border border-secondary border-opacity-25 shadow-sm" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)' }}>
+                      {([['valor', '$'], ['cf', 'CF'], ['cu', 'CU']] as const).map(([m, label]) => (
+                        <button 
+                          key={m} 
+                          onClick={() => setMetric(m)} 
+                          className={`btn btn-sm px-4 fw-black ${metric === m ? 'btn-danger shadow-sm' : 'btn-link text-secondary text-decoration-none'}`} 
+                          style={{ fontSize: '0.75rem', borderRadius: '2px', transition: 'all 0.2s' }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <Row className="g-3">
                     <Col xs={12} md={4}><div className="p-3 border border-secondary border-opacity-10 h-100" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><div className="d-flex justify-content-between align-items-start"><div><div className="text-secondary fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Analizando {metricLabel}</div><div className="fw-black fs-3">{formatValue(rfmResults.reduce((acc, r) => acc + (metric === 'valor' ? r.monetary : metric === 'cf' ? r.cf : r.cu), 0))}</div></div><FaBox className="text-warning opacity-25 fs-4" /></div></div></Col>
                     <Col xs={12} md={4}><div className="p-3 border border-info border-opacity-25 h-100" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><div className="d-flex justify-content-between align-items-start"><div><div className="text-info fw-bold text-uppercase mb-1" style={{ fontSize: '0.55rem' }}>Producto Estrella</div><div className="fw-black fs-5 text-truncate" style={{ maxWidth: '200px' }}>{statsPro.starProduct}</div><div className="text-info fw-bold" style={{ fontSize: '0.65rem' }}>{formatValue(statsPro.starProductValue)} ACUMULADO</div></div><FaCrown className="text-info opacity-25 fs-4" /></div></div></Col>
