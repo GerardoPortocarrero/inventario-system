@@ -589,7 +589,7 @@ const SupervisorPage: FC = () => {
                               <Col xs={6} className="border-end border-theme-default">
                                 <div className="dup-doc-header">
                                   <span className="fw-black"># {dupla.doc1.id}</span>
-                                  <Badge bg="secondary" className="dup-time-badge" style={{ backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)', border: '1px solid var(--theme-border-default)' }}>{dupla.doc1.hora}</Badge>
+                                  <span className="fw-black text-danger ms-auto" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>{dupla.doc1.hora}</span>
                                 </div>
                                 <div className="p-2">
                                   {dupla.doc1.items.map((item: any, i: number) => (
@@ -608,7 +608,7 @@ const SupervisorPage: FC = () => {
                               <Col xs={6}>
                                 <div className="dup-doc-header">
                                   <span className="fw-black"># {dupla.doc2.id}</span>
-                                  <Badge bg="secondary" className="dup-time-badge" style={{ backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)', border: '1px solid var(--theme-border-default)' }}>{dupla.doc2.hora}</Badge>
+                                  <span className="fw-black text-danger ms-auto" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>{dupla.doc2.hora}</span>
                                 </div>
                                 <div className="p-2">
                                   {dupla.doc2.items.map((item: any, i: number) => (
