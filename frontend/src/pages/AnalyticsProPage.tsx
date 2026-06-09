@@ -1,10 +1,11 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Row, Col, Tab, Nav, Badge, Table, OverlayTrigger, Popover, Form, Button } from 'react-bootstrap';
-import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle, FaMapMarkerAlt, FaSort, FaSortUp, FaSortDown, FaChevronRight } from 'react-icons/fa';
+import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle, FaMapMarkerAlt, FaSort, FaSortUp, FaSortDown, FaChevronRight, FaFilter } from 'react-icons/fa';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import SearchInput from '../components/SearchInput';
+import useMediaQuery from '../hooks/useMediaQuery';
 import { db, rtdb } from '../api/firebase';
 import { useData } from '../context/DataContext';
 import { ref, onValue } from 'firebase/database';
@@ -18,7 +19,9 @@ registerLocale('es', es);
 
 const AnalyticsProPage: FC = () => {
   const { sedes, marcas } = useData();
+  const isMobile = useMediaQuery('(max-width: 991px)');
   const [loading, setLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [demandaData, setDemandaData] = useState<any[]>([]);
   const [maestroData, setMaestroData] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -571,15 +574,36 @@ const AnalyticsProPage: FC = () => {
       </div>
 
       <div className="admin-section-table flex-grow-1 p-0 overflow-hidden">
-        <Tab.Container id="analytics-tabs" defaultActiveKey="dashboard">
+        <Tab.Container id="analytics-tabs" activeKey={activeTab} onSelect={(k) => setActiveTab(k as string)}>
           <div className="d-flex flex-column h-100">
-            <Nav variant="tabs" className="custom-tabs-industrial px-2 pt-2 flex-shrink-0 border-bottom-0">
-              <Nav.Item><Nav.Link eventKey="dashboard" className="d-flex align-items-center gap-2"><FaHistory className="d-none d-md-inline" /> RESUMEN</Nav.Link></Nav.Item>
-              <Nav.Item><Nav.Link eventKey="clientes" className="d-flex align-items-center gap-2"><FaUsers className="d-none d-md-inline" /> CLIENTES (RFM)</Nav.Link></Nav.Item>
-              <Nav.Item><Nav.Link eventKey="rutas" className="d-flex align-items-center gap-2"><FaRoute className="d-none d-md-inline" /> RUTAS Y DÍAS</Nav.Link></Nav.Item>
-              <Nav.Item><Nav.Link eventKey="cobertura" className="d-flex align-items-center gap-2"><FaMapMarkerAlt className="d-none d-md-inline" /> COBERTURA</Nav.Link></Nav.Item>
-              <Nav.Item><Nav.Link eventKey="productos" className="d-flex align-items-center gap-2"><FaBox className="d-none d-md-inline" /> PRODUCTOS</Nav.Link></Nav.Item>
-            </Nav>
+            {isMobile ? (
+              <div className="px-3 pt-3 flex-shrink-0">
+                <div className="info-pill-new w-100">
+                  <span className="pill-icon-sober text-danger p-1"><FaFilter className="pill-main-icon"/></span>
+                  <div className="pill-content flex-grow-1">
+                    <Form.Select 
+                      value={activeTab} 
+                      onChange={(e) => setActiveTab(e.target.value)} 
+                      className="pill-select-v2 w-100"
+                    >
+                      <option value="dashboard">RESUMEN</option>
+                      <option value="clientes">CLIENTES (RFM)</option>
+                      <option value="rutas">RUTAS Y DÍAS</option>
+                      <option value="cobertura">COBERTURA</option>
+                      <option value="productos">PRODUCTOS</option>
+                    </Form.Select>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Nav variant="tabs" className="custom-tabs-industrial px-2 pt-2 flex-shrink-0 border-bottom-0">
+                <Nav.Item><Nav.Link eventKey="dashboard" className="d-flex align-items-center gap-2"><FaHistory className="d-none d-md-inline" /> RESUMEN</Nav.Link></Nav.Item>
+                <Nav.Item><Nav.Link eventKey="clientes" className="d-flex align-items-center gap-2"><FaUsers className="d-none d-md-inline" /> CLIENTES (RFM)</Nav.Link></Nav.Item>
+                <Nav.Item><Nav.Link eventKey="rutas" className="d-flex align-items-center gap-2"><FaRoute className="d-none d-md-inline" /> RUTAS Y DÍAS</Nav.Link></Nav.Item>
+                <Nav.Item><Nav.Link eventKey="cobertura" className="d-flex align-items-center gap-2"><FaMapMarkerAlt className="d-none d-md-inline" /> COBERTURA</Nav.Link></Nav.Item>
+                <Nav.Item><Nav.Link eventKey="productos" className="d-flex align-items-center gap-2"><FaBox className="d-none d-md-inline" /> PRODUCTOS</Nav.Link></Nav.Item>
+              </Nav>
+            )}
 
             <Tab.Content className="flex-grow-1 overflow-hidden position-relative">
               <Tab.Pane eventKey="dashboard" className="h-100 overflow-auto custom-scrollbar p-3">
@@ -950,6 +974,12 @@ const AnalyticsProPage: FC = () => {
 
       <style>{`
         .fw-black { font-weight: 900 !important; }
+        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
+        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; z-index: 2; }
+        .pill-main-icon { font-size: 14px; }
+        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; z-index: 1; }
+        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; appearance: none; }
+        
         .custom-tabs-industrial .nav-link { color: var(--theme-text-secondary); border: none; border-bottom: 3px solid transparent; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; padding: 10px 20px; border-radius: 0; transition: all 0.2s ease; letter-spacing: 0.5px; }
         .custom-tabs-industrial .nav-link:hover { color: var(--theme-text-primary); background: rgba(244, 0, 9, 0.05); }
         .custom-tabs-industrial .nav-link.active { color: var(--color-red-primary) !important; background: transparent !important; border-bottom-color: var(--color-red-primary) !important; }
