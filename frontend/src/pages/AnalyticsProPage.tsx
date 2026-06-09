@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
-import { Row, Col, Tab, Nav, Badge, Table, OverlayTrigger, Popover, Form } from 'react-bootstrap';
+import { Row, Col, Tab, Nav, Badge, Table, OverlayTrigger, Popover, Form, Button } from 'react-bootstrap';
 import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle, FaMapMarkerAlt, FaSort, FaSortUp, FaSortDown, FaChevronRight } from 'react-icons/fa';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
@@ -17,16 +17,18 @@ import "react-datepicker/dist/react-datepicker.css";
 registerLocale('es', es);
 
 const AnalyticsProPage: FC = () => {
-  const { sedes } = useData();
+  const { sedes, marcas } = useData();
   const [loading, setLoading] = useState<boolean>(true);
   const [demandaData, setDemandaData] = useState<any[]>([]);
   const [maestroData, setMaestroData] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
 
   // --- FILTROS GLOBALES ---
   const [metric, setMetric] = useState<'valor' | 'cf' | 'cu'>('valor');
   const [selectedSede, setSelectedSede] = useState<string>('ALL');
   const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
+  const [selectedMarcasCobertura, setSelectedMarcasCobertura] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -48,9 +50,10 @@ const AnalyticsProPage: FC = () => {
     setLoading(true);
     let masterLoaded = false;
     let firestoreLoaded = false;
+    let productsLoaded = false;
 
     const checkLoading = () => {
-      if (masterLoaded && firestoreLoaded) setLoading(false);
+      if (masterLoaded && firestoreLoaded && productsLoaded) setLoading(false);
     };
 
     const demandaQuery = query(collection(db, 'demanda_historica'), orderBy('fecha', 'desc'));
@@ -71,6 +74,16 @@ const AnalyticsProPage: FC = () => {
       checkLoading();
     });
 
+    const unsubProducts = onSnapshot(collection(db, 'productos'), (snapshot) => {
+      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      productsLoaded = true;
+      checkLoading();
+    }, (error) => {
+      console.error("Error loading productos:", error);
+      productsLoaded = true;
+      checkLoading();
+    });
+
     const maestroRef = ref(rtdb, 'maestro/data');
     const unsubMaestro = onValue(maestroRef, (snapshot) => {
       if (snapshot.exists()) setMaestroData(snapshot.val() || []);
@@ -82,7 +95,7 @@ const AnalyticsProPage: FC = () => {
       checkLoading();
     });
 
-    return () => { unsubDemanda(); unsubMaestro(); };
+    return () => { unsubDemanda(); unsubMaestro(); unsubProducts(); };
   }, []);
 
   // --- FILTRADO JERÁRQUICO ---
@@ -409,6 +422,38 @@ const AnalyticsProPage: FC = () => {
     return data;
   }, [productPerformance, productSearch, productSort]);
 
+  const matrixCoberturaData = useMemo(() => {
+    if (selectedMarcasCobertura.length === 0) return { rutas: [], data: {} };
+
+    const productsMap = products.reduce((acc, p) => {
+      acc[String(p.sap).trim()] = p;
+      return acc;
+    }, {} as Record<string, any>);
+
+    const matrix: Record<string, Record<string, { cf: number; cu: number }>> = {};
+    const routeSet = new Set<string>();
+
+    filteredData.forEach(d => {
+      const rutaId = d.ruta || 'S/R';
+      routeSet.add(rutaId);
+      
+      if (!matrix[rutaId]) matrix[rutaId] = {};
+
+      (d.materiales || []).forEach((m: any) => {
+        const product = productsMap[String(m.sku).trim()];
+        if (product && selectedMarcasCobertura.includes(product.marcaId)) {
+          const mId = product.marcaId;
+          if (!matrix[rutaId][mId]) matrix[rutaId][mId] = { cf: 0, cu: 0 };
+          matrix[rutaId][mId].cf += m.cf || 0;
+          matrix[rutaId][mId].cu += m.cu || 0;
+        }
+      });
+    });
+
+    const sortedRoutes = Array.from(routeSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    return { rutas: sortedRoutes, data: matrix };
+  }, [filteredData, products, selectedMarcasCobertura]);
+
   const handleSort = (key: string, current: any, set: any) => {
     set((prev: any) => ({
       key,
@@ -532,6 +577,7 @@ const AnalyticsProPage: FC = () => {
               <Nav.Item><Nav.Link eventKey="dashboard" className="d-flex align-items-center gap-2"><FaHistory className="d-none d-md-inline" /> RESUMEN</Nav.Link></Nav.Item>
               <Nav.Item><Nav.Link eventKey="clientes" className="d-flex align-items-center gap-2"><FaUsers className="d-none d-md-inline" /> CLIENTES (RFM)</Nav.Link></Nav.Item>
               <Nav.Item><Nav.Link eventKey="rutas" className="d-flex align-items-center gap-2"><FaRoute className="d-none d-md-inline" /> RUTAS Y DÍAS</Nav.Link></Nav.Item>
+              <Nav.Item><Nav.Link eventKey="cobertura" className="d-flex align-items-center gap-2"><FaMapMarkerAlt className="d-none d-md-inline" /> COBERTURA</Nav.Link></Nav.Item>
               <Nav.Item><Nav.Link eventKey="productos" className="d-flex align-items-center gap-2"><FaBox className="d-none d-md-inline" /> PRODUCTOS</Nav.Link></Nav.Item>
             </Nav>
 
@@ -746,6 +792,141 @@ const AnalyticsProPage: FC = () => {
                 </div>
               </Tab.Pane>
 
+              <Tab.Pane eventKey="cobertura" className="h-100 overflow-auto custom-scrollbar p-3">
+                <div className="d-flex flex-column gap-3 h-100">
+                  <div className="admin-border-industrial p-4 flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
+                    <div className="d-flex flex-column gap-3">
+                      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div>
+                          <h5 className="fw-black mb-1 text-uppercase text-danger">Matriz de Cobertura Operativa</h5>
+                          <p className="text-secondary small fw-bold mb-0">Desglose matricial de Rutas vs Marcas (Volumen CF/CU).</p>
+                        </div>
+                        <div className="d-flex align-items-center gap-2 p-2 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', minWidth: '280px' }}>
+                          <FaStar className="text-warning ms-2" size={14} />
+                          <Form.Select 
+                            value="" 
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val && !selectedMarcasCobertura.includes(val)) {
+                                setSelectedMarcasCobertura(prev => [...prev, val]);
+                              }
+                            }} 
+                            className="bg-transparent border-0 small fw-black px-2 py-0 shadow-none text-uppercase" 
+                            style={{ outline: 'none', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
+                          >
+                            <option value="" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>+ AGREGAR MARCA A MATRIZ</option>
+                            {marcas
+                              .filter(m => !selectedMarcasCobertura.includes(m.id))
+                              .sort((a,b) => a.nombre.localeCompare(b.nombre))
+                              .map(m => (
+                                <option key={m.id} value={m.id} style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>{m.nombre.toUpperCase()}</option>
+                              ))
+                            }
+                          </Form.Select>
+                        </div>
+                      </div>
+
+                      {selectedMarcasCobertura.length > 0 && (
+                        <div className="d-flex flex-wrap gap-2 pt-3 border-top border-secondary border-opacity-10">
+                          {selectedMarcasCobertura.map(marcaId => {
+                            const marca = marcas.find(m => m.id === marcaId);
+                            return (
+                              <Badge key={marcaId} bg="danger" className="d-flex align-items-center gap-2 px-3 py-2 fw-black text-uppercase border-0" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>
+                                {marca?.nombre || 'MARCA'}
+                                <span style={{ cursor: 'pointer', opacity: 0.7 }} onClick={() => setSelectedMarcasCobertura(prev => prev.filter(id => id !== marcaId))}>✕</span>
+                              </Badge>
+                            );
+                          })}
+                          <Button variant="link" className="text-secondary small fw-black p-0 ms-3 text-decoration-none" onClick={() => setSelectedMarcasCobertura([])} style={{ fontSize: '0.65rem' }}>LIMPIAR TODO</Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedMarcasCobertura.length > 0 ? (
+                    <div className="admin-border-industrial overflow-auto flex-grow-1" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+                      <Table responsive hover bordered className="mb-0 industrial-table-v2 matrix-table h-100">
+                        <thead style={{ backgroundColor: 'var(--theme-background-tertiary)' }} className="sticky-top">
+                          <tr>
+                            <th rowSpan={2} className="align-middle text-center ps-4" style={{ width: '120px', fontSize: '0.7rem', backgroundColor: 'var(--theme-background-tertiary)' }}>ID RUTA</th>
+                            {selectedMarcasCobertura.map(mId => {
+                              const marca = marcas.find(m => m.id === mId);
+                              return (
+                                <th key={mId} colSpan={2} className="text-center text-uppercase fw-black bg-danger text-white py-2" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>
+                                  {marca?.nombre || 'MARCA'}
+                                </th>
+                              );
+                            })}
+                          </tr>
+                          <tr style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
+                            {selectedMarcasCobertura.map(mId => (
+                              <Fragment key={`sub-${mId}`}>
+                                <th className="text-center bg-dark text-success small fw-black py-1" style={{ fontSize: '0.6rem', borderRight: '1px solid rgba(255,255,255,0.05)', backgroundColor: '#000' }}>CF</th>
+                                <th className="text-center bg-dark text-warning small fw-black py-1" style={{ fontSize: '0.6rem', backgroundColor: '#000' }}>CU</th>
+                              </Fragment>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matrixCoberturaData.rutas.map(rutaId => (
+                            <tr key={rutaId}>
+                              <td className="text-center align-middle py-3">
+                                <span className="fw-black fs-6 text-uppercase" style={{ letterSpacing: '1px', color: 'var(--theme-text-primary)' }}>
+                                  {rutaId}
+                                </span>
+                              </td>
+                              {selectedMarcasCobertura.map(mId => {
+                                const vals = matrixCoberturaData.data[rutaId]?.[mId] || { cf: 0, cu: 0 };
+                                const hasData = vals.cf > 0 || vals.cu > 0;
+                                return (
+                                  <Fragment key={`${rutaId}-${mId}`}>
+                                    <td className={`text-center align-middle fw-black ${hasData ? 'text-success' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.85rem' }}>
+                                      {vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                                    </td>
+                                    <td className={`text-center align-middle fw-black ${hasData ? 'text-warning' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.85rem' }}>
+                                      {vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                                    </td>
+                                  </Fragment>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="sticky-bottom" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 5 }}>
+                          <tr className="border-top-2 border-danger">
+                            <td className="text-center fw-black text-uppercase small py-3" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>Total General</td>
+                            {selectedMarcasCobertura.map(mId => {
+                              let tCf = 0; let tCu = 0;
+                              matrixCoberturaData.rutas.forEach(rId => {
+                                const v = matrixCoberturaData.data[rId]?.[mId];
+                                if (v) { tCf += v.cf; tCu += v.cu; }
+                              });
+                              return (
+                                <Fragment key={`foot-${mId}`}>
+                                  <td className="text-center fw-black text-success fs-6" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>{tCf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                                  <td className="text-center fw-black text-warning fs-6" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>{tCu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                                </Fragment>
+                              );
+                            })}
+                          </tr>
+                        </tfoot>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="flex-grow-1 d-flex flex-column align-items-center justify-content-center p-5" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: '4px' }}>
+                      <div className="p-4 rounded-circle mb-4" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
+                        <FaMapMarkerAlt className="text-danger opacity-50" size={64} />
+                      </div>
+                      <h4 className="text-secondary fw-black text-uppercase mb-3" style={{ letterSpacing: '2px' }}>Matriz de Cobertura</h4>
+                      <p className="text-muted small fw-bold text-center" style={{ maxWidth: '400px', lineHeight: '1.6' }}>
+                        Seleccione las marcas en el panel superior para activar el comparativo transaccional por rutas. 
+                        El sistema generará automáticamente un desglose volumétrico de alta precisión.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Tab.Pane>
+
               <Tab.Pane eventKey="productos" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <div className="p-3 border-bottom border-secondary border-opacity-10"><SearchInput searchTerm={productSearch} onSearchChange={setProductSearch} placeholder="BUSCAR PRODUCTO POR NOMBRE O SAP..." className="mb-0" /></div>
@@ -787,6 +968,8 @@ const AnalyticsProPage: FC = () => {
         .react-datepicker__day:hover { background-color: var(--color-red-primary) !important; color: white !important; }
         .react-datepicker__day--selected { background-color: var(--color-red-primary) !important; color: white !important; }
         .react-datepicker__day--keyboard-selected { background-color: rgba(244, 0, 9, 0.2) !important; }
+        .matrix-table { border: 1px solid var(--theme-border-default) !important; }
+        .matrix-table th, .matrix-table td { border: 1px solid rgba(255,255,255,0.05) !important; }
       `}</style>
     </div>
   );
