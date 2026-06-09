@@ -53,7 +53,7 @@ service cloud.firestore {
 
     match /demanda_historica/{docId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin() || isSupervisor();
+      allow write: if isAdmin();
     }
 
     match /usuarios/{userId} {

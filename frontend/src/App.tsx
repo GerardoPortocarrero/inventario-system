@@ -80,7 +80,7 @@ const App: FC = () => {
                 <Route path="/admin/sedes" element={<ProtectedRoute allowedRoles={['admin']}><AdminSedesPage /></ProtectedRoute>} />
                 <Route path="/admin/beverage-types" element={<ProtectedRoute allowedRoles={['admin']}><AdminTipoBebidaPage /></ProtectedRoute>} />
                 <Route path="/admin/marcas" element={<ProtectedRoute allowedRoles={['admin']}><AdminMarcasPage /></ProtectedRoute>} />
-                <Route path="/admin/upload" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><AdminUploadPage /></ProtectedRoute>} />
+                <Route path="/admin/upload" element={<ProtectedRoute allowedRoles={['admin']}><AdminUploadPage /></ProtectedRoute>} />
                 <Route path="/analytics-pro" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><AnalyticsProPage /></ProtectedRoute>} />
 
                 {/* Página de no autorizado y redirecciones */}

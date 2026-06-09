@@ -70,18 +70,18 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
                   Analítica Pro
                 </Nav.Link>
               </Nav.Item>
-              <Nav.Item>
-                <Nav.Link as={Link} to="/admin/upload" className={location.pathname === '/admin/upload' ? 'active' : ''} onClick={handleLinkClick}>
-                  <FaDatabase className="me-2" />
-                  Datos
-                </Nav.Link>
-              </Nav.Item>
             </>
           )}
 
           {/* Enlaces para Administrador */}
           {isAdmin && (
             <>
+              <Nav.Item>
+                <Nav.Link as={Link} to="/admin/upload" className={location.pathname === '/admin/upload' ? 'active' : ''} onClick={handleLinkClick}>
+                  <FaDatabase className="me-2" />
+                  Datos
+                </Nav.Link>
+              </Nav.Item>
               <hr/>
               <Nav.Item>
                 <Nav.Link as={Link} to="/admin/users" className={location.pathname === '/admin/users' ? 'active' : ''} onClick={handleLinkClick}>
