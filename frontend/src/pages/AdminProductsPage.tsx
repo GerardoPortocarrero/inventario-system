@@ -433,6 +433,7 @@ const AdminProductsPage: FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [selectedMarca, setSelectedMarca] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [qrProduct, setQrProduct] = useState<Product | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -472,9 +473,19 @@ const AdminProductsPage: FC = () => {
     return products.filter(p => {
       const matchesSearch = matchSearchTerms(p, searchTerm, ['nombre', 'sap', 'basis', 'comercial', 'contaaya']);
       const matchesType = !selectedType || p.tipoBebidaId === selectedType;
-      return matchesSearch && matchesType;
+      const matchesMarca = !selectedMarca || p.marcaId === selectedMarca;
+      return matchesSearch && matchesType && matchesMarca;
     });
-  }, [products, searchTerm, selectedType]);
+  }, [products, searchTerm, selectedType, selectedMarca]);
+
+  const filteredMarcasForFilter = useMemo(() => {
+    if (!selectedType) return marcas;
+    return marcas.filter(m => m.tipoBebidaId === selectedType);
+  }, [marcas, selectedType]);
+
+  useEffect(() => {
+    setSelectedMarca('');
+  }, [selectedType]);
 
   const columns: Column<Product>[] = [
     { 
@@ -539,6 +550,13 @@ const AdminProductsPage: FC = () => {
                 value={selectedType}
                 onChange={setSelectedType}
                 options={beverageTypes.map(t => ({ value: t.id, label: t.nombre }))}
+                className="flex-shrink-0"
+              />
+              <GenericFilter
+                prefix="Marca"
+                value={selectedMarca}
+                onChange={setSelectedMarca}
+                options={filteredMarcasForFilter.map(m => ({ value: m.id, label: m.nombre }))}
                 className="flex-shrink-0"
               />
             </div>
