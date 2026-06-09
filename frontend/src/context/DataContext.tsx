@@ -14,10 +14,15 @@ interface SedeData extends MasterData {
   codigo: string;
 }
 
+interface MarcaData extends MasterData {
+  tipoBebidaId: string;
+}
+
 interface DataContextType {
   roles: MasterData[];
   sedes: SedeData[];
   beverageTypes: MasterData[];
+  marcas: MarcaData[];
   loadingMasterData: boolean;
 }
 
@@ -34,10 +39,12 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
   const [roles, setRoles] = useState<MasterData[]>([]);
   const [sedes, setSedes] = useState<SedeData[]>([]);
   const [beverageTypes, setBeverageTypes] = useState<MasterData[]>([]);
+  const [marcas, setMarcas] = useState<MarcaData[]>([]);
   const [loadingFlags, setLoadingFlags] = useState({ 
     roles: true, 
     sedes: true, 
-    types: true 
+    types: true,
+    marcas: true
   });
 
   useEffect(() => {
@@ -45,7 +52,8 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
       setRoles([]);
       setSedes([]);
       setBeverageTypes([]);
-      setLoadingFlags({ roles: true, sedes: true, types: true });
+      setMarcas([]);
+      setLoadingFlags({ roles: true, sedes: true, types: true, marcas: true });
       return;
     }
 
@@ -69,10 +77,20 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
       setLoadingFlags(prev => ({ ...prev, types: false }));
     });
 
+    const unsubMarcas = onSnapshot(collection(db, 'marcas'), (s) => {
+      setMarcas(s.docs.map(d => ({ 
+        id: d.id, 
+        nombre: d.get('nombre') || '',
+        tipoBebidaId: d.get('tipoBebidaId') || ''
+      })));
+      setLoadingFlags(prev => ({ ...prev, marcas: false }));
+    });
+
     return () => {
       unsubRoles();
       unsubSedes();
       unsubTypes();
+      unsubMarcas();
     };
   }, [currentUser]);
 
@@ -80,7 +98,8 @@ export const DataProvider: FC<{ children: React.ReactNode }> = ({ children }) =>
     roles,
     sedes,
     beverageTypes,
-    loadingMasterData: loadingFlags.roles || loadingFlags.sedes || loadingFlags.types
+    marcas,
+    loadingMasterData: loadingFlags.roles || loadingFlags.sedes || loadingFlags.types || loadingFlags.marcas
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

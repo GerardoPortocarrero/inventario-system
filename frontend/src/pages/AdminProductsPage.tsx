@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment, useRef } from 'react';
-import { Container, Form, Button, Alert, Spinner, Modal, Nav, Tab } from 'react-bootstrap';
+import { Container, Form, Button, Alert, Spinner, Modal, Nav, Tab, Row, Col } from 'react-bootstrap';
 import { db } from '../api/firebase';
 import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -25,6 +25,7 @@ interface Product {
   nombre: string;
   sap: string;
   tipoBebidaId: string;
+  marcaId: string;
   basis: string;
   comercial: string;
   contaaya: string;
@@ -199,10 +200,11 @@ const ProductForm: React.FC<{
   onCancel?: () => void;
   loading: boolean;
 }> = ({ initialData, onSubmit, onCancel, loading }) => {
-  const { beverageTypes } = useData();
+  const { beverageTypes, marcas } = useData();
   const [nombre, setNombre] = useState(initialData?.nombre || '');
   const [sap, setSap] = useState(initialData?.sap || '');
   const [tipoBebidaId, setTipoBebidaId] = useState(initialData?.tipoBebidaId || '');
+  const [marcaId, setMarcaId] = useState(initialData?.marcaId || '');
   const [basis, setBasis] = useState(initialData?.basis || '');
   const [comercial, setComercial] = useState(initialData?.comercial || '');
   const [contaaya, setContaaya] = useState(initialData?.contaaya || '');
@@ -215,8 +217,8 @@ const ProductForm: React.FC<{
     if (initialData) {
       setNombre(initialData.nombre || '');
       setSap(initialData.sap || '');
-      // Fallback to first beverage type if the product document lacks it
       setTipoBebidaId(initialData.tipoBebidaId || (beverageTypes.length > 0 ? beverageTypes[0].id : ''));
+      setMarcaId(initialData.marcaId || '');
       setBasis(initialData.basis || '');
       setComercial(initialData.comercial || '');
       setContaaya(initialData.contaaya || '');
@@ -234,6 +236,7 @@ const ProductForm: React.FC<{
     setNombre('');
     setSap('');
     setTipoBebidaId(beverageTypes.length > 0 ? beverageTypes[0].id : '');
+    setMarcaId('');
     setBasis('');
     setComercial('');
     setContaaya('');
@@ -250,6 +253,7 @@ const ProductForm: React.FC<{
         nombre, 
         sap, 
         tipoBebidaId,
+        marcaId,
         basis,
         comercial,
         contaaya,
@@ -265,19 +269,46 @@ const ProductForm: React.FC<{
   const selectedTypeName = beverageTypes.find(t => t.id === tipoBebidaId)?.nombre?.toLowerCase() || '';
   const isEnvase = selectedTypeName === 'envase';
 
+  const filteredMarcas = useMemo(() => {
+    return marcas.filter(m => m.tipoBebidaId === tipoBebidaId);
+  }, [marcas, tipoBebidaId]);
+
   return (
     <Form onSubmit={handleSubmit}>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.BEVERAGE_TYPE_NAME}</Form.Label>
-        <Form.Select 
-          value={tipoBebidaId} 
-          onChange={(e) => setTipoBebidaId(e.target.value)} 
-          required 
-          disabled={loading}
-        >
-          {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-        </Form.Select>
-      </Form.Group>
+      <Row>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>{UI_TEXTS.BEVERAGE_TYPE_NAME}</Form.Label>
+            <Form.Select 
+              value={tipoBebidaId} 
+              onChange={(e) => {
+                setTipoBebidaId(e.target.value);
+                setMarcaId(''); // Reset marca when type changes
+              }} 
+              required 
+              disabled={loading}
+            >
+              {beverageTypes.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>{UI_TEXTS.BRAND_NAME}</Form.Label>
+            <Form.Select
+              value={marcaId}
+              onChange={(e) => setMarcaId(e.target.value)}
+              required
+              disabled={loading || !tipoBebidaId}
+            >
+              <option value="">Seleccionar marca...</option>
+              {filteredMarcas.map(m => (
+                <option key={m.id} value={m.id}>{m.nombre}</option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
       <Form.Group className="mb-3">
         <Form.Label>{UI_TEXTS.PRODUCT_NAME}</Form.Label>
         <Form.Control
@@ -288,27 +319,33 @@ const ProductForm: React.FC<{
           disabled={loading}
         />
       </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.SAP}</Form.Label>
-        <Form.Control
-          type="text"
-          value={sap}
-          onChange={(e) => setSap(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>{UI_TEXTS.PRICE}</Form.Label>
-        <Form.Control
-          type="number"
-          step="0.01"
-          value={precio}
-          onChange={(e) => setPrecio(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </Form.Group>
+      <Row>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>{UI_TEXTS.SAP}</Form.Label>
+            <Form.Control
+              type="text"
+              value={sap}
+              onChange={(e) => setSap(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>{UI_TEXTS.PRICE}</Form.Label>
+            <Form.Control
+              type="number"
+              step="0.01"
+              value={precio}
+              onChange={(e) => setPrecio(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </Form.Group>
+        </Col>
+      </Row>
       {!isEnvase && (
         <>
           <Form.Group className="mb-3">
@@ -389,7 +426,7 @@ const AdminProductsPage: FC = () => {
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
-  const { beverageTypes, loadingMasterData } = useData();
+  const { beverageTypes, marcas, loadingMasterData } = useData();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -443,6 +480,10 @@ const AdminProductsPage: FC = () => {
     { 
       header: 'Tipo', 
       render: (p) => beverageTypes.find(t => t.id === p.tipoBebidaId)?.nombre || p.tipoBebidaId 
+    },
+    { 
+      header: 'Marca', 
+      render: (p) => marcas.find(m => m.id === p.marcaId)?.nombre || p.marcaId || 'N/A'
     },
     { accessorKey: 'nombre', header: UI_TEXTS.TABLE_HEADER_NAME },
     { accessorKey: 'sap', header: UI_TEXTS.SAP },

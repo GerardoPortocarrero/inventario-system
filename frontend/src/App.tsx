@@ -19,6 +19,7 @@ import AdminRolesPage from './pages/AdminRolesPage'; // Importa la nueva página
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminSedesPage from './pages/AdminSedesPage';
 import AdminTipoBebidaPage from './pages/AdminTipoBebidaPage';
+import AdminMarcasPage from './pages/AdminMarcasPage';
 import AdminUploadPage from './pages/AdminUploadPage';
 import AnalyticsProPage from './pages/AnalyticsProPage';
 
@@ -78,6 +79,7 @@ const App: FC = () => {
                 <Route path="/admin/products" element={<ProtectedRoute allowedRoles={['admin']}><AdminProductsPage /></ProtectedRoute>} />
                 <Route path="/admin/sedes" element={<ProtectedRoute allowedRoles={['admin']}><AdminSedesPage /></ProtectedRoute>} />
                 <Route path="/admin/beverage-types" element={<ProtectedRoute allowedRoles={['admin']}><AdminTipoBebidaPage /></ProtectedRoute>} />
+                <Route path="/admin/marcas" element={<ProtectedRoute allowedRoles={['admin']}><AdminMarcasPage /></ProtectedRoute>} />
                 <Route path="/admin/upload" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><AdminUploadPage /></ProtectedRoute>} />
                 <Route path="/analytics-pro" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><AnalyticsProPage /></ProtectedRoute>} />
 

@@ -41,6 +41,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /marcas/{marcaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     match /productos/{productId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();

@@ -287,18 +287,6 @@ const AnalyticsProPage: FC = () => {
     })).sort((a: any, b: any) => b.currentValue - a.currentValue);
   }, [filteredData, metric]);
 
-  const monthlyComparison = useMemo(() => {
-    if (sedeFilteredData.length === 0) return [];
-    const monthlyMap: Record<string, number> = {};
-    sedeFilteredData.forEach(d => { if (d.fechaObj) { 
-      const key = `${d.fechaObj.getFullYear()}-${String(d.fechaObj.getMonth() + 1).padStart(2, '0')}`; 
-      const val = metric === 'valor' ? d.totalValor : metric === 'cf' ? d.totalCF : d.totalCU;
-      monthlyMap[key] = (monthlyMap[key] || 0) + (val || 0); 
-    } });
-    const sorted = Object.entries(monthlyMap).sort((a, b) => a[0].localeCompare(b[0]));
-    return sorted.map(([month, total], i) => { const prevTotal = i > 0 ? sorted[i - 1][1] : 0; const delta = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0; return { month, total, prevTotal, delta }; });
-  }, [sedeFilteredData, metric]);
-
   const routePerformance = useMemo(() => {
     if (dateFilteredData.length === 0) return [];
     const routeMap: Record<string, any> = {};
@@ -335,7 +323,6 @@ const AnalyticsProPage: FC = () => {
   }, [dateFilteredData, metric]);
 
   const statsPro = useMemo(() => {
-    const lastMonth = monthlyComparison.length > 0 ? monthlyComparison[monthlyComparison.length - 1] : { delta: 0 };
     const topProd = productPerformance.length > 0 ? productPerformance[0] : { name: '---', currentValue: 0 };
     const topRoute = routePerformance.length > 0 ? routePerformance[0] : { ruta: '---', currentValue: 0 };
     const riskCount = rfmResults.filter(r => r.segment === 'Poco Frecuente' || r.segment === 'Hibernando').length;
@@ -353,7 +340,6 @@ const AnalyticsProPage: FC = () => {
       .sort((a, b) => b.value - a.value);
     
     return {
-      growth: lastMonth.delta,
       starProduct: topProd.name,
       starProductValue: topProd.currentValue,
       starRoute: topRoute.ruta,
@@ -361,29 +347,7 @@ const AnalyticsProPage: FC = () => {
       atRisk: riskCount,
       sedePerformance
     };
-  }, [monthlyComparison, productPerformance, routePerformance, rfmResults, dateFilteredData, metric]);
-
-  // --- ANÁLISIS DE AFINIDAD (Market Basket) ---
-  const affinityData = useMemo(() => {
-    if (filteredData.length === 0) return [];
-    const pairCounts: Record<string, { count: number; p1: string; p2: string }> = {};
-    
-    filteredData.forEach(visit => {
-      const prods = visit.materiales || [];
-      if (prods.length < 2) return;
-      
-      for (let i = 0; i < prods.length; i++) {
-        for (let j = i + 1; j < prods.length; j++) {
-          const names = [prods[i].descripcion, prods[j].descripcion].sort();
-          const key = names.join(' + ');
-          if (!pairCounts[key]) pairCounts[key] = { count: 0, p1: names[0], p2: names[1] };
-          pairCounts[key].count += 1;
-        }
-      }
-    });
-
-    return Object.values(pairCounts).sort((a, b) => b.count - a.count).slice(0, 20);
-  }, [filteredData]);
+  }, [productPerformance, routePerformance, rfmResults, dateFilteredData, metric]);
 
   const segmentCounts = useMemo(() => {
     const counts: Record<string, number> = { 'Campeón': 0, 'Fiel': 0, 'Poco Frecuente': 0, 'Hibernando': 0, 'Potencial': 0 };
@@ -569,8 +533,6 @@ const AnalyticsProPage: FC = () => {
               <Nav.Item><Nav.Link eventKey="clientes" className="d-flex align-items-center gap-2"><FaUsers className="d-none d-md-inline" /> CLIENTES (RFM)</Nav.Link></Nav.Item>
               <Nav.Item><Nav.Link eventKey="rutas" className="d-flex align-items-center gap-2"><FaRoute className="d-none d-md-inline" /> RUTAS Y DÍAS</Nav.Link></Nav.Item>
               <Nav.Item><Nav.Link eventKey="productos" className="d-flex align-items-center gap-2"><FaBox className="d-none d-md-inline" /> PRODUCTOS</Nav.Link></Nav.Item>
-              <Nav.Item><Nav.Link eventKey="afinidad" className="d-flex align-items-center gap-2"><FaExchangeAlt className="d-none d-md-inline" /> AFINIDAD</Nav.Link></Nav.Item>
-              <Nav.Item><Nav.Link eventKey="comparativa" className="d-flex align-items-center gap-2"><FaArrowUp className="d-none d-md-inline" /> COMPARATIVA</Nav.Link></Nav.Item>
             </Nav>
 
             <Tab.Content className="flex-grow-1 overflow-hidden position-relative">
@@ -799,27 +761,6 @@ const AnalyticsProPage: FC = () => {
                     <tbody>{finalProductPerformance.map((p) => (<tr key={p.sap}><td className="ps-4"><div className="d-flex flex-column"><span className="fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{p.name}</span><span className="text-secondary" style={{ fontSize: '0.6rem' }}>SAP: {p.sap}</span></div></td><td className="text-end align-middle fw-black">${p.valor.toLocaleString()}</td><td className="text-end align-middle fw-black text-success">{p.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td className="text-end align-middle fw-black text-warning pe-4">{p.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td></tr>))}</tbody>
                   </Table>
                 </div>
-              </Tab.Pane>
-
-              <Tab.Pane eventKey="afinidad" className="h-100 overflow-auto custom-scrollbar p-3">
-                <div className="d-flex justify-content-between align-items-end mb-4"><div><h5 className="fw-black mb-1 text-uppercase">Análisis de Afinidad (Market Basket)</h5><p className="text-secondary small fw-bold mb-0">Identifica qué productos se venden juntos.</p></div><Badge bg="danger" className="px-3 py-2 fw-black">TOP 20 COMBOS DETECTADOS</Badge></div>
-                <div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><Table responsive hover className="mb-0 industrial-table-v2">
-                  <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
-                    <tr><th className="ps-4">PRODUCTO A</th><th className="text-center">+</th><th>PRODUCTO B</th><th className="text-end pe-4">FRECUENCIA (VISITAS)</th></tr>
-                  </thead>
-                  <tbody>{affinityData.map((combo, i) => (<tr key={i}><td className="ps-4 fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{combo.p1}</td><td className="text-center text-danger fw-black">+</td><td className="fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{combo.p2}</td><td className="text-end pe-4 fw-black text-info fs-5">{combo.count.toLocaleString()}</td></tr>))}</tbody></Table></div>
-              </Tab.Pane>
-
-              <Tab.Pane eventKey="comparativa" className="h-100 overflow-auto custom-scrollbar p-3">
-                <h5 className="fw-black mb-3 text-uppercase">Análisis Comparativo Mensual</h5>
-                <Row className="g-3">
-                  <Col xs={12} lg={7}><div className="p-3 border border-secondary border-opacity-10" style={{ height: '400px', backgroundColor: 'var(--theme-background-secondary)' }}><ResponsiveContainer width="100%" height="100%"><BarChart data={monthlyComparison}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" /><XAxis dataKey="month" {...axisStyle} /><YAxis {...axisStyle} /><Tooltip {...chartTooltipStyle} /><Bar dataKey="total" fill="var(--color-red-primary)" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></Col>
-                  <Col xs={12} lg={5}><div className="admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}><Table responsive hover className="mb-0 industrial-table-v2">
-                    <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
-                      <tr><th className="ps-4">MES</th><th className="text-end">VENTA TOTAL</th><th className="text-end pe-4">DELTA (%)</th></tr>
-                    </thead>
-                    <tbody>{monthlyComparison.map((m) => (<tr key={m.month}><td className="ps-4 fw-black text-uppercase">{m.month}</td><td className="text-end fw-black">{formatValue(m.total)}</td><td className="text-end pe-4 align-middle"><Badge bg={m.delta >= 0 ? 'success' : 'danger'} className="fw-black">{m.delta >= 0 ? '+' : ''}{m.delta.toFixed(1)}%</Badge></td></tr>))}</tbody></Table></div></Col>
-                </Row>
               </Tab.Pane>
             </Tab.Content>
           </div>
