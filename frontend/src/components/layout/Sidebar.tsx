@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Nav } from 'react-bootstrap';
-import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle, FaDatabase } from 'react-icons/fa'; // Importar FaUserCircle y FaDatabase
+import { FaUsers, FaBoxOpen, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle, FaDatabase, FaChartLine, FaTag } from 'react-icons/fa'; // Importar FaUserCircle, FaDatabase y FaChartLine
 import './Sidebar.css';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -42,7 +42,7 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
         <div className="sidebar-sticky">
           <Nav.Item className="sidebar-title-item">
             <h4 className="sidebar-title text-center" style={{ color: 'var(--theme-text-primary)' }}>
-              Inventario A Y A
+              Ventas A Y A
             </h4>
           </Nav.Item>
 
@@ -55,57 +55,33 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
 
           <hr />
 
-          {/* Enlaces comunes para todos los roles */}
-          <Nav.Item>
-            <Nav.Link as={Link} to="/dashboard" className={location.pathname === '/dashboard' ? 'active' : ''} onClick={handleLinkClick}>
-              <FaHome className="me-2" />
-              Dashboard
-            </Nav.Link>
-          </Nav.Item>
-
-          {/* Enlaces para Preventista */}
-          {(userRole === 'preventista' || isAdmin) && (
-            <Nav.Item>
-              <Nav.Link as={Link} to="/stock" className={location.pathname === '/stock' ? 'active' : ''} onClick={handleLinkClick}>
-                <FaShoppingCart className="me-2" />
-                Stock
-              </Nav.Link>
-            </Nav.Item>
-          )}
-
-          {/* Enlaces para Almacenero */}
-          {(userRole === 'almacenero' || isAdmin) && (
-            <Nav.Item>
-              <Nav.Link as={Link} to="/almacen" className={location.pathname === '/almacen' ? 'active' : ''} onClick={handleLinkClick}>
-                <FaBoxOpen className="me-2" />
-                Controlador
-              </Nav.Link>
-            </Nav.Item>
-          )}
-
-          {/* Enlaces para Supervisor */}
+          {/* Enlaces para Supervisor / Admin */}
           {(userRole === 'supervisor' || isAdmin) && (
-            <Nav.Item>
-              <Nav.Link as={Link} to="/supervisor" className={location.pathname === '/supervisor' ? 'active' : ''} onClick={handleLinkClick}>
-                <FaClipboardList className="me-2" />
-                Supervisión
-              </Nav.Link>
-            </Nav.Item>
-          )}
-
-          {/* Enlaces para Supervisor / Admin - Carga de Datos */}
-          {(userRole === 'supervisor' || isAdmin) && (
-            <Nav.Item>
-              <Nav.Link as={Link} to="/admin/upload" className={location.pathname === '/admin/upload' ? 'active' : ''} onClick={handleLinkClick}>
-                <FaDatabase className="me-2" />
-                Datos
-              </Nav.Link>
-            </Nav.Item>
+            <>
+              <Nav.Item>
+                <Nav.Link as={Link} to="/supervisor" className={location.pathname === '/supervisor' ? 'active' : ''} onClick={handleLinkClick}>
+                  <FaClipboardList className="me-2" />
+                  Supervisión
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link as={Link} to="/analytics-pro" className={location.pathname === '/analytics-pro' ? 'active' : ''} onClick={handleLinkClick}>
+                  <FaChartLine className="me-2" />
+                  Analítica Pro
+                </Nav.Link>
+              </Nav.Item>
+            </>
           )}
 
           {/* Enlaces para Administrador */}
           {isAdmin && (
             <>
+              <Nav.Item>
+                <Nav.Link as={Link} to="/admin/upload" className={location.pathname === '/admin/upload' ? 'active' : ''} onClick={handleLinkClick}>
+                  <FaDatabase className="me-2" />
+                  Datos
+                </Nav.Link>
+              </Nav.Item>
               <hr/>
               <Nav.Item>
                 <Nav.Link as={Link} to="/admin/users" className={location.pathname === '/admin/users' ? 'active' : ''} onClick={handleLinkClick}>
@@ -135,6 +111,12 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
                 <Nav.Link as={Link} to="/admin/beverage-types" className={location.pathname === '/admin/beverage-types' ? 'active' : ''} onClick={handleLinkClick}>
                   <FaGlassMartiniAlt className="me-2" />
                   Tipo Bebida
+                </Nav.Link>
+              </Nav.Item>
+              <Nav.Item>
+                <Nav.Link as={Link} to="/admin/marcas" className={location.pathname === '/admin/marcas' ? 'active' : ''} onClick={handleLinkClick}>
+                  <FaTag className="me-2" />
+                  Marcas
                 </Nav.Link>
               </Nav.Item>
             </>

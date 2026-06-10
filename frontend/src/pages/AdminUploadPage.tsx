@@ -1,11 +1,11 @@
 import type { FC } from 'react';
 import { useState, useEffect, Fragment } from 'react';
-import { Row, Col, Button, Form, ProgressBar, Alert, Container } from 'react-bootstrap';
-import { FaCloudUploadAlt, FaFileExcel, FaHistory, FaExclamationTriangle, FaUser, FaDownload, FaCheckCircle, FaSpinner, FaShoppingCart, FaChartLine, FaGlassMartiniAlt, FaBox, FaInfoCircle } from 'react-icons/fa';
+import { Row, Col, Button, Form, ProgressBar, Alert, Container, Spinner } from 'react-bootstrap';
+import { FaCloudUploadAlt, FaFileExcel, FaHistory, FaExclamationTriangle, FaUser, FaDownload, FaCheckCircle, FaSpinner, FaShoppingCart, FaChartLine, FaGlassMartiniAlt, FaBox, FaInfoCircle, FaDatabase, FaTrash } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { db, rtdb } from '../api/firebase';
 import { ref, set, onValue } from 'firebase/database';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, Timestamp, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import GlobalSpinner from '../components/GlobalSpinner';
@@ -26,6 +26,14 @@ const AdminUploadPage: FC = () => {
   const [processingReports, setProcessingReports] = useState(false);
   const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0 });
 
+  // Estado para la nueva carga histórica de Analítica Pro
+  const [isUploadingHistorica, setIsUploadingHistorica] = useState(false);
+  const [historicaProgress, setHistoricaProgress] = useState(0);
+  const [historicaMsg, setHistoricaMsg] = useState<string | null>(null);
+
+  const [deleteDate, setDeleteDate] = useState('');
+  const [isDeletingDay, setIsDeletingDay] = useState(false);
+
   useEffect(() => {
     const types = ['maestro', 'demanda'];
     const unsubs = types.map(type => {
@@ -37,6 +45,129 @@ const AdminUploadPage: FC = () => {
     });
     return () => unsubs.forEach(unsub => unsub());
   }, []);
+
+  const deleteDayHistorica = async () => {
+    if (!deleteDate) return;
+    if (!window.confirm(`¿Está seguro de borrar todos los registros del día ${deleteDate}? Esta acción no se puede deshacer.`)) return;
+
+    setIsDeletingDay(true);
+    try {
+      const [year, month, day] = deleteDate.split('-').map(Number);
+      const start = new Date(year, month - 1, day, 0, 0, 0, 0);
+      const end = new Date(year, month - 1, day, 23, 59, 59, 999);
+
+      const demandaColl = collection(db, 'demanda_historica');
+      const q = query(
+        demandaColl, 
+        where('fecha', '>=', Timestamp.fromDate(start)), 
+        where('fecha', '<=', Timestamp.fromDate(end))
+      );
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        toast.error(`No se encontraron registros para el día ${deleteDate}.`);
+        setIsDeletingDay(false);
+        return;
+      }
+
+      const batchSize = 500;
+      const docs = snap.docs;
+      for (let i = 0; i < docs.length; i += batchSize) {
+        const batch = writeBatch(db);
+        docs.slice(i, i + batchSize).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+
+      toast.success(`¡Limpieza completada! Se eliminaron ${docs.length} registros del día ${deleteDate}.`);
+    } catch (err: any) {
+      console.error('Error al borrar día:', err);
+      toast.error(`Error al borrar: ${err.message}`);
+    } finally {
+      setIsDeletingDay(false);
+    }
+  };
+
+  const cleanId = (id: any) => String(id || '').trim().replace(/^0+/, '');
+
+  const processHistorica = async (file: File) => {
+    if (!file) return;
+    setIsUploadingHistorica(true);
+    setHistoricaProgress(0);
+    setHistoricaMsg('Obteniendo Maestro para conversiones...');
+
+    try {
+      const [maestroSnap, prodSnap] = await Promise.all([
+        new Promise<any[]>((res) => onValue(ref(rtdb, 'maestro/data'), (s) => res(s.exists() ? s.val() : []), { onlyOnce: true })),
+        getDocs(collection(db, 'productos'))
+      ]);
+      
+      const productsData = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const envaseTypeId = beverageTypes.find(t => t.nombre.toLowerCase().includes('envase'))?.id || '___NONE___';
+
+      setHistoricaMsg('Iniciando Web Worker (Cálculo de Volumen CF/CU)...');
+      
+      const worker = new Worker(new URL('../utils/dataProcessor.worker.ts', import.meta.url), { type: 'module' });
+      const fileArrayBuffer = await file.arrayBuffer();
+      worker.postMessage({ 
+        file: fileArrayBuffer, 
+        maestroData: maestroSnap,
+        productsData: productsData,
+        envaseTypeId: envaseTypeId
+      });
+
+      worker.onmessage = async (e) => {
+        const { success, results, error, metrics } = e.data;
+
+        if (!success) {
+          toast.error(`Error en procesamiento: ${error}`);
+          setIsUploadingHistorica(false);
+          worker.terminate();
+          return;
+        }
+
+        try {
+          const m = metrics || { totalRows: '?', matchedProducts: '?' };
+          setHistoricaMsg(`Sincronizando ${results.length} visitas (${m.matchedProducts} productos vinculados)...`);
+
+          const batchSize = 500;
+          const demandaColl = collection(db, 'demanda_historica');
+
+          for (let i = 0; i < results.length; i += batchSize) {
+            const batch = writeBatch(db);
+            const chunk = results.slice(i, i + batchSize);
+
+            chunk.forEach((item: any) => {
+              const docRef = doc(demandaColl, item.id);
+              batch.set(docRef, {
+                ...item,
+                fecha: Timestamp.fromMillis(item.fecha),
+                updatedAt: Timestamp.now()
+              });
+            });
+
+            await batch.commit();
+            const currentProgress = Math.min(Math.round(((i + chunk.length) / results.length) * 100), 100);
+            setHistoricaProgress(currentProgress);
+          }
+
+          toast.success(`¡Analítica Pro actualizada! ${results.length} visitas, ${m.totalRows} filas procesadas.`);
+          setIsUploadingHistorica(false);
+          setHistoricaMsg(null);
+        } catch (syncErr: any) {
+          console.error('Error sincronizando con Firestore:', syncErr);
+          toast.error(`Error de base de datos: ${syncErr.message}`);
+          setIsUploadingHistorica(false);
+        } finally {
+          worker.terminate();
+        }
+      };
+
+    } catch (err: any) {
+      toast.error(err.message);
+      setIsUploadingHistorica(false);
+    }
+  };
 
   const downloadTemplate = (type: 'maestro' | 'demanda') => {
     const columns = type === 'maestro' ? MAESTRO_COLUMNS : DEMANDA_COLUMNS;
@@ -54,22 +185,43 @@ const AdminUploadPage: FC = () => {
     const prodSnap = await getDocs(collection(db, 'productos'));
     const products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
     setReportProgress(prev => ({ ...prev, volumen: 30 }));
-    const productMap = products.reduce((acc, p) => ({ ...acc, [p.sap]: p }), {} as Record<string, any>);
-    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
+    
+    const productMap = products.reduce((acc, p) => ({ ...acc, [cleanId(p.sap)]: p }), {} as Record<string, any>);
+    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [cleanId(m.Codigo)]: m }), {} as Record<string, any>);
+    
     const UNIT_CASE_ML = 5677.92;
     const hier: Record<string, any> = {};
 
+    const parseSapNum = (val: any) => {
+      if (typeof val === 'number') return val;
+      const cleaned = String(val || '0').replace(/\./g, '').replace(',', '.');
+      return parseFloat(cleaned) || 0;
+    };
+
     setReportProgress(prev => ({ ...prev, volumen: 50 }));
     demanda.forEach(d => {
-      const prod = productMap[String(d.Material)];
-      const client = maestroMap[String(d.Solicitante)];
+      const prod = productMap[cleanId(d.Material)];
+      const client = maestroMap[cleanId(d.Solicitante)];
       if (!prod || !client) return;
+
       const loc = client.Loc || 'OTRO';
       const mesa = client['Mesa Com'] || client['MESA COM'] || 'SIN MESA';
       const ruta = client['Ruta com'] || client['RUTA COM'] || 'SIN RUTA';
-      let totalUnits = d.Medida === 'CAJ' ? (Number(d.Cantidad) || 0) * (prod.unidades || 1) : (Number(d.Cantidad) || 0);
-      const physicalBoxes = totalUnits / (prod.unidades || 1);
-      const unitCases = (totalUnits * (prod.mililitros || 0)) / UNIT_CASE_ML;
+      
+      const cantidad = parseSapNum(d.Cantidad);
+      const medida = String(d.Medida || '').toUpperCase();
+      
+      const unitsPerCase = parseFloat(prod.unidades) || 1;
+      const mlPerUnit = parseFloat(prod.mililitros) || 0;
+      const isCase = (medida === 'CAJ' || medida === 'CJ' || medida === 'CS' || medida === 'CASE' || medida.includes('CJ'));
+
+      const totalUnits = isCase ? (cantidad * unitsPerCase) : cantidad;
+
+      let physicalBoxes = 0;
+      if (mlPerUnit > 0) {
+        physicalBoxes = isCase ? cantidad : (cantidad / unitsPerCase);
+      }
+      const unitCases = (totalUnits * mlPerUnit) / UNIT_CASE_ML;
 
       if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, totalCF: 0, totalUC: 0, mesas: {} };
       if (!hier[loc].mesas[mesa]) hier[loc].mesas[mesa] = { totalCF: 0, totalUC: 0, rutas: {} };
@@ -93,7 +245,7 @@ const AdminUploadPage: FC = () => {
 
   const generateReportEficiencia = async (demanda: any[], maestro: any[]) => {
     setReportProgress(prev => ({ ...prev, eficiencia: 10 }));
-    const demandaSet = new Set(demanda.map(d => String(d.Solicitante)));
+    const demandaSet = new Set(demanda.map(d => cleanId(d.Solicitante)));
     const hier: Record<string, any> = {};
 
     maestro.forEach(m => {
@@ -110,7 +262,7 @@ const AdminUploadPage: FC = () => {
       if (!hier[loc].mesas[mesa].rutas[ruta]) hier[loc].mesas[mesa].rutas[ruta] = { schedules: {} };
 
       const r = hier[loc].mesas[mesa].rutas[ruta];
-      const isEfec = demandaSet.has(String(m.Codigo));
+      const isEfec = demandaSet.has(cleanId(m.Codigo));
 
       dias.forEach(dia => {
         const key = `${dia}_${sem}`;
@@ -132,15 +284,23 @@ const AdminUploadPage: FC = () => {
     setReportProgress(prev => ({ ...prev, bebidas: 10 }));
     const prodSnap = await getDocs(collection(db, 'productos'));
     const products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-    const productMap = products.reduce((acc, p) => ({ ...acc, [p.sap]: p }), {} as Record<string, any>);
-    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
+    
+    const productMap = products.reduce((acc, p) => ({ ...acc, [cleanId(p.sap)]: p }), {} as Record<string, any>);
+    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [cleanId(m.Codigo)]: m }), {} as Record<string, any>);
+    
     const UNIT_CASE_ML = 5677.92;
     const hier: Record<string, any> = {};
 
+    const parseSapNum = (val: any) => {
+      if (typeof val === 'number') return val;
+      const cleaned = String(val || '0').replace(/\./g, '').replace(',', '.');
+      return parseFloat(cleaned) || 0;
+    };
+
     setReportProgress(prev => ({ ...prev, bebidas: 40 }));
     demanda.forEach(d => {
-      const prod = productMap[String(d.Material)];
-      const client = maestroMap[String(d.Solicitante)];
+      const prod = productMap[cleanId(d.Material)];
+      const client = maestroMap[cleanId(d.Solicitante)];
       if (!prod || !client) return;
 
       const loc = client.Loc || 'OTRO';
@@ -148,9 +308,20 @@ const AdminUploadPage: FC = () => {
       const tipoNombre = beverageTypes.find(t => t.id === tipoId)?.nombre || 'OTROS';
       const rutaCom = client['Ruta com'] || client['RUTA COM'] || 'SIN RUTA';
 
-      let totalUnits = d.Medida === 'CAJ' ? (Number(d.Cantidad) || 0) * (prod.unidades || 1) : (Number(d.Cantidad) || 0);
-      const physicalBoxes = totalUnits / (prod.unidades || 1);
-      const unitCases = (totalUnits * (prod.mililitros || 0)) / UNIT_CASE_ML;
+      const cantidad = parseSapNum(d.Cantidad);
+      const medida = String(d.Medida || '').toUpperCase();
+
+      const unitsPerCase = parseFloat(prod.unidades) || 1;
+      const mlPerUnit = parseFloat(prod.mililitros) || 0;
+      const isCase = (medida === 'CAJ' || medida === 'CJ' || medida === 'CS' || medida === 'CASE' || medida.includes('CJ'));
+
+      const totalUnits = isCase ? (cantidad * unitsPerCase) : cantidad;
+
+      let physicalBoxes = 0;
+      if (mlPerUnit > 0) {
+        physicalBoxes = isCase ? cantidad : (cantidad / unitsPerCase);
+      }
+      const unitCases = (totalUnits * mlPerUnit) / UNIT_CASE_ML;
 
       if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, tipos: {} };
       if (!hier[loc].tipos[tipoId]) hier[loc].tipos[tipoId] = { nombre: tipoNombre.toUpperCase(), totalCF: 0, totalUC: 0, rutas: {} };
@@ -175,18 +346,12 @@ const AdminUploadPage: FC = () => {
 
   const generateReportDuplicados = async (demanda: any[], maestro: any[]) => {
     setReportProgress(prev => ({ ...prev, duplicados: 10 }));
-    
-    // 1. Filtrar registros activos (Status != 'C')
-    const demandaActiva = demanda.filter(d => String(d.Status).toUpperCase() !== 'C');
-    
-    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [String(m.Codigo)]: m }), {} as Record<string, any>);
+    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [cleanId(m.Codigo)]: m }), {} as Record<string, any>);
     const hier: Record<string, any> = {};
-
-    // 2. Agrupar la demanda activa por Solicitante y Documento para comparar carritos completos
-    const orderGroups: Record<string, Record<string, any[]>> = {}; // { solicitanteId: { documentoId: [items] } }
+    const orderGroups: Record<string, Record<string, any[]>> = {}; 
     
-    demandaActiva.forEach(d => {
-      const solId = String(d.Solicitante);
+    demanda.forEach(d => {
+      const solId = cleanId(d.Solicitante);
       const docId = String(d.Documento);
       if (!orderGroups[solId]) orderGroups[solId] = {};
       if (!orderGroups[solId][docId]) orderGroups[solId][docId] = [];
@@ -195,45 +360,25 @@ const AdminUploadPage: FC = () => {
 
     setReportProgress(prev => ({ ...prev, duplicados: 50 }));
 
-    // 3. Comparar documentos del mismo solicitante
     Object.entries(orderGroups).forEach(([solId, docs]) => {
       const docIds = Object.keys(docs);
       if (docIds.length < 2) return;
-
       const duplicatePairs: any[] = [];
 
       for (let i = 0; i < docIds.length; i++) {
         for (let j = i + 1; j < docIds.length; j++) {
           const docA = docs[docIds[i]];
           const docB = docs[docIds[j]];
-
-          // REGLA DE ORO: Si no tienen la misma cantidad de ítems, no son duplicados
           if (docA.length !== docB.length) continue;
 
-          // Lógica de comparación normalizada
-          // Normalizamos Material (sin ceros) y Cantidad (número) para una firma exacta
-          const getNormalizedSignature = (items: any[]) => items
-            .map(item => {
-              const mat = String(item.Material || '').trim().replace(/^0+/, '');
-              const cant = parseFloat(item.Cantidad) || 0;
-              const med = String(item.Medida || '').trim().toUpperCase();
-              return `${mat}_${cant}_${med}`;
-            })
-            .sort()
-            .join('|');
+          const getSignature = (items: any[]) => items
+            .map(it => `${cleanId(it.Material)}_${parseFloat(it.Cantidad)}_${String(it.Medida).toUpperCase()}`)
+            .sort().join('|');
 
-          if (getNormalizedSignature(docA) === getNormalizedSignature(docB)) {
+          if (getSignature(docA) === getSignature(docB)) {
             duplicatePairs.push({
-              doc1: { 
-                id: docIds[i], 
-                hora: docA[0].Hora || '--:--',
-                items: docA.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) 
-              },
-              doc2: { 
-                id: docIds[j], 
-                hora: docB[0].Hora || '--:--',
-                items: docB.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) 
-              }
+              doc1: { id: docIds[i], hora: docA[0].Hora || '--:--', items: docA.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) },
+              doc2: { id: docIds[j], hora: docB[0].Hora || '--:--', items: docB.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) }
             });
           }
         }
@@ -242,23 +387,8 @@ const AdminUploadPage: FC = () => {
       if (duplicatePairs.length > 0) {
         const client = maestroMap[solId];
         const loc = client?.Loc || 'OTRO';
-        const clienteNombre = client?.Cliente || 'CLIENTE DESCONOCIDO';
-
-        if (!hier[loc]) {
-          hier[loc] = { 
-            nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, 
-            id: loc, 
-            clientes: {} 
-          };
-        }
-
-        if (!hier[loc].clientes[solId]) {
-          hier[loc].clientes[solId] = {
-            nombre: clienteNombre,
-            codigo: solId,
-            duplas: []
-          };
-        }
+        if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, id: loc, clientes: {} };
+        if (!hier[loc].clientes[solId]) hier[loc].clientes[solId] = { nombre: client?.Cliente || 'CLIENTE DESCONOCIDO', codigo: solId, duplas: [] };
         hier[loc].clientes[solId].duplas.push(...duplicatePairs);
       }
     });
@@ -295,12 +425,12 @@ const AdminUploadPage: FC = () => {
 
         if (type === 'demanda') {
           setProcessingReports(true);
-          const maestroSnap = await new Promise<any[]>((res) => onValue(ref(rtdb, 'maestro/data'), (s) => res(s.exists() ? s.val() : []), { onlyOnce: true }));
+          const maestroMap = await new Promise<any[]>((res) => onValue(ref(rtdb, 'maestro/data'), (s) => res(s.exists() ? s.val() : []), { onlyOnce: true }));
           await Promise.all([
-            generateReportVolumen(sanitizedData, maestroSnap),
-            generateReportEficiencia(sanitizedData, maestroSnap),
-            generateReportBebidas(sanitizedData, maestroSnap),
-            generateReportDuplicados(sanitizedData, maestroSnap)
+            generateReportVolumen(sanitizedData, maestroMap),
+            generateReportEficiencia(sanitizedData, maestroMap),
+            generateReportBebidas(sanitizedData, maestroMap),
+            generateReportDuplicados(sanitizedData, maestroMap)
           ]);
           setTimeout(() => {
             setProcessingReports(false);
@@ -387,6 +517,70 @@ const AdminUploadPage: FC = () => {
                 ))}
               </Row>
 
+              {/* SECCIÓN ANALÍTICA PRO: CARGA HISTÓRICA AGREGADA */}
+              <div className="admin-border-industrial p-4 mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid #ffc107 !important' }}>
+                <div className="d-flex align-items-center mb-3">
+                  <div className="p-3 me-3 d-flex align-items-center justify-content-center" style={{ backgroundColor: 'rgba(255, 193, 7, 0.1)', border: '1px solid #ffc107' }}>
+                    <FaDatabase className="text-warning fs-3" />
+                  </div>
+                  <div className="flex-grow-1">
+                    <h6 className="mb-0 fw-black text-uppercase" style={{ letterSpacing: '1px' }}>Carga Histórica: Analítica Pro</h6>
+                    <small className="text-warning fw-bold" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Sistema Acumulativo e Inteligente (Firestore)</small>
+                  </div>
+                </div>
+                
+                <p className="mb-4 text-secondary" style={{ fontSize: '0.8rem' }}>
+                  A diferencia de la carga diaria, este proceso **agrega** la información al historial existente. 
+                  Calcula automáticamente CF/CU y agrupa por cliente/día para análisis de tendencias de largo plazo.
+                </p>
+
+                <Row className="g-3">
+                  <Col xs={12} md={8}>
+                    {isUploadingHistorica ? (
+                      <div className="p-3 border h-100" style={{ backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)' }}>
+                        <div className="d-flex justify-content-between mb-2 small fw-black text-uppercase">
+                          <span className="text-secondary">{historicaMsg || 'Procesando...'}</span>
+                          <span className="text-warning">{historicaProgress}%</span>
+                        </div>
+                        <ProgressBar now={historicaProgress} variant="warning" style={{ height: '4px' }} />
+                      </div>
+                    ) : (
+                      <Form.Group className="h-100">
+                        <Form.Label htmlFor="upload-historica" className="btn btn-outline-warning w-100 h-100 d-flex align-items-center justify-content-center py-3 fw-black text-uppercase" style={{ fontSize: '0.8rem' }}>
+                          <FaCloudUploadAlt className="me-2 fs-5" /> Iniciar Carga Histórica Inteligente
+                        </Form.Label>
+                        <Form.Control id="upload-historica" type="file" accept=".xlsx, .xls, .csv" hidden onChange={(e: any) => processHistorica(e.target.files?.[0])} disabled={isUploadingHistorica} />
+                      </Form.Group>
+                    )}
+                  </Col>
+                  <Col xs={12} md={4}>
+                    <div className="p-3 border h-100" style={{ backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)' }}>
+                      <label className="small fw-black text-uppercase text-secondary mb-2" style={{ fontSize: '0.6rem' }}>Mantenimiento de Datos</label>
+                      <div className="d-flex gap-2">
+                        <Form.Control 
+                          type="date" 
+                          value={deleteDate} 
+                          onChange={(e) => setDeleteDate(e.target.value)}
+                          className="bg-transparent border-secondary border-opacity-25"
+                          style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}
+                          disabled={isDeletingDay}
+                        />
+                        <Button 
+                          variant="danger" 
+                          size="sm" 
+                          className="fw-black text-uppercase px-3"
+                          style={{ fontSize: '0.7rem' }}
+                          onClick={deleteDayHistorica}
+                          disabled={isDeletingDay || !deleteDate}
+                        >
+                          {isDeletingDay ? <Spinner size="sm" animation="border" /> : <FaTrash />}
+                        </Button>
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+
               <div className="admin-border-industrial p-4 mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                 <div className="d-flex align-items-center mb-4 gap-2">
                   <FaSpinner className={`${processingReports || isUploading ? 'spinner-animation' : ''} text-danger`} size={20} />
@@ -457,4 +651,3 @@ const AdminUploadPage: FC = () => {
 };
 
 export default AdminUploadPage;
-

@@ -11,18 +11,17 @@ import { SPINNER_VARIANTS } from './constants'; // Import SPINNER_VARIANTS
 
 // Importa las páginas
 import LoginPage from './pages/LoginPage';
-import Dashboard from './pages/Dashboard';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import ProfilePage from './pages/ProfilePage';
-import StockPage from './pages/StockPage';
-import AlmacenPage from './pages/AlmacenPage';
 import SupervisorPage from './pages/SupervisorPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminRolesPage from './pages/AdminRolesPage'; // Importa la nueva página de roles
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminSedesPage from './pages/AdminSedesPage';
 import AdminTipoBebidaPage from './pages/AdminTipoBebidaPage';
+import AdminMarcasPage from './pages/AdminMarcasPage';
 import AdminUploadPage from './pages/AdminUploadPage';
+import AnalyticsProPage from './pages/AnalyticsProPage';
 
 // Importa los archivos CSS
 import './App.css';
@@ -71,23 +70,22 @@ const App: FC = () => {
             <Container fluid className="py-3 flex-grow-1">
               <Routes>
                 {/* Ruta pública para usuarios autenticados */}
-                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<ProfilePage />} />
 
                 {/* Rutas Protegidas */}
-                <Route path="/stock" element={<ProtectedRoute allowedRoles={['preventista']}><StockPage /></ProtectedRoute>} />
-                <Route path="/almacen" element={<ProtectedRoute allowedRoles={['almacenero']}><AlmacenPage /></ProtectedRoute>} />
                 <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['supervisor']}><SupervisorPage /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>} />
                 <Route path="/admin/roles" element={<ProtectedRoute allowedRoles={['admin']}><AdminRolesPage /></ProtectedRoute>} />
                 <Route path="/admin/products" element={<ProtectedRoute allowedRoles={['admin']}><AdminProductsPage /></ProtectedRoute>} />
                 <Route path="/admin/sedes" element={<ProtectedRoute allowedRoles={['admin']}><AdminSedesPage /></ProtectedRoute>} />
                 <Route path="/admin/beverage-types" element={<ProtectedRoute allowedRoles={['admin']}><AdminTipoBebidaPage /></ProtectedRoute>} />
-                <Route path="/admin/upload" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><AdminUploadPage /></ProtectedRoute>} />
+                <Route path="/admin/marcas" element={<ProtectedRoute allowedRoles={['admin']}><AdminMarcasPage /></ProtectedRoute>} />
+                <Route path="/admin/upload" element={<ProtectedRoute allowedRoles={['admin']}><AdminUploadPage /></ProtectedRoute>} />
+                <Route path="/analytics-pro" element={<ProtectedRoute allowedRoles={['admin', 'supervisor']}><AnalyticsProPage /></ProtectedRoute>} />
 
                 {/* Página de no autorizado y redirecciones */}
                 <Route path="/unauthorized" element={<UnauthorizedPage />} />
-                <Route path="*" element={<Navigate to="/dashboard" />} />
+                <Route path="*" element={<Navigate to="/supervisor" />} />
               </Routes>
             </Container>
           </div>

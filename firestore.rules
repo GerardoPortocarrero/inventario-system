@@ -16,24 +16,12 @@ service cloud.firestore {
       return getUserData().rolId;
     }
 
-    function getSedeId() {
-      return getUserData().sedeId;
-    }
-
     function isAdmin() {
       return isAuthenticated() && getRole() == 'admin';
     }
 
     function isSupervisor() {
       return isAuthenticated() && getRole() == 'supervisor';
-    }
-
-    function isPreventista() {
-      return isAuthenticated() && getRole() == 'preventista';
-    }
-
-    function isAlmacenero() {
-      return isAuthenticated() && getRole() == 'almacenero';
     }
 
     // --- Collection Rules ---
@@ -53,7 +41,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /marcas/{marcaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     match /productos/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /demanda_historica/{docId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
@@ -64,31 +62,6 @@ service cloud.firestore {
       allow update: if request.auth.uid == userId && 
                     request.resource.data.rolId == resource.data.rolId &&
                     request.resource.data.sedeId == resource.data.sedeId;
-    }
-
-    match /unidadesDeStock/{unitId} {
-      allow read: if isAdmin() || isSupervisor() || (isAuthenticated() && resource.data.sedeId == getSedeId());
-      allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
-    }
-
-    match /inventario_diario/{docId} {
-      allow read: if isAuthenticated();
-      // Solo Admin y Almaceneros pueden escribir/actualizar el inventario físico.
-      // Los preventistas ya NO tienen permisos de update (antes los tenían para preventa).
-      allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
-      allow update: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
-    }
-
-    match /transito/{docId} {
-      allow read: if isAdmin() || isSupervisor() || isAlmacenero();
-      allow write: if isAdmin() || (isAlmacenero() && request.resource.data.sedeId == getSedeId());
-    }
-
-    match /ordenes/{orderId} {
-      // Las órdenes ahora son solo para histórico o supervisión si existen. 
-      // Los preventistas ya NO pueden crear órdenes.
-      allow read: if isAdmin() || isSupervisor();
-      allow write: if isAdmin();
     }
   }
 }

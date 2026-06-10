@@ -23,7 +23,7 @@
     },
     "reportes": {
       ".read": "root.child('user_roles').child(auth.uid).val() === 'admin' || root.child('user_roles').child(auth.uid).val() === 'supervisor'",
-      ".write": "root.child('user_roles').child(auth.uid).val() === 'admin' || root.child('user_roles').child(auth.uid).val() === 'supervisor'",
+      ".write": "root.child('user_roles').child(auth.uid).val() === 'admin'",
       "$reporte_name": {
         "metadata": {
           ".validate": "newData.hasChildren(['lastUpdated', 'processedBy'])"

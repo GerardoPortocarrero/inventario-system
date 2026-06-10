@@ -41,11 +41,11 @@ const LoginPage: FC = () => {
       <div className="mb-3 p-2" style={{ backgroundColor: 'white', borderRadius: '8px', maxWidth: '300px', width: '100%' }}> {/* Añadido maxWidth y width para que coincida con la Card */}
         <img
           src={logo}
-          alt="Logo Inventario A Y A"
+          alt="Logo Ventas A Y A"
           style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto' }} // Logo al 100% del ancho del contenedor
         />
       </div>
-      <h2 className="text-center mb-4" style={{ color: 'var(--theme-text-primary)' }}>Inventario A Y A</h2>
+      <h2 className="text-center mb-4" style={{ color: 'var(--theme-text-primary)' }}>Ventas A Y A</h2>
       <Card style={{ maxWidth: '300px', width: '100%' }}> {/* Login menos ancho */}
         <Card.Body>
           {error && <Alert variant="danger">{error}</Alert>}

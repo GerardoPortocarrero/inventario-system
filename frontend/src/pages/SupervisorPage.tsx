@@ -44,8 +44,8 @@ const RutaVolumenBebidaItem = memo(({
                     <span className="fw-bold p-sap">SAP: {sap}</span>
                   </div>
                   <div className="d-flex gap-2 align-items-center ps-2">
-                    <Badge bg="dark" className="p-badge">{p.cantU} UND</Badge>
-                    <Badge bg="light" className="p-badge text-dark border">{p.cantC.toFixed(1)} CJ</Badge>
+                    <Badge bg="secondary" className="p-badge border border-secondary border-opacity-25" style={{ backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-primary)' }}>{p.cantU} UND</Badge>
+                    <Badge bg="secondary" className="p-badge border border-secondary border-opacity-25" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>{p.cantC.toFixed(1)} CJ</Badge>
                   </div>
                 </ListGroup.Item>
               ))}
@@ -98,21 +98,34 @@ const SupervisorPage: FC = () => {
   const [maestroData, setMaestroData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const [selectedSedeId, setSelectedSedeId] = useState<string>('GLOBAL');
-  const [selectedReportType, setSelectedReportType] = useState<ReportType>('VOLUMEN');
+  const [selectedSedeId, setSelectedSedeId] = useState<string>(() => localStorage.getItem('sup_selectedSedeId') || 'GLOBAL');
+  const [selectedReportType, setSelectedReportType] = useState<ReportType>(() => (localStorage.getItem('sup_selectedReportType') as ReportType) || 'VOLUMEN');
   
   // Filtros para Eficiencia
-  const [selectedDia, setSelectedDia] = useState<string>(['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'][new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
-  const [selectedSemanas, setSelectedSemanas] = useState<string[]>([]);
-  const [selectedBebidaTypes, setSelectedBebidaTypes] = useState<string[]>([]);
+  const [selectedDia, setSelectedDia] = useState<string>(() => localStorage.getItem('sup_selectedDia') || ['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'][new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
+  const [selectedSemanas, setSelectedSemanas] = useState<string[]>(() => {
+    const saved = localStorage.getItem('sup_selectedSemanas');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedBebidaTypes, setSelectedBebidaTypes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('sup_selectedBebidaTypes');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
+
+  // Efectos para persistencia
+  useEffect(() => { localStorage.setItem('sup_selectedSedeId', selectedSedeId); }, [selectedSedeId]);
+  useEffect(() => { localStorage.setItem('sup_selectedReportType', selectedReportType); }, [selectedReportType]);
+  useEffect(() => { localStorage.setItem('sup_selectedDia', selectedDia); }, [selectedDia]);
+  useEffect(() => { localStorage.setItem('sup_selectedSemanas', JSON.stringify(selectedSemanas)); }, [selectedSemanas]);
+  useEffect(() => { localStorage.setItem('sup_selectedBebidaTypes', JSON.stringify(selectedBebidaTypes)); }, [selectedBebidaTypes]);
 
   // Estado para controlar qué sede está abierta en el acordeón (Lazy Rendering técnico)
   const [activeLocId, setActiveLocId] = useState<string | null>(null);
 
-  // Inicializar tipos de bebida
+  // Inicializar tipos de bebida solo si no hay persistencia
   useEffect(() => {
-    if (beverageTypes.length > 0 && selectedBebidaTypes.length === 0) {
+    if (beverageTypes.length > 0 && selectedBebidaTypes.length === 0 && !localStorage.getItem('sup_selectedBebidaTypes')) {
       setSelectedBebidaTypes(beverageTypes.map(t => t.id));
     }
   }, [beverageTypes, selectedBebidaTypes.length]);
@@ -198,7 +211,7 @@ const SupervisorPage: FC = () => {
   }, [eficienciaReport]);
 
   useEffect(() => {
-    if (selectedSemanas.length === 0 && availableSemanas.length > 0) {
+    if (selectedSemanas.length === 0 && availableSemanas.length > 0 && !localStorage.getItem('sup_selectedSemanas')) {
       setSelectedSemanas([availableSemanas[availableSemanas.length - 1]]);
     }
   }, [availableSemanas, selectedSemanas.length]);
@@ -576,7 +589,7 @@ const SupervisorPage: FC = () => {
                               <Col xs={6} className="border-end border-theme-default">
                                 <div className="dup-doc-header">
                                   <span className="fw-black"># {dupla.doc1.id}</span>
-                                  <Badge bg="secondary" className="dup-time-badge">{dupla.doc1.hora}</Badge>
+                                  <span className="fw-black text-danger ms-auto" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>{dupla.doc1.hora}</span>
                                 </div>
                                 <div className="p-2">
                                   {dupla.doc1.items.map((item: any, i: number) => (
@@ -595,7 +608,7 @@ const SupervisorPage: FC = () => {
                               <Col xs={6}>
                                 <div className="dup-doc-header">
                                   <span className="fw-black"># {dupla.doc2.id}</span>
-                                  <Badge bg="secondary" className="dup-time-badge">{dupla.doc2.hora}</Badge>
+                                  <span className="fw-black text-danger ms-auto" style={{ fontSize: '0.85rem', letterSpacing: '0.5px' }}>{dupla.doc2.hora}</span>
                                 </div>
                                 <div className="p-2">
                                   {dupla.doc2.items.map((item: any, i: number) => (

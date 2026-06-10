@@ -28,6 +28,14 @@
   --theme-icon-bg: #000000;
   --theme-icon-color: rgba(255,255,255,0.7);
   --theme-calendar-invert: 1;
+
+  /* Colores Segmentación RFM (Accesibilidad) */
+  --rfm-campeon: #ff4d4d;
+  --rfm-fiel: #ff7676;
+  --rfm-nueva-promesa: #ff9b9b;
+  --rfm-potencial: #ffbebe;
+  --rfm-en-riesgo: #ffc107;
+  --rfm-hibernando: #888888;
 }
 
 /* 2. Sobrescribir variables para el tema claro cuando el body tiene clase .theme-light */
@@ -44,6 +52,14 @@ body.theme-light {
   --theme-icon-bg: #e4e6e9;
   --theme-icon-color: #1c1e21;
   --theme-calendar-invert: 0;
+
+  /* Colores Segmentación RFM (Accesibilidad - Más oscuros para fondo claro) */
+  --rfm-campeon: #d32f2f;
+  --rfm-fiel: #e53935;
+  --rfm-nueva-promesa: #f44336;
+  --rfm-potencial: #ef5350;
+  --rfm-en-riesgo: #f57c00;
+  --rfm-hibernando: #616161;
 }
 
 html, body, #root { /* Asegura que html y body y el div #root ocupen el 100% del alto */
