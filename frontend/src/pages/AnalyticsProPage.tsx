@@ -515,58 +515,54 @@ const AnalyticsProPage: FC = () => {
   return (
     <div className="admin-layout-container flex-column gap-2 gap-md-3">
       <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '1rem 1.25rem', borderLeft: '4px solid var(--color-red-primary)' }}>
-        <Row className="align-items-center g-3">
-          <Col xs={12} lg={4}>
-            <div className="d-flex flex-column">
-              <h3 className="fw-black mb-0 d-flex align-items-center gap-2"><FaChartLine className="text-danger" style={{ fontSize: '1.2rem' }} /> ANALÍTICA PRO</h3>
-              <span className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.65rem', letterSpacing: '1px' }}>BI de Volumen y Rentabilidad Logística</span>
+        <div className={`d-flex ${isMobile ? 'flex-column gap-2' : 'align-items-center justify-content-between'} g-3`}>
+          <div className="d-flex flex-column">
+            <h3 className="fw-black mb-0 d-flex align-items-center gap-2" style={{ fontSize: '1.2rem' }}>
+              <FaChartLine className="text-danger" style={{ fontSize: '1.2rem' }} /> ANALÍTICA PRO
+            </h3>
+          </div>
+          <div className={`d-flex align-items-center gap-2 ${isMobile ? 'flex-wrap' : 'justify-content-end'}`}>
+            <div className="d-flex align-items-center p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <FaMapMarkerAlt className="text-danger ms-2" size={12} />
+              <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '85px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}>
+                <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>GLOBAL</option>
+                {sedes.map(s => <option key={s.id} value={s.codigo} style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>{s.nombre.toUpperCase()}</option>)}
+              </Form.Select>
             </div>
-          </Col>
-          <Col xs={12} lg={8}>
-            <div className="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
-              <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
-                <FaMapMarkerAlt className="text-danger ms-2" size={12} />
-                <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '85px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}>
-                  <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>GLOBAL</option>
-                  {sedes.map(s => <option key={s.id} value={s.codigo} style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>{s.nombre.toUpperCase()}</option>)}
-                </Form.Select>
-              </div>
 
-              <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
-                <FaRoute className="text-danger ms-2" size={12} />
-                <Form.Select 
-                  value={selectedRoute} 
-                  onChange={(e) => setSelectedRoute(e.target.value)} 
-                  className="bg-transparent border-0 small fw-bold px-2 py-0" 
-                  style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '80px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
-                >
-                  <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>RUTAS</option>
-                  {availableRoutes.map(r => (
-                    <option key={r} value={r} style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>RUTA {r}</option>
-                  ))}
-                </Form.Select>
-              </div>
-              
-              <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
-                <DatePicker
-                  selected={new Date(dateRange.start + 'T00:00:00')}
-                  onChange={(date: Date | null) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))}
-                  dateFormat="dd/MM/yyyy"
-                  locale="es"
-                  className="date-picker-industrial"
-                />
-                <span className="text-secondary fw-black">AL</span>
-                <DatePicker
-                  selected={new Date(dateRange.end + 'T00:00:00')}
-                  onChange={(date: Date | null) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))}
-                  dateFormat="dd/MM/yyyy"
-                  locale="es"
-                  className="date-picker-industrial"
-                />
-              </div>
+            <div className="d-flex align-items-center p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <FaRoute className="text-danger ms-2" size={12} />
+              <Form.Select 
+                value={selectedRoute} 
+                onChange={(e) => setSelectedRoute(e.target.value)} 
+                className="bg-transparent border-0 small fw-bold px-2 py-0" 
+                style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '80px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
+              >
+                <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>RUTAS</option>
+                {availableRoutes.map(r => (
+                  <option key={r} value={r} style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>RUTA {r}</option>
+                ))}
+              </Form.Select>
             </div>
-          </Col>
-        </Row>
+            
+            <div className="d-flex align-items-center p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <DatePicker
+                selected={new Date(dateRange.start + 'T00:00:00')}
+                onChange={(date: Date | null) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))}
+                dateFormat="dd/MM/yyyy"
+                locale="es"
+                className="date-picker-industrial"
+              />
+              <DatePicker
+                selected={new Date(dateRange.end + 'T00:00:00')}
+                onChange={(date: Date | null) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))}
+                dateFormat="dd/MM/yyyy"
+                locale="es"
+                className="date-picker-industrial"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="admin-section-table flex-grow-1 p-0 overflow-hidden">
