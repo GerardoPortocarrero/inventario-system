@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Row, Col, Tab, Nav, Badge, Table, OverlayTrigger, Popover, Form, Button } from 'react-bootstrap';
-import { FaChartLine, FaUsers, FaRoute, FaBox, FaExchangeAlt, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle, FaMapMarkerAlt, FaSort, FaSortUp, FaSortDown, FaChevronRight, FaFilter } from 'react-icons/fa';
+import { FaChartLine, FaUsers, FaRoute, FaBox, FaHistory, FaCrown, FaExclamationTriangle, FaStar, FaBed, FaUserCheck, FaArrowUp, FaInfoCircle, FaMapMarkerAlt, FaSort, FaSortUp, FaSortDown, FaChevronRight, FaFilter } from 'react-icons/fa';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import SearchInput from '../components/SearchInput';
@@ -25,7 +25,6 @@ const AnalyticsProPage: FC = () => {
   const [demandaData, setDemandaData] = useState<any[]>([]);
   const [maestroData, setMaestroData] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
-  const [metadata, setMetadata] = useState<any>(null);
 
   // --- FILTROS GLOBALES ---
   const [metric, setMetric] = useState<'valor' | 'cf' | 'cu'>('valor');
@@ -66,9 +65,6 @@ const AnalyticsProPage: FC = () => {
         fechaObj: (doc.data() as any).fecha?.toDate()
       }));
       setDemandaData(data);
-      if (data.length > 0) {
-        setMetadata({ updatedAt: (data[0] as any).updatedAt?.toDate().toLocaleString() });
-      }
       firestoreLoaded = true;
       checkLoading();
     }, (error) => {
@@ -457,7 +453,7 @@ const AnalyticsProPage: FC = () => {
     return { rutas: sortedRoutes, data: matrix };
   }, [filteredData, products, selectedMarcasCobertura]);
 
-  const handleSort = (key: string, current: any, set: any) => {
+  const handleSort = (key: string, set: any) => {
     set((prev: any) => ({
       key,
       dir: prev?.key === key && prev?.dir === 'asc' ? 'desc' : 'asc'
@@ -705,7 +701,7 @@ const AnalyticsProPage: FC = () => {
                                 radius={[0, 4, 4, 0]} 
                                 barSize={25}
                               >
-                                {statsPro.sedePerformance.map((entry, index) => (
+                                {statsPro.sedePerformance.map((_entry, index) => (
                                   <Cell key={`cell-${index}`} fill={index === 0 ? 'var(--color-red-primary)' : 'rgba(244, 0, 9, 0.6)'} />
                                 ))}
                               </Bar>
@@ -737,12 +733,12 @@ const AnalyticsProPage: FC = () => {
                   <Table responsive hover className="mb-0 industrial-table-v2">
                     <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
                       <tr>
-                        <SortHeader label="CLIENTE" sortKey="clientName" currentSort={clientSort} onSort={(k: string) => handleSort(k, clientSort, setClientSort)} />
-                        <SortHeader label="SEGMENTO" sortKey="segment" currentSort={clientSort} onSort={(k: string) => handleSort(k, clientSort, setClientSort)} align="center" />
-                        <SortHeader label="RECENCIA" sortKey="recency" currentSort={clientSort} onSort={(k: string) => handleSort(k, clientSort, setClientSort)} align="center" />
-                        <SortHeader label="V. MONETARIO ($)" sortKey="monetary" currentSort={clientSort} onSort={(k: string) => handleSort(k, clientSort, setClientSort)} align="end" />
-                        <SortHeader label="VOLUMEN (CF)" sortKey="cf" currentSort={clientSort} onSort={(k: string) => handleSort(k, clientSort, setClientSort)} align="end" />
-                        <SortHeader label="VOLUMEN (CU)" sortKey="cu" currentSort={clientSort} onSort={(k: string) => handleSort(k, clientSort, setClientSort)} align="end" />
+                        <SortHeader label="CLIENTE" sortKey="clientName" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} />
+                        <SortHeader label="SEGMENTO" sortKey="segment" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="center" />
+                        <SortHeader label="RECENCIA" sortKey="recency" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="center" />
+                        <SortHeader label="V. MONETARIO ($)" sortKey="monetary" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
+                        <SortHeader label="VOLUMEN (CF)" sortKey="cf" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
+                        <SortHeader label="VOLUMEN (CU)" sortKey="cu" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
                       </tr>
                     </thead>
                     <tbody>{finalRfmResults.map((r) => (<tr key={r.clientId}><td className="ps-4"><div className="d-flex flex-column"><span className="fw-black text-uppercase" style={{ fontSize: '0.85rem' }}>{r.clientName}</span><span className="text-secondary" style={{ fontSize: '0.65rem' }}>ID: {r.clientId}</span></div></td><td className="text-center align-middle"><div className="d-flex align-items-center justify-content-center gap-2">{segmentIcons[r.segment]}<span className="fw-black text-uppercase" style={{ fontSize: '0.7rem', color: segmentColors[r.segment] }}>{r.segment}</span></div></td><td className="text-center align-middle fw-black">{r.recency} <small className="text-secondary">días</small></td><td className="text-end align-middle fw-black text-info">${r.monetary.toLocaleString()}</td><td className="text-end align-middle fw-black text-success">{r.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td className="text-end align-middle fw-black text-warning pe-4">{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td></tr>))}</tbody>
@@ -757,12 +753,12 @@ const AnalyticsProPage: FC = () => {
                   <Table responsive hover className="mb-0 industrial-table-v2">
                     <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
                       <tr>
-                        <SortHeader label="RUTA / PREVENTISTA" sortKey="ruta" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} />
-                        <SortHeader label="CLIENTES ACTIVOS" sortKey="clientCount" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} align="center" />
-                        <SortHeader label="PEDIDOS TOT." sortKey="count" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} align="center" />
-                        <SortHeader label="VALOR TOTAL" sortKey="monetary" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} align="end" />
-                        <SortHeader label="VOL. CF" sortKey="cf" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} align="end" />
-                        <SortHeader label="VOL. CU" sortKey="cu" currentSort={routeSort} onSort={(k: string) => handleSort(k, routeSort, setRouteSort)} align="end" />
+                        <SortHeader label="RUTA / PREVENTISTA" sortKey="ruta" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} />
+                        <SortHeader label="CLIENTES ACTIVOS" sortKey="clientCount" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="center" />
+                        <SortHeader label="PEDIDOS TOT." sortKey="count" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="center" />
+                        <SortHeader label="VALOR TOTAL" sortKey="monetary" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="end" />
+                        <SortHeader label="VOL. CF" sortKey="cf" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="end" />
+                        <SortHeader label="VOL. CU" sortKey="cu" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="end" />
                       </tr>
                     </thead>
                     <tbody>{finalRoutePerformance.map((r) => (
@@ -970,10 +966,10 @@ const AnalyticsProPage: FC = () => {
                   <Table responsive hover className="mb-0 industrial-table-v2">
                     <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
                       <tr>
-                        <SortHeader label="PRODUCTO" sortKey="name" currentSort={productSort} onSort={(k: string) => handleSort(k, productSort, setProductSort)} />
-                        <SortHeader label="TOTAL VALOR ($)" sortKey="valor" currentSort={productSort} onSort={(k: string) => handleSort(k, productSort, setProductSort)} align="end" />
-                        <SortHeader label="TOTAL CF" sortKey="cf" currentSort={productSort} onSort={(k: string) => handleSort(k, productSort, setProductSort)} align="end" />
-                        <SortHeader label="TOTAL CU" sortKey="cu" currentSort={productSort} onSort={(k: string) => handleSort(k, productSort, setProductSort)} align="end" />
+                        <SortHeader label="PRODUCTO" sortKey="name" currentSort={productSort} onSort={(k: string) => handleSort(k, setProductSort)} />
+                        <SortHeader label="TOTAL VALOR ($)" sortKey="valor" currentSort={productSort} onSort={(k: string) => handleSort(k, setProductSort)} align="end" />
+                        <SortHeader label="TOTAL CF" sortKey="cf" currentSort={productSort} onSort={(k: string) => handleSort(k, setProductSort)} align="end" />
+                        <SortHeader label="TOTAL CU" sortKey="cu" currentSort={productSort} onSort={(k: string) => handleSort(k, setProductSort)} align="end" />
                       </tr>
                     </thead>
                     <tbody>{finalProductPerformance.map((p) => (<tr key={p.sap}><td className="ps-4"><div className="d-flex flex-column"><span className="fw-black text-uppercase" style={{ fontSize: '0.75rem' }}>{p.name}</span><span className="text-secondary" style={{ fontSize: '0.6rem' }}>SAP: {p.sap}</span></div></td><td className="text-end align-middle fw-black">${p.valor.toLocaleString()}</td><td className="text-end align-middle fw-black text-success">{p.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td className="text-end align-middle fw-black text-warning pe-4">{p.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td></tr>))}</tbody>

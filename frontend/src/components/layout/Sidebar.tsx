@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Nav } from 'react-bootstrap';
-import { FaHome, FaUsers, FaBoxOpen, FaShoppingCart, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle, FaDatabase, FaChartLine, FaTag } from 'react-icons/fa'; // Importar FaUserCircle, FaDatabase y FaChartLine
+import { FaUsers, FaBoxOpen, FaClipboardList, FaSignOutAlt, FaBuilding, FaUserTag, FaGlassMartiniAlt, FaUserCircle, FaDatabase, FaChartLine, FaTag } from 'react-icons/fa'; // Importar FaUserCircle, FaDatabase y FaChartLine
 import './Sidebar.css';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -42,7 +42,7 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
         <div className="sidebar-sticky">
           <Nav.Item className="sidebar-title-item">
             <h4 className="sidebar-title text-center" style={{ color: 'var(--theme-text-primary)' }}>
-              Inventario A Y A
+              Ventas A Y A
             </h4>
           </Nav.Item>
 

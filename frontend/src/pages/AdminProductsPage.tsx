@@ -135,9 +135,6 @@ const ProductQRModal: FC<{
                   }}
                 />
               </div>
-              <div className="mt-3 pt-2 border-top text-muted small fw-bold text-uppercase" style={{ opacity: 0.5, fontSize: '0.6rem' }}>
-                Sistema de Inventario • Propiedad de la Empresa
-              </div>
             </div>
           </div>
 
