@@ -526,8 +526,8 @@ const AnalyticsProPage: FC = () => {
             <div className="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
               <div className="d-flex align-items-center gap-2 p-1 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)' }}>
                 <FaMapMarkerAlt className="text-danger ms-2" size={12} />
-                <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '120px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}>
-                  <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>GLOBAL (TODAS)</option>
+                <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '85px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}>
+                  <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>GLOBAL</option>
                   {sedes.map(s => <option key={s.id} value={s.codigo} style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>{s.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
@@ -538,9 +538,9 @@ const AnalyticsProPage: FC = () => {
                   value={selectedRoute} 
                   onChange={(e) => setSelectedRoute(e.target.value)} 
                   className="bg-transparent border-0 small fw-bold px-2 py-0" 
-                  style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '100px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
+                  style={{ outline: 'none', fontSize: '0.75rem', width: 'auto', minWidth: '80px', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
                 >
-                  <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>TODAS LAS RUTAS</option>
+                  <option value="ALL" style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>RUTAS</option>
                   {availableRoutes.map(r => (
                     <option key={r} value={r} style={{ backgroundColor: 'var(--theme-background-secondary)', color: 'var(--theme-text-primary)' }}>RUTA {r}</option>
                   ))}
