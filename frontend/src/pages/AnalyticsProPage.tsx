@@ -431,7 +431,8 @@ const AnalyticsProPage: FC = () => {
     }, {} as Record<string, any>);
 
     const matrix: Record<string, {
-      total: Record<string, { cf: number; cu: number }>,
+      total: Record<string, { cf: number; cu: number; cliConVenta: number }>,
+      totalClientesRuta: number,
       clientes: Record<string, {
         nombre: string,
         marcas: Record<string, { cf: number; cu: number }>
@@ -453,9 +454,10 @@ const AnalyticsProPage: FC = () => {
       const clientName = String(m.Cliente || m.CLIENTE || 'Sin Nombre').trim();
 
       if (!matrix[rutaId]) {
-        matrix[rutaId] = { total: {}, clientes: {} };
+        matrix[rutaId] = { total: {}, totalClientesRuta: 0, clientes: {} };
       }
       if (!matrix[rutaId].clientes[clientId]) {
+        matrix[rutaId].totalClientesRuta += 1;
         matrix[rutaId].clientes[clientId] = {
           nombre: clientName,
           marcas: {}
@@ -463,7 +465,7 @@ const AnalyticsProPage: FC = () => {
         // Pre-llenar marcas seleccionadas con 0
         selectedMarcasCobertura.forEach(mId => {
           matrix[rutaId].clientes[clientId].marcas[mId] = { cf: 0, cu: 0 };
-          if (!matrix[rutaId].total[mId]) matrix[rutaId].total[mId] = { cf: 0, cu: 0 };
+          if (!matrix[rutaId].total[mId]) matrix[rutaId].total[mId] = { cf: 0, cu: 0, cliConVenta: 0 };
         });
       }
     });
@@ -474,10 +476,11 @@ const AnalyticsProPage: FC = () => {
       const clientId = String(d.solicitante).trim();
       
       if (!matrix[rutaId]) {
-        matrix[rutaId] = { total: {}, clientes: {} };
+        matrix[rutaId] = { total: {}, totalClientesRuta: 0, clientes: {} };
         routeSet.add(rutaId);
       }
       if (!matrix[rutaId].clientes[clientId]) {
+        matrix[rutaId].totalClientesRuta += 1;
         matrix[rutaId].clientes[clientId] = {
           nombre: d.nombreCliente || 'Cliente Desconocido',
           marcas: {}
@@ -495,14 +498,22 @@ const AnalyticsProPage: FC = () => {
           if (!matrix[rutaId].clientes[clientId].marcas[mId]) {
             matrix[rutaId].clientes[clientId].marcas[mId] = { cf: 0, cu: 0 };
           }
+          
+          // Solo sumamos si no tenía venta previa de esta marca (para el conteo de clientes)
+          const hadSale = matrix[rutaId].clientes[clientId].marcas[mId].cf > 0 || matrix[rutaId].clientes[clientId].marcas[mId].cu > 0;
+          
           matrix[rutaId].clientes[clientId].marcas[mId].cf += m.cf || 0;
           matrix[rutaId].clientes[clientId].marcas[mId].cu += m.cu || 0;
 
           if (!matrix[rutaId].total[mId]) {
-            matrix[rutaId].total[mId] = { cf: 0, cu: 0 };
+            matrix[rutaId].total[mId] = { cf: 0, cu: 0, cliConVenta: 0 };
           }
           matrix[rutaId].total[mId].cf += m.cf || 0;
           matrix[rutaId].total[mId].cu += m.cu || 0;
+
+          if (!hadSale && (m.cf > 0 || m.cu > 0)) {
+            matrix[rutaId].total[mId].cliConVenta += 1;
+          }
         }
       });
     });
@@ -933,11 +944,11 @@ const AnalyticsProPage: FC = () => {
                       <Table responsive hover bordered className="mb-0 industrial-table-v2 matrix-table h-100">
                         <thead style={{ backgroundColor: 'var(--theme-background-tertiary)' }} className="sticky-top">
                           <tr>
-                            <th rowSpan={2} className="align-middle text-center ps-4" style={{ width: '120px', fontSize: '0.7rem', backgroundColor: 'var(--theme-background-tertiary)' }}>ID RUTA</th>
+                            <th rowSpan={2} className="align-middle text-center ps-4" style={{ width: '120px', fontSize: '0.65rem', backgroundColor: 'var(--theme-background-tertiary)' }}>ID RUTA</th>
                             {selectedMarcasCobertura.map(mId => {
                               const marca = marcas.find(m => m.id === mId);
                               return (
-                                <th key={mId} colSpan={2} className="text-center text-uppercase fw-black bg-danger text-white py-2" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>
+                                <th key={mId} colSpan={2} className="text-center text-uppercase fw-black bg-danger text-white py-2" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
                                   {marca?.nombre || 'MARCA'}
                                 </th>
                               );
@@ -946,94 +957,101 @@ const AnalyticsProPage: FC = () => {
                           <tr style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
                             {selectedMarcasCobertura.map(mId => (
                               <Fragment key={`sub-${mId}`}>
-                                <th className="text-center bg-dark text-success small fw-black py-1" style={{ fontSize: '0.6rem', borderRight: '1px solid rgba(255,255,255,0.05)', backgroundColor: '#000' }}>CF</th>
-                                <th className="text-center bg-dark text-warning small fw-black py-1" style={{ fontSize: '0.6rem', backgroundColor: '#000' }}>CU</th>
+                                <th className="text-center bg-dark text-white small fw-black py-1" style={{ fontSize: '0.55rem', borderRight: '1px solid rgba(255,255,255,0.05)', backgroundColor: '#000' }}>CF / CU</th>
+                                <th className="text-center bg-dark text-white small fw-black py-1" style={{ fontSize: '0.55rem', backgroundColor: '#000' }}>CLI</th>
                               </Fragment>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {matrixCoberturaData.rutas.map(rutaId => (
-                            <Fragment key={rutaId}>
-                              <tr 
-                                onClick={() => setExpandedCoberturaRutas(prev => ({ ...prev, [rutaId]: !prev[rutaId] }))}
-                                style={{ cursor: 'pointer' }}
-                                className={expandedCoberturaRutas[rutaId] ? 'bg-danger bg-opacity-10' : ''}
-                              >
-                                <td className="text-center align-middle py-3">
-                                  <div className="d-flex align-items-center justify-content-center gap-3">
-                                    <div className={`chevron-icon ${expandedCoberturaRutas[rutaId] ? 'active' : ''}`} style={{ transition: 'transform 0.2s' }}>
-                                      <FaChevronRight style={{ transform: expandedCoberturaRutas[rutaId] ? 'rotate(90deg)' : 'none' }} />
+                          {matrixCoberturaData.rutas.map(rutaId => {
+                            const routeData = matrixCoberturaData.data[rutaId];
+                            return (
+                              <Fragment key={rutaId}>
+                                <tr 
+                                  onClick={() => setExpandedCoberturaRutas(prev => ({ ...prev, [rutaId]: !prev[rutaId] }))}
+                                  style={{ cursor: 'pointer' }}
+                                  className={expandedCoberturaRutas[rutaId] ? 'bg-danger bg-opacity-10' : ''}
+                                >
+                                  <td className="text-center align-middle py-2">
+                                    <div className="d-flex align-items-center justify-content-center gap-2">
+                                      <div className={`chevron-icon ${expandedCoberturaRutas[rutaId] ? 'active' : ''}`} style={{ transition: 'transform 0.1s' }}>
+                                        <FaChevronRight size={10} style={{ transform: expandedCoberturaRutas[rutaId] ? 'rotate(90deg)' : 'none' }} />
+                                      </div>
+                                      <span className="fw-black fs-6 text-uppercase" style={{ letterSpacing: '0.5px', color: 'var(--theme-text-primary)', fontSize: '0.8rem' }}>
+                                        {rutaId}
+                                      </span>
                                     </div>
-                                    <span className="fw-black fs-6 text-uppercase" style={{ letterSpacing: '1px', color: 'var(--theme-text-primary)' }}>
-                                      {rutaId}
-                                    </span>
-                                  </div>
-                                </td>
-                                {selectedMarcasCobertura.map(mId => {
-                                  const vals = matrixCoberturaData.data[rutaId]?.total[mId] || { cf: 0, cu: 0 };
-                                  const hasData = vals.cf > 0 || vals.cu > 0;
-                                  return (
-                                    <Fragment key={`${rutaId}-${mId}`}>
-                                      <td className={`text-center align-middle fw-black ${hasData ? 'text-success' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.85rem' }}>
-                                        {vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                                      </td>
-                                      <td className={`text-center align-middle fw-black ${hasData ? 'text-warning' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.85rem' }}>
-                                        {vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                                      </td>
-                                    </Fragment>
-                                  );
-                                })}
-                              </tr>
-                              {expandedCoberturaRutas[rutaId] && (
-                                Object.entries(matrixCoberturaData.data[rutaId].clientes)
-                                  .sort((a, b) => a[1].nombre.localeCompare(b[1].nombre))
-                                  .map(([clientId, client]) => {
-                                    const hasAnySale = selectedMarcasCobertura.some(mId => 
-                                      (client.marcas[mId]?.cf || 0) > 0 || (client.marcas[mId]?.cu || 0) > 0
-                                    );
-
+                                  </td>
+                                  {selectedMarcasCobertura.map(mId => {
+                                    const vals = routeData?.total[mId] || { cf: 0, cu: 0, cliConVenta: 0 };
+                                    const hasData = vals.cf > 0 || vals.cu > 0;
                                     return (
-                                      <tr 
-                                        key={`${rutaId}-${clientId}`} 
-                                        style={{ 
-                                          backgroundColor: hasAnySale ? 'rgba(0,0,0,0.15)' : 'rgba(244, 0, 9, 0.03)' 
-                                        }}
-                                      >
-                                        <td className={`ps-4 py-2 border-start ${hasAnySale ? 'border-danger' : 'border-warning'} border-4`}>
-                                          <div className="d-flex flex-column">
-                                            <span 
-                                              className="fw-bold text-uppercase" 
-                                              style={{ 
-                                                fontSize: '0.75rem', 
-                                                color: hasAnySale ? 'var(--theme-text-primary)' : 'rgba(255,255,255,0.4)' 
-                                              }}
-                                            >
-                                              {client.nombre}
-                                            </span>
-                                            <span className="text-secondary" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
-                                          </div>
+                                      <Fragment key={`${rutaId}-${mId}`}>
+                                        <td className={`text-center align-middle fw-black ${hasData ? '' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.75rem' }}>
+                                          <span className="text-success">{vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                          <span className="mx-1 text-secondary opacity-50">/</span>
+                                          <span className="text-warning">{vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                                         </td>
-                                        {selectedMarcasCobertura.map(mId => {
-                                          const vals = client.marcas[mId] || { cf: 0, cu: 0 };
-                                          const hasData = vals.cf > 0 || vals.cu > 0;
-                                          return (
-                                            <Fragment key={`${rutaId}-${clientId}-${mId}`}>
-                                              <td className={`text-center align-middle fw-bold ${hasData ? 'text-success' : 'text-danger opacity-50'}`} style={{ fontSize: '0.8rem' }}>
-                                                {vals.cf > 0 ? vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}
-                                              </td>
-                                              <td className={`text-center align-middle fw-bold ${hasData ? 'text-warning' : 'text-danger opacity-50'}`} style={{ fontSize: '0.8rem' }}>
-                                                {vals.cu > 0 ? vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}
-                                              </td>
-                                            </Fragment>
-                                          );
-                                        })}
-                                      </tr>
+                                        <td className={`text-center align-middle fw-black ${hasData ? 'text-info' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.75rem' }}>
+                                          {vals.cliConVenta} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
+                                        </td>
+                                      </Fragment>
                                     );
-                                  })
-                              )}
-                            </Fragment>
-                          ))}
+                                  })}
+                                </tr>
+                                {expandedCoberturaRutas[rutaId] && (
+                                  Object.entries(routeData.clientes)
+                                    .sort((a, b) => a[1].nombre.localeCompare(b[1].nombre))
+                                    .map(([clientId, client]) => {
+                                      const hasAnySale = selectedMarcasCobertura.some(mId => 
+                                        (client.marcas[mId]?.cf || 0) > 0 || (client.marcas[mId]?.cu || 0) > 0
+                                      );
+
+                                      return (
+                                        <tr 
+                                          key={`${rutaId}-${clientId}`} 
+                                          style={{ 
+                                            backgroundColor: hasAnySale ? 'rgba(0,0,0,0.15)' : 'rgba(244, 0, 9, 0.03)' 
+                                          }}
+                                        >
+                                          <td className={`ps-4 py-1 border-start ${hasAnySale ? 'border-danger' : 'border-warning'} border-4`}>
+                                            <div className="d-flex flex-column">
+                                              <span 
+                                                className="fw-bold text-uppercase" 
+                                                style={{ 
+                                                  fontSize: '0.7rem', 
+                                                  color: hasAnySale ? 'var(--theme-text-primary)' : 'rgba(255,255,255,0.4)' 
+                                                }}
+                                              >
+                                                {client.nombre}
+                                              </span>
+                                              <span className="text-secondary" style={{ fontSize: '0.55rem' }}>ID: {clientId}</span>
+                                            </div>
+                                          </td>
+                                          {selectedMarcasCobertura.map(mId => {
+                                            const vals = client.marcas[mId] || { cf: 0, cu: 0 };
+                                            const hasData = vals.cf > 0 || vals.cu > 0;
+                                            return (
+                                              <Fragment key={`${rutaId}-${clientId}-${mId}`}>
+                                                <td className={`text-center align-middle fw-bold ${hasData ? '' : 'text-danger opacity-50'}`} style={{ fontSize: '0.75rem' }}>
+                                                  <span className={hasData ? 'text-success' : ''}>{vals.cf > 0 ? vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}</span>
+                                                  <span className="mx-1 text-secondary opacity-50">/</span>
+                                                  <span className={hasData ? 'text-warning' : ''}>{vals.cu > 0 ? vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}</span>
+                                                </td>
+                                                <td className="text-center align-middle" style={{ fontSize: '0.75rem' }}>
+                                                  {hasData ? <FaUserCheck className="text-info" size={12} /> : <span className="text-danger opacity-50">0</span>}
+                                                </td>
+                                              </Fragment>
+                                            );
+                                          })}
+                                        </tr>
+                                      );
+                                    })
+                                )}
+                              </Fragment>
+                            );
+                          })}
                         </tbody>
                         <tfoot className="sticky-bottom" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 5 }}>
                           <tr className="border-top-2 border-danger">
