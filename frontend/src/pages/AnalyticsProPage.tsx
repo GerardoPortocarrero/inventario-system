@@ -885,40 +885,34 @@ const AnalyticsProPage: FC = () => {
 
               <Tab.Pane eventKey="cobertura" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex flex-column gap-3 h-100">
-                  <div className="admin-border-industrial p-4 flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
-                    <div className="d-flex flex-column gap-3">
-                      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                        <div>
-                          <h5 className="fw-black mb-1 text-uppercase text-danger">Matriz de Cobertura Operativa</h5>
-                          <p className="text-secondary small fw-bold mb-0">Desglose matricial de Rutas vs Marcas (Volumen CF/CU).</p>
-                        </div>
-                        <div className="d-flex align-items-center gap-2 p-2 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', minWidth: '280px' }}>
-                          <FaStar className="text-warning ms-2" size={14} />
-                          <Form.Select 
-                            value="" 
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val && !selectedMarcasCobertura.includes(val)) {
-                                setSelectedMarcasCobertura(prev => [...prev, val]);
-                              }
-                            }} 
-                            className="bg-transparent border-0 small fw-black px-2 py-0 shadow-none text-uppercase" 
-                            style={{ outline: 'none', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
-                          >
-                            <option value="" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>+ AGREGAR MARCA A MATRIZ</option>
-                            {marcas
-                              .filter(m => !selectedMarcasCobertura.includes(m.id))
-                              .sort((a,b) => a.nombre.localeCompare(b.nombre))
-                              .map(m => (
-                                <option key={m.id} value={m.id} style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>{m.nombre.toUpperCase()}</option>
-                              ))
+                  <div className="admin-border-industrial p-3 flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
+                    <div className="d-flex align-items-center gap-3 flex-wrap">
+                      <div className="d-flex align-items-center gap-2 p-2 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', minWidth: '220px' }}>
+                        <FaStar className="text-warning ms-2" size={14} />
+                        <Form.Select 
+                          value="" 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && !selectedMarcasCobertura.includes(val)) {
+                              setSelectedMarcasCobertura(prev => [...prev, val]);
                             }
-                          </Form.Select>
-                        </div>
+                          }} 
+                          className="bg-transparent border-0 small fw-black px-2 py-0 shadow-none text-uppercase" 
+                          style={{ outline: 'none', fontSize: '0.8rem', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
+                        >
+                          <option value="" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>+ AGREGAR MARCA</option>
+                          {marcas
+                            .filter(m => !selectedMarcasCobertura.includes(m.id))
+                            .sort((a,b) => a.nombre.localeCompare(b.nombre))
+                            .map(m => (
+                              <option key={m.id} value={m.id} style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>{m.nombre.toUpperCase()}</option>
+                            ))
+                          }
+                        </Form.Select>
                       </div>
 
                       {selectedMarcasCobertura.length > 0 && (
-                        <div className="d-flex flex-wrap gap-2 pt-3 border-top border-secondary border-opacity-10">
+                        <div className="d-flex flex-wrap gap-2">
                           {selectedMarcasCobertura.map(marcaId => {
                             const marca = marcas.find(m => m.id === marcaId);
                             return (
@@ -928,7 +922,7 @@ const AnalyticsProPage: FC = () => {
                               </Badge>
                             );
                           })}
-                          <Button variant="link" className="text-secondary small fw-black p-0 ms-3 text-decoration-none" onClick={() => setSelectedMarcasCobertura([])} style={{ fontSize: '0.65rem' }}>LIMPIAR TODO</Button>
+                          <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => setSelectedMarcasCobertura([])} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
                         </div>
                       )}
                     </div>
