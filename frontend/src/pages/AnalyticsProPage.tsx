@@ -988,30 +988,49 @@ const AnalyticsProPage: FC = () => {
                               {expandedCoberturaRutas[rutaId] && (
                                 Object.entries(matrixCoberturaData.data[rutaId].clientes)
                                   .sort((a, b) => a[1].nombre.localeCompare(b[1].nombre))
-                                  .map(([clientId, client]) => (
-                                    <tr key={`${rutaId}-${clientId}`} style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}>
-                                      <td className="ps-4 py-2 border-start border-danger border-4">
-                                        <div className="d-flex flex-column">
-                                          <span className="fw-bold text-uppercase" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>{client.nombre}</span>
-                                          <span className="text-secondary" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
-                                        </div>
-                                      </td>
-                                      {selectedMarcasCobertura.map(mId => {
-                                        const vals = client.marcas[mId] || { cf: 0, cu: 0 };
-                                        const hasData = vals.cf > 0 || vals.cu > 0;
-                                        return (
-                                          <Fragment key={`${rutaId}-${clientId}-${mId}`}>
-                                            <td className={`text-center align-middle fw-bold ${hasData ? 'text-success' : 'text-secondary opacity-10'}`} style={{ fontSize: '0.8rem' }}>
-                                              {vals.cf > 0 ? vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}
-                                            </td>
-                                            <td className={`text-center align-middle fw-bold ${hasData ? 'text-warning' : 'text-secondary opacity-10'}`} style={{ fontSize: '0.8rem' }}>
-                                              {vals.cu > 0 ? vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}
-                                            </td>
-                                          </Fragment>
-                                        );
-                                      })}
-                                    </tr>
-                                  ))
+                                  .map(([clientId, client]) => {
+                                    const hasAnySale = selectedMarcasCobertura.some(mId => 
+                                      (client.marcas[mId]?.cf || 0) > 0 || (client.marcas[mId]?.cu || 0) > 0
+                                    );
+
+                                    return (
+                                      <tr 
+                                        key={`${rutaId}-${clientId}`} 
+                                        style={{ 
+                                          backgroundColor: hasAnySale ? 'rgba(0,0,0,0.15)' : 'rgba(244, 0, 9, 0.03)' 
+                                        }}
+                                      >
+                                        <td className={`ps-4 py-2 border-start ${hasAnySale ? 'border-danger' : 'border-warning'} border-4`}>
+                                          <div className="d-flex flex-column">
+                                            <span 
+                                              className="fw-bold text-uppercase" 
+                                              style={{ 
+                                                fontSize: '0.75rem', 
+                                                color: hasAnySale ? 'var(--theme-text-primary)' : 'rgba(255,255,255,0.4)' 
+                                              }}
+                                            >
+                                              {client.nombre}
+                                            </span>
+                                            <span className="text-secondary" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
+                                          </div>
+                                        </td>
+                                        {selectedMarcasCobertura.map(mId => {
+                                          const vals = client.marcas[mId] || { cf: 0, cu: 0 };
+                                          const hasData = vals.cf > 0 || vals.cu > 0;
+                                          return (
+                                            <Fragment key={`${rutaId}-${clientId}-${mId}`}>
+                                              <td className={`text-center align-middle fw-bold ${hasData ? 'text-success' : 'text-danger opacity-50'}`} style={{ fontSize: '0.8rem' }}>
+                                                {vals.cf > 0 ? vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}
+                                              </td>
+                                              <td className={`text-center align-middle fw-bold ${hasData ? 'text-warning' : 'text-danger opacity-50'}`} style={{ fontSize: '0.8rem' }}>
+                                                {vals.cu > 0 ? vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}
+                                              </td>
+                                            </Fragment>
+                                          );
+                                        })}
+                                      </tr>
+                                    );
+                                  })
                               )}
                             </Fragment>
                           ))}
