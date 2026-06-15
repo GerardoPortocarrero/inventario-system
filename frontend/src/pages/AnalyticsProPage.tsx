@@ -40,13 +40,9 @@ const AnalyticsProPage: FC = () => {
   const [clientSearch, setClientSearch] = useState('');
   const [clientSort, setClientSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
   
-  const [routeSearch, setRouteSearch] = useState('');
-  const [routeSort, setRouteSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
-  
   const [productSearch, setProductSearch] = useState('');
   const [productSort, setProductSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
 
-  const [expandedRfmRutas, setExpandedRfmRutas] = useState<Record<string, boolean>>({});
   const [expandedCoberturaRutas, setExpandedCoberturaRutas] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -388,23 +384,6 @@ const AnalyticsProPage: FC = () => {
     return data;
   }, [rfmResults, clientSearch, clientSort]);
 
-  const finalRoutePerformance = useMemo(() => {
-    let data = [...routePerformance];
-    if (routeSearch) {
-      const term = routeSearch.toLowerCase();
-      data = data.filter(r => String(r.ruta).toLowerCase().includes(term));
-    }
-    if (routeSort) {
-      data.sort((a, b) => {
-        const valA = a[routeSort.key as keyof typeof a];
-        const valB = b[routeSort.key as keyof typeof b];
-        if (typeof valA === 'string') return routeSort.dir === 'asc' ? valA.localeCompare(valB as string) : (valB as string).localeCompare(valA);
-        return routeSort.dir === 'asc' ? ((valA as number) || 0) - ((valB as number) || 0) : ((valB as number) || 0) - ((valA as number) || 0);
-      });
-    }
-    return data;
-  }, [routePerformance, routeSearch, routeSort]);
-
   const finalProductPerformance = useMemo(() => {
     let data = [...productPerformance];
     if (productSearch) {
@@ -529,10 +508,6 @@ const AnalyticsProPage: FC = () => {
     }));
   };
 
-  const toggleRoute = (id: string) => {
-    setExpandedRfmRutas(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
   const SortHeader = ({ label, sortKey, currentSort, onSort, align = 'start' }: any) => {
     const isSorted = currentSort?.key === sortKey;
     return (
@@ -645,7 +620,6 @@ const AnalyticsProPage: FC = () => {
                     >
                       <option value="dashboard">RESUMEN</option>
                       <option value="clientes">CLIENTES (RFM)</option>
-                      <option value="rutas">RUTAS Y DÍAS</option>
                       <option value="cobertura">COBERTURA</option>
                       <option value="productos">PRODUCTOS</option>
                     </Form.Select>
@@ -656,7 +630,6 @@ const AnalyticsProPage: FC = () => {
               <Nav variant="tabs" className="custom-tabs-industrial px-2 pt-2 flex-shrink-0 border-bottom-0">
                 <Nav.Item><Nav.Link eventKey="dashboard" className="d-flex align-items-center gap-2"><FaHistory className="d-none d-md-inline" /> RESUMEN</Nav.Link></Nav.Item>
                 <Nav.Item><Nav.Link eventKey="clientes" className="d-flex align-items-center gap-2"><FaUsers className="d-none d-md-inline" /> CLIENTES (RFM)</Nav.Link></Nav.Item>
-                <Nav.Item><Nav.Link eventKey="rutas" className="d-flex align-items-center gap-2"><FaRoute className="d-none d-md-inline" /> RUTAS Y DÍAS</Nav.Link></Nav.Item>
                 <Nav.Item><Nav.Link eventKey="cobertura" className="d-flex align-items-center gap-2"><FaMapMarkerAlt className="d-none d-md-inline" /> COBERTURA</Nav.Link></Nav.Item>
                 <Nav.Item><Nav.Link eventKey="productos" className="d-flex align-items-center gap-2"><FaBox className="d-none d-md-inline" /> PRODUCTOS</Nav.Link></Nav.Item>
               </Nav>
@@ -811,85 +784,6 @@ const AnalyticsProPage: FC = () => {
                       </tr>
                     </thead>
                     <tbody>{finalRfmResults.map((r) => (<tr key={r.clientId}><td className="ps-4"><div className="d-flex flex-column"><span className="fw-black text-uppercase" style={{ fontSize: '0.85rem' }}>{r.clientName}</span><span className="text-secondary" style={{ fontSize: '0.65rem' }}>ID: {r.clientId}</span></div></td><td className="text-center align-middle"><div className="d-flex align-items-center justify-content-center gap-2">{segmentIcons[r.segment]}<span className="fw-black text-uppercase" style={{ fontSize: '0.7rem', color: segmentColors[r.segment] }}>{r.segment}</span></div></td><td className="text-center align-middle fw-black">{r.recency} <small className="text-secondary">días</small></td><td className="text-end align-middle fw-black text-info">${r.monetary.toLocaleString()}</td><td className="text-end align-middle fw-black text-success">{r.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td className="text-end align-middle fw-black text-warning pe-4">{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td></tr>))}</tbody>
-                  </Table>
-                </div>
-              </Tab.Pane>
-              
-              <Tab.Pane eventKey="rutas" className="h-100 overflow-auto custom-scrollbar p-3">
-                <div className="d-flex justify-content-between align-items-end mb-4"><div><h5 className="fw-black mb-1 text-uppercase">Desempeño de Rutas y Preventistas</h5><p className="text-secondary small fw-bold mb-0">Análisis comparativo de volumen y efectividad.</p></div></div>
-                <div className="admin-border-industrial mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
-                  <div className="p-3 border-bottom border-secondary border-opacity-10"><SearchInput searchTerm={routeSearch} onSearchChange={setRouteSearch} placeholder="BUSCAR RUTA..." className="mb-0" /></div>
-                  <Table responsive hover className="mb-0 industrial-table-v2">
-                    <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
-                      <tr>
-                        <SortHeader label="RUTA / PREVENTISTA" sortKey="ruta" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} />
-                        <SortHeader label="CLIENTES ACTIVOS" sortKey="clientCount" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="center" />
-                        <SortHeader label="PEDIDOS TOT." sortKey="count" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="center" />
-                        <SortHeader label="VALOR TOTAL" sortKey="monetary" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="end" />
-                        <SortHeader label="VOL. CF" sortKey="cf" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="end" />
-                        <SortHeader label="VOL. CU" sortKey="cu" currentSort={routeSort} onSort={(k: string) => handleSort(k, setRouteSort)} align="end" />
-                      </tr>
-                    </thead>
-                    <tbody>{finalRoutePerformance.map((r) => (
-                      <Fragment key={r.ruta}>
-                        <tr 
-                          onClick={() => toggleRoute(r.ruta)} 
-                          style={{ cursor: 'pointer' }}
-                          className={expandedRfmRutas[r.ruta] ? 'bg-danger bg-opacity-10' : ''}
-                        >
-                          <td className="ps-4">
-                            <div className="d-flex align-items-center gap-3">
-                              <div className={`chevron-icon ${expandedRfmRutas[r.ruta] ? 'active' : ''}`} style={{ transition: 'transform 0.2s' }}>
-                                <FaChevronRight style={{ transform: expandedRfmRutas[r.ruta] ? 'rotate(90deg)' : 'none' }} />
-                              </div>
-                              <div className="loc-avatar" style={{ backgroundColor: 'var(--color-red-primary)', width: '32px', height: '32px', fontSize: '0.7rem' }}>{r.ruta}</div>
-                              <span className="fw-black fs-6">RUTA {r.ruta}</span>
-                            </div>
-                          </td>
-                          <td className="text-center align-middle fw-black text-info">{r.clientCount}</td>
-                          <td className="text-center align-middle fw-black">{r.count}</td>
-                          <td className="text-end align-middle fw-black">${r.monetary.toLocaleString()}</td>
-                          <td className="text-end align-middle fw-black text-success">{r.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                          <td className="text-end align-middle fw-black text-warning pe-4">{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                        </tr>
-                        {expandedRfmRutas[r.ruta] && (
-                          <tr>
-                            <td colSpan={6} className="p-0 border-0">
-                              <div className="p-3 bg-dark bg-opacity-25 border-start border-danger border-4 ms-4 my-2 me-4">
-                                <h6 className="fw-black text-uppercase small mb-3 text-danger">Detalle de Clientes en Ruta {r.ruta}</h6>
-                                <Table responsive hover size="sm" className="mb-0 industrial-table-v2 border-0">
-                                  <thead>
-                                    <tr>
-                                      <th className="ps-0" style={{ fontSize: '0.6rem' }}>CLIENTE</th>
-                                      <th className="text-center" style={{ fontSize: '0.6rem' }}>PEDIDOS</th>
-                                      <th className="text-end" style={{ fontSize: '0.6rem' }}>VALOR ($)</th>
-                                      <th className="text-end" style={{ fontSize: '0.6rem' }}>VOL (CF)</th>
-                                      <th className="text-end pe-0" style={{ fontSize: '0.6rem' }}>VOL (CU)</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {r.clients.map((c: any) => (
-                                      <tr key={c.id}>
-                                        <td className="ps-0 py-2">
-                                          <div className="d-flex flex-column">
-                                            <span className="fw-bold text-uppercase" style={{ fontSize: '0.7rem' }}>{c.name}</span>
-                                            <span className="text-secondary" style={{ fontSize: '0.6rem' }}>SAP: {c.id}</span>
-                                          </div>
-                                        </td>
-                                        <td className="text-center align-middle fw-bold" style={{ fontSize: '0.75rem' }}>{c.count}</td>
-                                        <td className="text-end align-middle fw-black text-info" style={{ fontSize: '0.75rem' }}>${c.valor.toLocaleString()}</td>
-                                        <td className="text-end align-middle fw-bold text-success" style={{ fontSize: '0.75rem' }}>{c.cf.toFixed(1)}</td>
-                                        <td className="text-end align-middle fw-bold text-warning pe-0" style={{ fontSize: '0.75rem' }}>{c.cu.toFixed(1)}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </Table>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    ))}</tbody>
                   </Table>
                 </div>
               </Tab.Pane>
