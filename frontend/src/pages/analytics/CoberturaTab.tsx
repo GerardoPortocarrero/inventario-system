@@ -79,8 +79,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
               <tr style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
                 {selectedMarcasCobertura.map(mId => (
                   <Fragment key={`sub-${mId}`}>
-                    <th className="text-center bg-dark text-white small fw-black py-1" style={{ fontSize: '0.55rem', borderRight: '1px solid rgba(255,255,255,0.05)', backgroundColor: '#000' }}>CF / CU</th>
-                    <th className="text-center bg-dark text-white small fw-black py-1" style={{ fontSize: '0.55rem', backgroundColor: '#000' }}>CLI</th>
+                    <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem', borderRight: '1px solid var(--theme-border-default)', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CF / CU</th>
+                    <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CLI</th>
                   </Fragment>
                 ))}
               </tr>
@@ -98,7 +98,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                       <td className="text-center align-middle py-2">
                         <div className="d-flex align-items-center justify-content-center gap-2">
                           <div className={`chevron-icon ${expandedCoberturaRutas[rutaId] ? 'active' : ''}`} style={{ transition: 'transform 0.1s' }}>
-                            <FaChevronRight size={10} style={{ transform: expandedCoberturaRutas[rutaId] ? 'rotate(90deg)' : 'none' }} />
+                            <FaChevronRight size={10} style={{ transform: expandedCoberturaRutas[rutaId] ? 'rotate(90deg)' : 'none', color: 'var(--theme-text-primary)' }} />
                           </div>
                           <span className="fw-black fs-6 text-uppercase" style={{ letterSpacing: '0.5px', color: 'var(--theme-text-primary)', fontSize: '0.8rem' }}>
                             {rutaId}
@@ -110,7 +110,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                         const hasData = vals.cf > 0 || vals.cu > 0;
                         return (
                           <Fragment key={`${rutaId}-${mId}`}>
-                            <td className={`text-center align-middle fw-black ${hasData ? '' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.75rem' }}>
+                            <td className={`text-center align-middle fw-black ${hasData ? '' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.75rem', color: hasData ? 'var(--theme-text-primary)' : '' }}>
                               <span className="text-success">{vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                               <span className="mx-1 text-secondary opacity-50">/</span>
                               <span className="text-warning">{vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
@@ -134,7 +134,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                             <tr 
                               key={`${rutaId}-${clientId}`} 
                               style={{ 
-                                backgroundColor: hasAnySale ? 'rgba(0,0,0,0.15)' : 'rgba(244, 0, 9, 0.03)' 
+                                backgroundColor: hasAnySale ? 'var(--theme-background-secondary)' : 'transparent' 
                               }}
                             >
                               <td className={`ps-4 py-1 border-start ${hasAnySale ? 'border-danger' : 'border-warning'} border-4`}>
@@ -143,7 +143,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                     className="fw-bold text-uppercase" 
                                     style={{ 
                                       fontSize: '0.7rem', 
-                                      color: hasAnySale ? 'var(--theme-text-primary)' : 'rgba(255,255,255,0.4)' 
+                                      color: hasAnySale ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)' 
                                     }}
                                   >
                                     {client.nombre}

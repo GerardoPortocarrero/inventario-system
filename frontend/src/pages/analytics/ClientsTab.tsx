@@ -44,7 +44,7 @@ const ClientsTab: FC<ClientsTabProps> = memo(({
             <div className="flex-grow-1">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={segmentCounts} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--theme-border-default)" opacity={0.3} />
                   <XAxis type="number" hide />
                   <YAxis dataKey="name" type="category" {...axisStyle} width={100} />
                   <Tooltip {...chartTooltipStyle} />

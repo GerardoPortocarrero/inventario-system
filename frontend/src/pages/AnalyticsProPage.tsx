@@ -351,7 +351,7 @@ const AnalyticsProPage: FC = () => {
               <Tab.Pane eventKey="dashboard" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex justify-content-between align-items-center p-3 mb-3 border-start border-danger border-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <div><h6 className="fw-black mb-0 text-uppercase">Dimensión del Análisis</h6><span className="text-secondary small fw-bold">Unidad de medida para gráficos</span></div>
-                  <div className="d-flex p-1 border border-secondary border-opacity-25 shadow-sm" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)' }}>
+                  <div className="d-flex p-1 border shadow-sm" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)' }}>
                     {([['valor', '$'], ['cf', 'CF'], ['cu', 'CU']] as const).map(([m, label]) => (
                       <button key={m} onClick={() => setMetric(m)} className={`btn btn-sm px-4 fw-black ${metric === m ? 'btn-danger shadow-sm' : 'btn-link text-secondary text-decoration-none'}`} style={{ fontSize: '0.75rem', borderRadius: '2px' }}>{label}</button>
                     ))}
@@ -395,7 +395,7 @@ const AnalyticsProPage: FC = () => {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-red-primary); }
         .date-picker-industrial { background: transparent; border: none; font-weight: 900; font-size: 0.75rem; color: var(--theme-text-primary); text-align: center; width: 100px; outline: none; }
         .industrial-table-v2 thead th { background-color: var(--theme-background-tertiary) !important; color: var(--theme-text-secondary); font-weight: 900; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--theme-border-default); padding: 15px 10px; }
-        .industrial-table-v2 tbody tr { border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s ease; }
+        .industrial-table-v2 tbody tr { border-bottom: 1px solid var(--theme-table-border-color); transition: background 0.2s ease; }
         .industrial-table-v2 tbody tr:hover { background-color: rgba(244, 0, 9, 0.05) !important; }
       `}</style>
     </div>
@@ -403,3 +403,4 @@ const AnalyticsProPage: FC = () => {
 };
 
 export default AnalyticsProPage;
+nalyticsProPage;

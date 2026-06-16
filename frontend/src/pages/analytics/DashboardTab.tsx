@@ -65,7 +65,7 @@ const DashboardTab: FC<DashboardProps> = memo(({
         <h6 className="fw-black text-uppercase small mb-4">Evolución Histórica ({metricLabel})</h6>
         <ResponsiveContainer width="100%" height="90%">
           <LineChart data={timelineStats}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--theme-border-default)" opacity={0.3} />
             <XAxis dataKey="date" {...axisStyle} />
             <YAxis {...axisStyle} />
             <Tooltip {...chartTooltipStyle} formatter={(value: any) => [formatValue(value), metricLabel]} />
@@ -78,7 +78,7 @@ const DashboardTab: FC<DashboardProps> = memo(({
         <h6 className="fw-black text-uppercase small mb-4">Tendencia por Día ({metricLabel})</h6>
         <ResponsiveContainer width="100%" height="90%">
           <BarChart data={dailyStats}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--theme-border-default)" opacity={0.3} />
             <XAxis dataKey="name" {...axisStyle} />
             <YAxis {...axisStyle} />
             <Tooltip {...chartTooltipStyle} formatter={(value: any) => [formatValue(value), metricLabel]} />
@@ -95,7 +95,7 @@ const DashboardTab: FC<DashboardProps> = memo(({
               <div style={{ height: `${Math.max(routePerformance.length * 40, 400)}px`, width: '100%' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={routePerformance} layout="vertical" margin={{ left: 0, right: 30, top: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--theme-border-default)" opacity={0.3} />
                     <XAxis type="number" hide />
                     <YAxis dataKey="ruta" type="category" {...axisStyle} width={80} />
                     <Tooltip {...chartTooltipStyle} formatter={(val: any) => [formatValue(val), metricLabel]} />
@@ -119,7 +119,7 @@ const DashboardTab: FC<DashboardProps> = memo(({
                   layout="vertical" 
                   margin={{ left: 5, right: 40, top: 0, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--theme-border-default)" opacity={0.3} />
                   <XAxis type="number" hide />
                   <YAxis dataKey="displaySede" type="category" {...axisStyle} width={90} tickFormatter={(val) => val.length > 12 ? `${val.substring(0, 10)}...` : val} />
                   <Tooltip {...chartTooltipStyle} formatter={(val: any) => [formatValue(val), metricLabel]} />
