@@ -334,7 +334,7 @@ const AnalyticsProPage: FC = () => {
                 {activeTab === 'cobertura' && <CoberturaTab marcas={marcas} selectedMarcasCobertura={selectedMarcasCobertura} setSelectedMarcasCobertura={setSelectedMarcasCobertura} matrixCoberturaData={matrixCoberturaData} expandedCoberturaRutas={expandedCoberturaRutas} setExpandedCoberturaRutas={setExpandedCoberturaRutas} />}
               </Tab.Pane>
 
-              <Tab.Pane eventKey="productos" className="h-100 overflow-auto custom-scrollbar p-3">
+              <Tab.Pane eventKey="productos" className="h-100 overflow-hidden custom-scrollbar p-3">
                 {activeTab === 'productos' && <ProductsTab productSearch={productSearch} setProductSearch={setProductSearch} productSort={productSort} handleSort={handleSort} setProductSort={setProductSort} finalProductPerformance={productMetrics} SortHeader={SortHeader} />}
               </Tab.Pane>
             </Tab.Content>
