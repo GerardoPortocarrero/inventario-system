@@ -5,8 +5,9 @@ import { FaChartLine, FaUsers, FaBox, FaHistory, FaMapMarkerAlt, FaFilter, FaRou
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import useMediaQuery from '../hooks/useMediaQuery';
-import { db } from '../api/firebase';
+import { db, rtdb } from '../api/firebase';
 import { useData } from '../context/DataContext';
+import { ref, onValue } from 'firebase/database';
 import { collection, getDocs, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale/es';
@@ -26,6 +27,7 @@ const AnalyticsProPage: FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [demandaData, setDemandaData] = useState<any[]>([]);
+  const [maestroData, setMaestroData] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
 
   // --- FILTROS GLOBALES ---
@@ -33,6 +35,11 @@ const AnalyticsProPage: FC = () => {
   const [selectedSede, setSelectedSede] = useState<string>('ALL');
   const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
   const [selectedMarcasCobertura, setSelectedMarcasCobertura] = useState<string[]>([]);
+  
+  // --- FILTROS EXCLUSIVOS COBERTURA ---
+  const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
+  const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string>('ALL');
+
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -69,7 +76,13 @@ const AnalyticsProPage: FC = () => {
         const [dSnap, pSnap] = await Promise.all([getDocs(q), getDocs(collection(db, 'productos'))]);
         setDemandaData(dSnap.docs.map(doc => ({ ...doc.data(), fechaObj: (doc.data() as any).fecha?.toDate() })));
         setProducts(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setLoading(false);
+        
+        // Cargar Maestro para Filtros de Cobertura
+        onValue(ref(rtdb, 'maestro/data'), (snapshot) => {
+          if (snapshot.exists()) setMaestroData(snapshot.val() || []);
+          setLoading(false);
+        }, { onlyOnce: true });
+
       } catch (e) { console.error(e); setLoading(false); }
     };
     loadData();
@@ -181,34 +194,83 @@ const AnalyticsProPage: FC = () => {
     return res;
   }, [groupedClients, debouncedClientSearch, clientSort]);
 
+  const availableSubCanales = useMemo(() => {
+    const s = new Set<string>();
+    maestroData.forEach(m => { if (m.SubCanal) s.add(String(m.SubCanal).trim()); });
+    return Array.from(s).sort();
+  }, [maestroData]);
+
   const matrixCoberturaData = useMemo(() => {
     if (activeTab !== 'cobertura' || selectedMarcasCobertura.length === 0) return { rutas: [], data: {} };
+    
     const matrix: Record<string, any> = {};
     const routeSet = new Set<string>();
     const prodMap = products.reduce((acc, p) => ({ ...acc, [String(p.sap).trim()]: p }), {} as any);
-    filteredData.forEach(d => {
-      const rid = String(d.ruta || 'S/R').trim();
-      const cid = String(d.solicitante).trim();
-      routeSet.add(rid);
+
+    // 1. Identificar clientes que cumplen los filtros (Día y SubCanal)
+    const validClients = new Set<string>();
+    const clientMeta: Record<string, any> = {};
+
+    maestroData.forEach(m => {
+      const cid = String(m.Codigo || '').trim();
+      if (!cid) return;
+
+      // Filtro SubCanal
+      if (selectedSubCanalCobertura !== 'ALL' && String(m.SubCanal).trim() !== selectedSubCanalCobertura) return;
+
+      // Filtro Día (Normalización estricta de 2 letras: LU, MA, MI, etc.)
+      if (selectedDiaCobertura !== 'ALL') {
+        const diasArray = String(m['SEGDIAS'] || m['SEG DIAS'] || m['SEG.DIAS'] || '')
+          .split(/[, -]/)
+          .map(d => d.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 2))
+          .filter(d => d.length === 2);
+        
+        if (!diasArray.includes(selectedDiaCobertura)) return;
+      }
+
+      // Filtro Sede
+      if (selectedSede !== 'ALL' && String(m.Loc || '').trim() !== selectedSede) return;
+
+      validClients.add(cid);
+      const rid = String(m['Ruta com'] || m.Ruta || 'S/R').trim();
+      clientMeta[cid] = { rid, nombre: m.Cliente || 'SIN NOMBRE' };
+
       if (!matrix[rid]) matrix[rid] = { total: {}, totalClientesRuta: 0, clientes: {} };
-      if (!matrix[rid].clientes[cid]) { matrix[rid].totalClientesRuta++; matrix[rid].clientes[cid] = { nombre: d.nombreCliente, marcas: {} }; }
+      if (!matrix[rid].clientes[cid]) {
+        matrix[rid].totalClientesRuta++;
+        matrix[rid].clientes[cid] = { nombre: m.Cliente, marcas: {} };
+        routeSet.add(rid);
+      }
+    });
+
+    // 2. Llenar con ventas (solo para clientes válidos)
+    filteredData.forEach(d => {
+      const cid = String(d.solicitante || '').trim();
+      if (!validClients.has(cid)) return;
+
+      const rid = clientMeta[cid].rid;
+      
       (d.materiales || []).forEach((m: any) => {
         const p = prodMap[String(m.sku).trim()];
         if (p && selectedMarcasCobertura.includes(p.marcaId)) {
           const mid = p.marcaId;
           if (!matrix[rid].clientes[cid].marcas[mid]) matrix[rid].clientes[cid].marcas[mid] = { cf: 0, cu: 0 };
-          const hadS = matrix[rid].clientes[cid].marcas[mid].cf > 0;
+          const hadS = matrix[rid].clientes[cid].marcas[mid].cf > 0 || matrix[rid].clientes[cid].marcas[mid].cu > 0;
+          
           matrix[rid].clientes[cid].marcas[mid].cf += m.cf || 0;
           matrix[rid].clientes[cid].marcas[mid].cu += m.cu || 0;
+          
           if (!matrix[rid].total[mid]) matrix[rid].total[mid] = { cf: 0, cu: 0, cliConVenta: 0 };
           matrix[rid].total[mid].cf += m.cf || 0;
           matrix[rid].total[mid].cu += m.cu || 0;
-          if (!hadS) matrix[rid].total[mid].cliConVenta++;
+          
+          if (!hadS && (m.cf > 0 || m.cu > 0)) matrix[rid].total[mid].cliConVenta++;
         }
       });
     });
-    return { rutas: Array.from(routeSet).sort(), data: matrix };
-  }, [filteredData, activeTab, selectedMarcasCobertura, products]);
+
+    return { rutas: Array.from(routeSet).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})), data: matrix };
+  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede]);
 
   // OPTIMIZACIÓN: Separar agregación de filtrado de productos
   const groupedProducts = useMemo(() => {
@@ -331,7 +393,21 @@ const AnalyticsProPage: FC = () => {
               </Tab.Pane>
               
               <Tab.Pane eventKey="cobertura" className="h-100 overflow-auto custom-scrollbar p-3">
-                {activeTab === 'cobertura' && <CoberturaTab marcas={marcas} selectedMarcasCobertura={selectedMarcasCobertura} setSelectedMarcasCobertura={setSelectedMarcasCobertura} matrixCoberturaData={matrixCoberturaData} expandedCoberturaRutas={expandedCoberturaRutas} setExpandedCoberturaRutas={setExpandedCoberturaRutas} />}
+                {activeTab === 'cobertura' && (
+                  <CoberturaTab 
+                    marcas={marcas} 
+                    selectedMarcasCobertura={selectedMarcasCobertura} 
+                    setSelectedMarcasCobertura={setSelectedMarcasCobertura} 
+                    matrixCoberturaData={matrixCoberturaData} 
+                    expandedCoberturaRutas={expandedCoberturaRutas} 
+                    setExpandedCoberturaRutas={setExpandedCoberturaRutas} 
+                    selectedDia={selectedDiaCobertura}
+                    setSelectedDia={setSelectedDiaCobertura}
+                    selectedSubCanal={selectedSubCanalCobertura}
+                    setSelectedSubCanal={setSelectedSubCanalCobertura}
+                    availableSubCanales={availableSubCanales}
+                  />
+                )}
               </Tab.Pane>
 
               <Tab.Pane eventKey="productos" className="h-100 overflow-hidden custom-scrollbar p-3">

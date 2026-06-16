@@ -10,17 +10,51 @@ interface CoberturaTabProps {
   matrixCoberturaData: { rutas: string[]; data: any };
   expandedCoberturaRutas: Record<string, boolean>;
   setExpandedCoberturaRutas: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  selectedDia: string;
+  setSelectedDia: (dia: string) => void;
+  selectedSubCanal: string;
+  setSelectedSubCanal: (sc: string) => void;
+  availableSubCanales: string[];
 }
 
 const CoberturaTab: FC<CoberturaTabProps> = memo(({ 
   marcas, selectedMarcasCobertura, setSelectedMarcasCobertura, 
-  matrixCoberturaData, expandedCoberturaRutas, setExpandedCoberturaRutas 
+  matrixCoberturaData, expandedCoberturaRutas, setExpandedCoberturaRutas,
+  selectedDia, setSelectedDia, selectedSubCanal, setSelectedSubCanal, availableSubCanales
 }) => {
   return (
     <div className="d-flex flex-column gap-3 h-100">
       <div className="admin-border-industrial p-3 flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
         <div className="d-flex align-items-center gap-3 flex-wrap">
-          <div className="d-flex align-items-center gap-2 p-2 border border-secondary border-opacity-25" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', minWidth: '220px' }}>
+          {/* FILTRO DIA */}
+          <div className="d-flex align-items-center gap-2 p-1 border" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)', minWidth: '130px' }}>
+            <span className="text-danger ms-2 fw-black" style={{ fontSize: '0.7rem' }}>DÍA:</span>
+            <Form.Select 
+              value={selectedDia} 
+              onChange={(e) => setSelectedDia(e.target.value)} 
+              className="bg-transparent border-0 small fw-black px-2 py-0 shadow-none text-uppercase" 
+              style={{ outline: 'none', fontSize: '0.75rem', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
+            >
+              <option value="ALL">TODOS</option>
+              {['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'].map(d => <option key={d} value={d}>{d}</option>)}
+            </Form.Select>
+          </div>
+
+          {/* FILTRO SUBCANAL */}
+          <div className="d-flex align-items-center gap-2 p-1 border" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)', minWidth: '180px' }}>
+            <span className="text-danger ms-2 fw-black" style={{ fontSize: '0.7rem' }}>CANAL:</span>
+            <Form.Select 
+              value={selectedSubCanal} 
+              onChange={(e) => setSelectedSubCanal(e.target.value)} 
+              className="bg-transparent border-0 small fw-black px-2 py-0 shadow-none text-uppercase" 
+              style={{ outline: 'none', fontSize: '0.75rem', cursor: 'pointer', color: 'var(--theme-text-primary)' }}
+            >
+              <option value="ALL">TODOS</option>
+              {availableSubCanales.map(sc => <option key={sc} value={sc}>{sc}</option>)}
+            </Form.Select>
+          </div>
+
+          <div className="d-flex align-items-center gap-2 p-1 border" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)', minWidth: '220px' }}>
             <FaStar className="text-warning ms-2" size={14} />
             <Form.Select 
               value="" 
