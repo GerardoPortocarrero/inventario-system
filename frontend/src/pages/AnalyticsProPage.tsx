@@ -38,7 +38,7 @@ const AnalyticsProPage: FC = () => {
     end: new Date().toISOString().split('T')[0]
   });
 
-  // --- BUSQUEDA CON DEBOUNCE REAL ---
+  // --- BUSQUEDA CON DEBOUNCE ---
   const [clientSearch, setClientSearch] = useState('');
   const [debouncedClientSearch, setDebouncedClientSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
@@ -151,7 +151,8 @@ const AnalyticsProPage: FC = () => {
     return { timelineStats: timeline, dailyStats: Object.entries(daysMap).map(([name, x]: any) => ({ name, value: x.t })), routePerformance: rPerf.map((x: any) => ({ ...x, currentValue: x.v })), statsPro: { starProduct: pPerf[0]?.name || '---', starProductValue: pPerf[0]?.v || 0, starRoute: rPerf[0]?.ruta || '---', starRouteValue: rPerf[0]?.v || 0, sedePerformance: Object.entries(sMap).map(([sede, value]) => ({ sede, value })).sort((a, b) => b.value - a.value) }, totalMetric: total };
   }, [filteredData, metric, activeTab, dateRange]);
 
-  const clientMetrics = useMemo(() => {
+  // OPTIMIZACIÓN: Separar agregación de filtrado
+  const groupedClients = useMemo(() => {
     if (activeTab !== 'clientes') return [];
     const cMap: Record<string, any> = {};
     filteredData.forEach(d => {
@@ -161,7 +162,11 @@ const AnalyticsProPage: FC = () => {
       cMap[id].cf += d.totalCF || 0;
       cMap[id].cu += d.totalCU || 0;
     });
-    let res = Object.values(cMap);
+    return Object.values(cMap);
+  }, [filteredData, activeTab]);
+
+  const clientMetrics = useMemo(() => {
+    let res = [...groupedClients];
     if (debouncedClientSearch) {
       const t = debouncedClientSearch.toLowerCase();
       res = res.filter(x => x.clientName.toLowerCase().includes(t) || x.clientId.toLowerCase().includes(t));
@@ -174,7 +179,7 @@ const AnalyticsProPage: FC = () => {
       });
     }
     return res;
-  }, [filteredData, debouncedClientSearch, clientSort, activeTab]);
+  }, [groupedClients, debouncedClientSearch, clientSort]);
 
   const matrixCoberturaData = useMemo(() => {
     if (activeTab !== 'cobertura' || selectedMarcasCobertura.length === 0) return { rutas: [], data: {} };
@@ -205,7 +210,8 @@ const AnalyticsProPage: FC = () => {
     return { rutas: Array.from(routeSet).sort(), data: matrix };
   }, [filteredData, activeTab, selectedMarcasCobertura, products]);
 
-  const productMetrics = useMemo(() => {
+  // OPTIMIZACIÓN: Separar agregación de filtrado de productos
+  const groupedProducts = useMemo(() => {
     if (activeTab !== 'productos') return [];
     const pMap: Record<string, any> = {};
     filteredData.forEach(d => {
@@ -216,7 +222,11 @@ const AnalyticsProPage: FC = () => {
         pMap[m.sku].cu += m.cu || 0;
       });
     });
-    let res = Object.values(pMap);
+    return Object.values(pMap);
+  }, [filteredData, activeTab]);
+
+  const productMetrics = useMemo(() => {
+    let res = [...groupedProducts];
     if (debouncedProductSearch) {
       const t = debouncedProductSearch.toLowerCase();
       res = res.filter(x => x.name.toLowerCase().includes(t) || x.sap.toLowerCase().includes(t));
@@ -229,33 +239,34 @@ const AnalyticsProPage: FC = () => {
       });
     }
     return res;
-  }, [filteredData, debouncedProductSearch, productSort, activeTab]);
+  }, [groupedProducts, debouncedProductSearch, productSort]);
 
   if (loading) return <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />;
 
   return (
     <div className="admin-layout-container flex-column gap-2 gap-md-3">
+      {/* HEADER Y FILTROS */}
       <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '1rem 1.25rem', borderLeft: '4px solid var(--color-red-primary)' }}>
         <div className={`d-flex ${isMobile ? 'flex-column gap-2' : 'align-items-center justify-content-between'} g-3`}>
           <h3 className="fw-black mb-0 d-flex align-items-center gap-2" style={{ fontSize: '1.2rem' }}>
             <FaChartLine className="text-danger" /> ANALÍTICA PRO
           </h3>
           <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-            <div className="d-flex align-items-center p-1 border" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', borderColor: 'var(--theme-border-default)', height: '32px' }}>
+            <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
               <FaMapMarkerAlt className="text-danger ms-2" size={12} />
               <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '85px', color: 'var(--theme-text-primary)' }}>
                 <option value="ALL">GLOBAL</option>
                 {sedes.map(s => <option key={s.id} value={s.codigo}>{s.nombre.toUpperCase()}</option>)}
               </Form.Select>
             </div>
-            <div className="d-flex align-items-center p-1 border" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', borderColor: 'var(--theme-border-default)', height: '32px' }}>
+            <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
               <FaRoute className="text-danger ms-2" size={12} />
               <Form.Select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '80px', color: 'var(--theme-text-primary)' }}>
                 <option value="ALL">RUTAS</option>
                 {availableRoutes.map(r => <option key={r} value={r}>RUTA {r}</option>)}
               </Form.Select>
             </div>
-            <div className="d-flex align-items-center p-1 border" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', borderColor: 'var(--theme-border-default)', height: '32px' }}>
+            <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
               <DatePicker selected={new Date(dateRange.start + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" />
               <DatePicker selected={new Date(dateRange.end + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" />
             </div>
@@ -263,6 +274,7 @@ const AnalyticsProPage: FC = () => {
         </div>
       </div>
 
+      {/* CONTENIDO PRINCIPAL */}
       <div className="admin-section-table flex-grow-1 p-0 overflow-hidden">
         <Tab.Container id="analytics-tabs" activeKey={activeTab} onSelect={(k) => setActiveTab(k as string)}>
           <div className="d-flex flex-column h-100">
@@ -293,9 +305,9 @@ const AnalyticsProPage: FC = () => {
               <Tab.Pane eventKey="dashboard" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex justify-content-between align-items-center p-3 mb-3 border-start border-danger border-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <div><h6 className="fw-black mb-0 text-uppercase">Dimensión del Análisis</h6><span className="text-secondary small fw-bold">Unidad de medida para gráficos</span></div>
-                  <div className="d-flex p-1 border shadow-sm" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)' }}>
+                  <div className="d-flex p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)' }}>
                     {([['valor', '$'], ['cf', 'CF'], ['cu', 'CU']] as const).map(([m, label]) => (
-                      <button key={m} onClick={() => setMetric(m)} className={`btn btn-sm px-4 fw-black ${metric === m ? 'btn-danger shadow-sm' : 'btn-link text-secondary text-decoration-none'}`} style={{ fontSize: '0.75rem', borderRadius: '2px' }}>{label}</button>
+                      <button key={m} onClick={() => setMetric(m)} className={`btn btn-sm px-4 fw-black ${metric === m ? 'btn-danger' : 'btn-link text-secondary text-decoration-none'}`} style={{ fontSize: '0.75rem', borderRadius: '2px' }}>{label}</button>
                     ))}
                   </div>
                 </div>
