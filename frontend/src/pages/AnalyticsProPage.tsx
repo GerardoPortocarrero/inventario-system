@@ -1,13 +1,12 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Tab, Nav, Form, Popover, Badge } from 'react-bootstrap';
-import { FaChartLine, FaUsers, FaBox, FaHistory, FaMapMarkerAlt, FaFilter, FaRoute, FaSortUp, FaSortDown, FaSort, FaCrown, FaStar, FaArrowUp, FaUserCheck, FaExclamationTriangle, FaBed } from 'react-icons/fa';
+import { Tab, Nav, Form, Popover } from 'react-bootstrap';
+import { FaChartLine, FaUsers, FaBox, FaHistory, FaMapMarkerAlt, FaFilter, FaRoute, FaSortUp, FaSortDown, FaSort, FaCrown, FaStar, FaExclamationTriangle, FaBed } from 'react-icons/fa';
 import { SPINNER_VARIANTS } from '../constants';
 import GlobalSpinner from '../components/GlobalSpinner';
 import useMediaQuery from '../hooks/useMediaQuery';
-import { db, rtdb } from '../api/firebase';
+import { db } from '../api/firebase';
 import { useData } from '../context/DataContext';
-import { ref, onValue } from 'firebase/database';
 import { collection, getDocs, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale/es';
@@ -27,7 +26,6 @@ const AnalyticsProPage: FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [demandaData, setDemandaData] = useState<any[]>([]);
-  const [maestroData, setMaestroData] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
 
   // --- FILTROS GLOBALES ---
@@ -52,9 +50,8 @@ const AnalyticsProPage: FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const start = new Date(dateRange.start);
-        const end = new Date(dateRange.end);
-        end.setHours(23, 59, 59);
+        const start = new Date(dateRange.start + 'T00:00:00');
+        const end = new Date(dateRange.end + 'T23:59:59');
 
         const demandaQuery = query(
           collection(db, 'demanda_historica'), 
@@ -73,12 +70,7 @@ const AnalyticsProPage: FC = () => {
           fechaObj: (doc.data() as any).fecha?.toDate()
         })));
         setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-        onValue(ref(rtdb, 'maestro/data'), (snapshot) => {
-          if (snapshot.exists()) setMaestroData(snapshot.val() || []);
-          setLoading(false);
-        }, { onlyOnce: true });
-
+        setLoading(false);
       } catch (error) {
         console.error("Error loading analytics data:", error);
         setLoading(false);
