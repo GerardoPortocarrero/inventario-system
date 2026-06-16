@@ -96,11 +96,11 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
       </div>
 
       {selectedMarcasCobertura.length > 0 ? (
-        <div className="admin-border-industrial overflow-auto flex-grow-1" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
-          <Table responsive hover bordered className="mb-0 industrial-table-v2 matrix-table h-100">
+        <div className="admin-border-industrial flex-grow-1 overflow-auto custom-scrollbar position-relative" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+          <Table hover bordered className="mb-0 industrial-table-v2 matrix-table" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: 'max-content' }}>
             <thead style={{ backgroundColor: 'var(--theme-background-tertiary)' }} className="sticky-top">
               <tr>
-                <th rowSpan={2} className="align-middle text-center ps-4" style={{ width: '120px', fontSize: '0.65rem', backgroundColor: 'var(--theme-background-tertiary)' }}>ID RUTA</th>
+                <th rowSpan={2} className="align-middle text-center ps-4 sticky-column" style={{ width: '180px', minWidth: '180px', fontSize: '0.65rem', backgroundColor: 'var(--theme-background-tertiary)', zIndex: 11, borderRight: '2px solid var(--theme-border-default)' }}>ID RUTA</th>
                 {selectedMarcasCobertura.map(mId => {
                   const marca = marcas.find(m => m.id === mId);
                   return (
@@ -132,7 +132,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                       style={{ cursor: 'pointer' }}
                       className={expandedCoberturaRutas[rutaId] ? 'bg-danger bg-opacity-10' : ''}
                     >
-                      <td className="text-center align-middle py-3 border-0">
+                      <td className="text-center align-middle py-3 border-0 sticky-column" style={{ backgroundColor: expandedCoberturaRutas[rutaId] ? 'rgba(244, 0, 9, 0.12)' : 'var(--theme-background-secondary)', zIndex: 10, borderRight: '2px solid var(--theme-border-default)' }}>
                         <div className="d-flex align-items-center justify-content-center gap-2">
                           <div className={`chevron-icon ${expandedCoberturaRutas[rutaId] ? 'active' : ''}`} style={{ transition: 'transform 0.1s' }}>
                             <FaChevronRight size={12} style={{ transform: expandedCoberturaRutas[rutaId] ? 'rotate(90deg)' : 'none', color: 'var(--theme-text-primary)' }} />
@@ -148,12 +148,12 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                         const isLast = idx === selectedMarcasCobertura.length - 1;
                         return (
                           <Fragment key={`${rutaId}-${mId}`}>
-                            <td className={`text-center align-middle fw-black border-0 ${hasData ? '' : 'text-secondary opacity-25'}`} style={{ fontSize: '1rem', color: hasData ? 'var(--theme-text-primary)' : '' }}>
+                            <td className={`text-center align-middle fw-black border-0 ${hasData ? '' : 'text-secondary opacity-25'}`} style={{ fontSize: '1rem', color: hasData ? 'var(--theme-text-primary)' : '', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
                               <span className="text-success">{vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                               <span className="mx-2 text-secondary opacity-50">/</span>
                               <span className="text-warning">{vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                             </td>
-                            <td className={`text-center align-middle fw-black border-0 ${hasData ? 'text-info' : 'text-secondary opacity-25'}`} style={{ fontSize: '1rem', borderRight: isLast ? 'none' : '1px solid var(--theme-border-default) !important' }}>
+                            <td className={`text-center align-middle fw-black border-0 ${hasData ? 'text-info' : 'text-secondary opacity-25'}`} style={{ fontSize: '1rem', borderRight: isLast ? 'none' : '1px solid var(--theme-border-default) !important', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
                               {vals.cliConVenta} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
                             </td>
                           </Fragment>
@@ -166,19 +166,23 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                         .map(([clientId, client]: [string, any]) => {
                           return (
                             <tr key={`${rutaId}-${clientId}`} className="border-0">
-                              <td className="ps-4 py-2 border-0">
+                              <td className="ps-4 py-2 border-0 sticky-column" style={{ backgroundColor: 'var(--theme-background-primary)', zIndex: 10, borderRight: '2px solid var(--theme-border-default)' }}>
                                 <div className="d-flex flex-column">
+                                  <div className="d-flex justify-content-between align-items-center mb-1">
+                                    <span className="fw-black text-danger" style={{ fontSize: '0.65rem', opacity: 0.9 }}>RUTA: {rutaId}</span>
+                                    <span className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
+                                  </div>
                                   <span 
                                     className="fw-black text-uppercase" 
                                     style={{ 
-                                      fontSize: '0.85rem', 
+                                      fontSize: '0.9rem', 
                                       color: 'var(--theme-text-primary)',
-                                      letterSpacing: '0.5px'
+                                      letterSpacing: '0.5px',
+                                      lineHeight: '1.1'
                                     }}
                                   >
                                     {client.nombre}
                                   </span>
-                                  <span className="text-secondary fw-bold" style={{ fontSize: '0.65rem' }}>ID: {clientId}</span>
                                 </div>
                               </td>
                               {selectedMarcasCobertura.map((mId, idx) => {
@@ -191,7 +195,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                     <td 
                                       className={`text-center align-middle fw-black border-0`} 
                                       style={{ 
-                                        fontSize: '0.9rem',
+                                        fontSize: '0.95rem',
                                         backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent',
                                         transition: 'background-color 0.2s'
                                       }}
@@ -207,13 +211,13 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                     <td 
                                       className="text-center align-middle border-0" 
                                       style={{ 
-                                        fontSize: '0.9rem', 
+                                        fontSize: '0.95rem', 
                                         borderRight: isLastMarca ? 'none' : '1px solid var(--theme-border-default) !important',
                                         backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent'
                                       }}
                                     >
                                       {hasData ? (
-                                        <FaCheck className="text-success" size={16} />
+                                        <FaCheck className="text-success" size={18} />
                                       ) : (
                                         <FaTimes className="text-danger opacity-25" size={16} />
                                       )}
@@ -229,24 +233,6 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 );
               })}
             </tbody>
-            <tfoot className="sticky-bottom" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 5 }}>
-              <tr className="border-top-2 border-danger">
-                <td className="text-center fw-black text-uppercase small py-3" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>Total General</td>
-                {selectedMarcasCobertura.map(mId => {
-                  let tCf = 0; let tCu = 0;
-                  matrixCoberturaData.rutas.forEach(rId => {
-                    const v = matrixCoberturaData.data[rId]?.total[mId];
-                    if (v) { tCf += v.cf; tCu += v.cu; }
-                  });
-                  return (
-                    <Fragment key={`foot-${mId}`}>
-                      <td className="text-center fw-black text-success fs-6" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>{tCf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                      <td className="text-center fw-black text-warning fs-6" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>{tCu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                    </Fragment>
-                  );
-                })}
-              </tr>
-            </tfoot>
           </Table>
         </div>
       ) : (
@@ -261,6 +247,23 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           </p>
         </div>
       )}
+
+      <style>{`
+        .sticky-column {
+          position: sticky !important;
+          left: 0;
+          box-shadow: 6px 0 10px rgba(0,0,0,0.2);
+          z-index: 10;
+        }
+        .matrix-table {
+          border-collapse: separate !important;
+        }
+        /* Forzar visibilidad del scrollbar horizontal debajo de la cabecera */
+        .admin-border-industrial {
+          overflow-x: auto !important;
+          overflow-y: auto !important;
+        }
+      `}</style>
     </div>
   );
 });
