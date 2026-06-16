@@ -111,12 +111,15 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 })}
               </tr>
               <tr style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
-                {selectedMarcasCobertura.map(mId => (
-                  <Fragment key={`sub-${mId}`}>
-                    <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem', borderRight: '1px solid var(--theme-border-default)', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CF / CU</th>
-                    <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CLI</th>
-                  </Fragment>
-                ))}
+                {selectedMarcasCobertura.map((mId, idx) => {
+                  const isLast = idx === selectedMarcasCobertura.length - 1;
+                  return (
+                    <Fragment key={`sub-${mId}`}>
+                      <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CF / CU</th>
+                      <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem', borderRight: isLast ? 'none' : '1px solid var(--theme-border-default)', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CLI</th>
+                    </Fragment>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -129,7 +132,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                       style={{ cursor: 'pointer' }}
                       className={expandedCoberturaRutas[rutaId] ? 'bg-danger bg-opacity-10' : ''}
                     >
-                      <td className="text-center align-middle py-2">
+                      <td className="text-center align-middle py-2 border-0">
                         <div className="d-flex align-items-center justify-content-center gap-2">
                           <div className={`chevron-icon ${expandedCoberturaRutas[rutaId] ? 'active' : ''}`} style={{ transition: 'transform 0.1s' }}>
                             <FaChevronRight size={10} style={{ transform: expandedCoberturaRutas[rutaId] ? 'rotate(90deg)' : 'none', color: 'var(--theme-text-primary)' }} />
@@ -139,17 +142,18 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                           </span>
                         </div>
                       </td>
-                      {selectedMarcasCobertura.map(mId => {
+                      {selectedMarcasCobertura.map((mId, idx) => {
                         const vals = routeData?.total[mId] || { cf: 0, cu: 0, cliConVenta: 0 };
                         const hasData = vals.cf > 0 || vals.cu > 0;
+                        const isLast = idx === selectedMarcasCobertura.length - 1;
                         return (
                           <Fragment key={`${rutaId}-${mId}`}>
-                            <td className={`text-center align-middle fw-black ${hasData ? '' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.75rem', color: hasData ? 'var(--theme-text-primary)' : '' }}>
+                            <td className={`text-center align-middle fw-black border-0 ${hasData ? '' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.75rem', color: hasData ? 'var(--theme-text-primary)' : '' }}>
                               <span className="text-success">{vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                               <span className="mx-1 text-secondary opacity-50">/</span>
                               <span className="text-warning">{vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                             </td>
-                            <td className={`text-center align-middle fw-black ${hasData ? 'text-info' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.75rem' }}>
+                            <td className={`text-center align-middle fw-black border-0 ${hasData ? 'text-info' : 'text-secondary opacity-25'}`} style={{ fontSize: '0.75rem', borderRight: isLast ? 'none' : '1px solid var(--theme-border-default) !important' }}>
                               {vals.cliConVenta} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
                             </td>
                           </Fragment>
@@ -171,7 +175,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                 backgroundColor: hasAnySale ? 'var(--theme-background-secondary)' : 'transparent' 
                               }}
                             >
-                              <td className={`ps-4 py-1 border-start ${hasAnySale ? 'border-danger' : 'border-warning'} border-4`}>
+                              <td className="ps-4 py-1 border-0">
                                 <div className="d-flex flex-column">
                                   <span 
                                     className="fw-bold text-uppercase" 
@@ -185,17 +189,18 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                   <span className="text-secondary" style={{ fontSize: '0.55rem' }}>ID: {clientId}</span>
                                 </div>
                               </td>
-                              {selectedMarcasCobertura.map(mId => {
+                              {selectedMarcasCobertura.map((mId, idx) => {
                                 const vals = client.marcas[mId] || { cf: 0, cu: 0 };
                                 const hasData = vals.cf > 0 || vals.cu > 0;
+                                const isLastMarca = idx === selectedMarcasCobertura.length - 1;
                                 return (
                                   <Fragment key={`${rutaId}-${clientId}-${mId}`}>
-                                    <td className={`text-center align-middle fw-bold ${hasData ? '' : 'text-danger opacity-50'}`} style={{ fontSize: '0.75rem' }}>
+                                    <td className={`text-center align-middle fw-bold border-0 ${hasData ? '' : 'text-danger opacity-50'}`} style={{ fontSize: '0.75rem' }}>
                                       <span className={hasData ? 'text-success' : ''}>{vals.cf > 0 ? vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}</span>
                                       <span className="mx-1 text-secondary opacity-50">/</span>
                                       <span className={hasData ? 'text-warning' : ''}>{vals.cu > 0 ? vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0'}</span>
                                     </td>
-                                    <td className="text-center align-middle" style={{ fontSize: '0.75rem' }}>
+                                    <td className="text-center align-middle border-0" style={{ fontSize: '0.75rem', borderRight: isLastMarca ? 'none' : '1px solid var(--theme-border-default) !important' }}>
                                       {hasData ? <FaUserCheck className="text-info" size={12} /> : <span className="text-danger opacity-50">0</span>}
                                     </td>
                                   </Fragment>
