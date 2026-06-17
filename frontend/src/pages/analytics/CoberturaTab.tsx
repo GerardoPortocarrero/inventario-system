@@ -104,7 +104,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 {selectedMarcasCobertura.map(mId => {
                   const marca = marcas.find(m => m.id === mId);
                   return (
-                    <th key={mId} colSpan={2} className="text-center text-uppercase fw-black bg-danger text-white py-2" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
+                    <th key={mId} colSpan={2} className="text-center text-uppercase fw-black text-white py-2 brand-header-cell brand-separator" style={{ fontSize: '0.7rem', letterSpacing: '1px', backgroundColor: 'var(--color-red-primary)' }}>
                       {marca?.nombre || 'MARCA'}
                     </th>
                   );
@@ -254,17 +254,29 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           left: 0;
           box-shadow: 6px 0 10px rgba(0,0,0,0.2);
           z-index: 10;
-          border-right: 2px solid var(--theme-border-default) !important;
+          border-right: 1px solid var(--theme-table-border-color) !important;
         }
         .matrix-table {
           border-collapse: separate !important;
         }
-        .matrix-table th, .matrix-table td {
+        /* Bordes horizontales estándar */
+        .matrix-table thead th {
           border-bottom: 1px solid var(--theme-border-default) !important;
         }
-        .brand-separator {
+        .matrix-table tbody td {
+          border-bottom: 1px solid var(--theme-table-border-color) !important;
+        }
+        /* Separadores verticales alineados al estilo de la plataforma */
+        .matrix-table thead th.brand-separator {
           border-right: 1px solid var(--theme-border-default) !important;
         }
+        .matrix-table tbody td.brand-separator {
+          border-right: 1px solid var(--theme-table-border-color) !important;
+        }
+        .matrix-table tbody td.sticky-column {
+          border-right: 1px solid var(--theme-table-border-color) !important;
+        }
+        
         /* Forzar visibilidad del scrollbar horizontal debajo de la cabecera */
         .admin-border-industrial {
           overflow-x: auto !important;
