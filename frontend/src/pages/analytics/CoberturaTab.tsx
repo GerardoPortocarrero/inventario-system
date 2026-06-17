@@ -97,10 +97,10 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
 
       {selectedMarcasCobertura.length > 0 ? (
         <div className="admin-border-industrial flex-grow-1 overflow-auto custom-scrollbar position-relative" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
-          <Table hover bordered className="mb-0 industrial-table-v2 matrix-table" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: 'max-content' }}>
+          <Table hover className="mb-0 industrial-table-v2 matrix-table" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: 'max-content' }}>
             <thead style={{ backgroundColor: 'var(--theme-background-tertiary)' }} className="sticky-top">
               <tr>
-                <th rowSpan={2} className="align-middle text-center ps-4 sticky-column" style={{ width: '180px', minWidth: '180px', fontSize: '0.65rem', backgroundColor: 'var(--theme-background-tertiary)', zIndex: 11, borderRight: '2px solid var(--theme-border-default)' }}>ID RUTA</th>
+                <th rowSpan={2} className="align-middle text-center ps-4 sticky-column" style={{ width: '180px', minWidth: '180px', fontSize: '0.65rem', backgroundColor: 'var(--theme-background-tertiary)', zIndex: 11 }}>ID RUTA</th>
                 {selectedMarcasCobertura.map(mId => {
                   const marca = marcas.find(m => m.id === mId);
                   return (
@@ -111,12 +111,11 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 })}
               </tr>
               <tr style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
-                {selectedMarcasCobertura.map((mId, idx) => {
-                  const isLast = idx === selectedMarcasCobertura.length - 1;
+                {selectedMarcasCobertura.map((mId) => {
                   return (
                     <Fragment key={`sub-${mId}`}>
                       <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CF / CU</th>
-                      <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem', borderRight: isLast ? 'none' : '1px solid var(--theme-border-default)', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CLI</th>
+                      <th className="text-center small fw-black py-1 brand-separator" style={{ fontSize: '0.55rem', backgroundColor: 'var(--theme-background-tertiary)', color: 'var(--theme-text-secondary)' }}>CLI</th>
                     </Fragment>
                   );
                 })}
@@ -132,7 +131,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                       style={{ cursor: 'pointer' }}
                       className={expandedCoberturaRutas[rutaId] ? 'bg-danger bg-opacity-10' : ''}
                     >
-                      <td className="text-center align-middle py-3 border-0 sticky-column" style={{ backgroundColor: expandedCoberturaRutas[rutaId] ? 'rgba(244, 0, 9, 0.12)' : 'var(--theme-background-secondary)', zIndex: 10, borderRight: '2px solid var(--theme-border-default)' }}>
+                      <td className="text-center align-middle py-3 sticky-column" style={{ backgroundColor: expandedCoberturaRutas[rutaId] ? 'rgba(244, 0, 9, 0.12)' : 'var(--theme-background-secondary)', zIndex: 10 }}>
                         <div className="d-flex align-items-center justify-content-center gap-2">
                           <div className={`chevron-icon ${expandedCoberturaRutas[rutaId] ? 'active' : ''}`} style={{ transition: 'transform 0.1s' }}>
                             <FaChevronRight size={12} style={{ transform: expandedCoberturaRutas[rutaId] ? 'rotate(90deg)' : 'none', color: 'var(--theme-text-primary)' }} />
@@ -142,19 +141,20 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                           </span>
                         </div>
                       </td>
-                      {selectedMarcasCobertura.map((mId, idx) => {
+                      {selectedMarcasCobertura.map((mId) => {
                         const vals = routeData?.total[mId] || { cf: 0, cu: 0, cliConVenta: 0 };
                         const hasData = vals.cf > 0 || vals.cu > 0;
-                        const isLast = idx === selectedMarcasCobertura.length - 1;
                         return (
                           <Fragment key={`${rutaId}-${mId}`}>
-                            <td className={`text-center align-middle fw-black border-0 ${hasData ? '' : 'text-secondary opacity-25'}`} style={{ fontSize: '1rem', color: hasData ? 'var(--theme-text-primary)' : '', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
-                              <span className="text-success">{vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                            <td className={`text-center align-middle fw-black`} style={{ fontSize: '1rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
+                              <span className={hasData ? 'text-success' : 'text-secondary opacity-25'}>{vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                               <span className="mx-2 text-secondary opacity-50">/</span>
-                              <span className="text-warning">{vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                              <span className={hasData ? 'text-warning' : 'text-secondary opacity-25'}>{vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                             </td>
-                            <td className={`text-center align-middle fw-black border-0 ${hasData ? 'text-info' : 'text-secondary opacity-25'}`} style={{ fontSize: '1rem', borderRight: isLast ? 'none' : '1px solid var(--theme-border-default) !important', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
-                              {vals.cliConVenta} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
+                            <td className={`text-center align-middle fw-black brand-separator`} style={{ fontSize: '1rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
+                              <span className={hasData ? 'text-info' : 'text-secondary opacity-25'}>
+                                {vals.cliConVenta} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
+                              </span>
                             </td>
                           </Fragment>
                         );
@@ -165,8 +165,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                         .sort((a: any, b: any) => a[1].nombre.localeCompare(b[1].nombre))
                         .map(([clientId, client]: [string, any]) => {
                           return (
-                            <tr key={`${rutaId}-${clientId}`} className="border-0">
-                              <td className="ps-4 py-2 border-0 sticky-column" style={{ backgroundColor: 'var(--theme-background-primary)', zIndex: 10, borderRight: '2px solid var(--theme-border-default)' }}>
+                            <tr key={`${rutaId}-${clientId}`}>
+                              <td className="ps-4 py-2 sticky-column" style={{ backgroundColor: 'var(--theme-background-primary)', zIndex: 10 }}>
                                 <div className="d-flex flex-column">
                                   <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="fw-black text-danger" style={{ fontSize: '0.65rem', opacity: 0.9 }}>RUTA: {rutaId}</span>
@@ -185,15 +185,14 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                   </span>
                                 </div>
                               </td>
-                              {selectedMarcasCobertura.map((mId, idx) => {
+                              {selectedMarcasCobertura.map((mId) => {
                                 const vals = client.marcas[mId] || { cf: 0, cu: 0 };
                                 const hasData = vals.cf > 0 || vals.cu > 0;
-                                const isLastMarca = idx === selectedMarcasCobertura.length - 1;
                                 
                                 return (
                                   <Fragment key={`${rutaId}-${clientId}-${mId}`}>
                                     <td 
-                                      className={`text-center align-middle fw-black border-0`} 
+                                      className={`text-center align-middle fw-black`} 
                                       style={{ 
                                         fontSize: '0.95rem',
                                         backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent',
@@ -209,18 +208,19 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                       </span>
                                     </td>
                                     <td 
-                                      className="text-center align-middle border-0" 
+                                      className="text-center align-middle brand-separator" 
                                       style={{ 
                                         fontSize: '0.95rem', 
-                                        borderRight: isLastMarca ? 'none' : '1px solid var(--theme-border-default) !important',
                                         backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent'
                                       }}
                                     >
-                                      {hasData ? (
-                                        <FaCheck className="text-success" size={18} />
-                                      ) : (
-                                        <FaTimes className="text-danger opacity-25" size={16} />
-                                      )}
+                                      <div className={hasData ? '' : 'opacity-25'}>
+                                        {hasData ? (
+                                          <FaCheck className="text-success" size={18} />
+                                        ) : (
+                                          <FaTimes className="text-danger" size={16} />
+                                        )}
+                                      </div>
                                     </td>
                                   </Fragment>
                                 );
@@ -254,9 +254,16 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           left: 0;
           box-shadow: 6px 0 10px rgba(0,0,0,0.2);
           z-index: 10;
+          border-right: 2px solid var(--theme-border-default) !important;
         }
         .matrix-table {
           border-collapse: separate !important;
+        }
+        .matrix-table th, .matrix-table td {
+          border-bottom: 1px solid var(--theme-border-default) !important;
+        }
+        .brand-separator {
+          border-right: 1px solid var(--theme-border-default) !important;
         }
         /* Forzar visibilidad del scrollbar horizontal debajo de la cabecera */
         .admin-border-industrial {
