@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { memo, useState, useMemo } from 'react';
-import { Row, Col, Badge, Table, Button } from 'react-bootstrap';
-import { FaUsers, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { Badge, Table, Button } from 'react-bootstrap';
+import { FaUsers } from 'react-icons/fa';
 import SearchInput from '../../components/SearchInput';
 
 interface ClientsTabProps {
