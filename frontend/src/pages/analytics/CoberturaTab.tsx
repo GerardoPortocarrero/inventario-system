@@ -239,6 +239,9 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                             <td className={`text-center align-middle fw-black brand-separator`} style={{ fontSize: '1rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
                               <span className={hasData ? 'text-info' : 'text-secondary opacity-25'}>
                                 {vals.cliConVenta} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
+                                <span className="text-secondary ms-1" style={{ fontSize: '0.7rem' }}>
+                                  ({routeData.totalClientesRuta > 0 ? ((vals.cliConVenta / routeData.totalClientesRuta) * 100).toFixed(1) : 0}%)
+                                </span>
                               </span>
                             </td>
                           </Fragment>
