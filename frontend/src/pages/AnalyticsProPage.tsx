@@ -22,7 +22,7 @@ import ProductsTab from './analytics/ProductsTab';
 registerLocale('es', es);
 
 const AnalyticsProPage: FC = () => {
-  const { sedes, marcas } = useData();
+  const { sedes, marcas, beverageTypes } = useData();
   const isMobile = useMediaQuery('(max-width: 991px)');
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -39,6 +39,7 @@ const AnalyticsProPage: FC = () => {
   // --- FILTROS EXCLUSIVOS COBERTURA ---
   const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
   const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string>('ALL');
+  const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('ALL');
 
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -396,6 +397,7 @@ const AnalyticsProPage: FC = () => {
                 {activeTab === 'cobertura' && (
                   <CoberturaTab 
                     marcas={marcas} 
+                    beverageTypes={beverageTypes}
                     selectedMarcasCobertura={selectedMarcasCobertura} 
                     setSelectedMarcasCobertura={setSelectedMarcasCobertura} 
                     matrixCoberturaData={matrixCoberturaData} 
@@ -405,6 +407,8 @@ const AnalyticsProPage: FC = () => {
                     setSelectedDia={setSelectedDiaCobertura}
                     selectedSubCanal={selectedSubCanalCobertura}
                     setSelectedSubCanal={setSelectedSubCanalCobertura}
+                    selectedTipoCobertura={selectedTipoCobertura}
+                    setSelectedTipoCobertura={setSelectedTipoCobertura}
                     availableSubCanales={availableSubCanales}
                   />
                 )}
