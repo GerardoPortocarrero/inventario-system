@@ -314,23 +314,24 @@ const AnalyticsProPage: FC = () => {
           <h3 className="fw-black mb-0 d-flex align-items-center gap-2" style={{ fontSize: '1.2rem' }}>
             <FaChartLine className="text-danger" /> ANALÍTICA PRO
           </h3>
-          <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-            <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+          <div className={`d-flex gap-2 ${isMobile ? 'flex-column w-100' : 'align-items-center flex-wrap justify-content-end'}`}>
+            <div className={`d-flex align-items-center p-1 ${isMobile ? 'w-100' : ''}`} style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
               <FaMapMarkerAlt className="text-danger ms-2" size={12} />
-              <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '85px', color: 'var(--theme-text-primary)' }}>
+              <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '85px', color: 'var(--theme-text-primary)', flex: 1 }}>
                 <option value="ALL">GLOBAL</option>
                 {sedes.map(s => <option key={s.id} value={s.codigo}>{s.nombre.toUpperCase()}</option>)}
               </Form.Select>
             </div>
-            <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+            <div className={`d-flex align-items-center p-1 ${isMobile ? 'w-100' : ''}`} style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
               <FaRoute className="text-danger ms-2" size={12} />
-              <Form.Select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '80px', color: 'var(--theme-text-primary)' }}>
+              <Form.Select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '80px', color: 'var(--theme-text-primary)', flex: 1 }}>
                 <option value="ALL">RUTAS</option>
                 {availableRoutes.map(r => <option key={r} value={r}>RUTA {r}</option>)}
               </Form.Select>
             </div>
-            <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+            <div className={`d-flex align-items-center p-1 gap-1 ${isMobile ? 'w-100' : ''}`} style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
               <DatePicker selected={new Date(dateRange.start + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" />
+              <span className="text-secondary fw-black" style={{ fontSize: '0.7rem' }}>-</span>
               <DatePicker selected={new Date(dateRange.end + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" />
             </div>
           </div>

@@ -1,7 +1,8 @@
 import type { FC } from 'react';
 import { memo, Fragment, useState, useEffect, useMemo } from 'react';
 import { Badge, Table, Button, Form, Modal } from 'react-bootstrap';
-import { FaMapMarkerAlt, FaChevronRight, FaCheck, FaTimes, FaFilter } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaChevronRight, FaCheck, FaTimes, FaFilter, FaChevronUp } from 'react-icons/fa';
+import useMediaQuery from '../../hooks/useMediaQuery';
 
 interface CoberturaTabProps {
   marcas: any[];
@@ -26,11 +27,17 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   selectedDia, setSelectedDia, selectedSubCanal, setSelectedSubCanal,
   selectedTipoCobertura, setSelectedTipoCobertura, availableSubCanales
 }) => {
+  const isMobile = useMediaQuery('(max-width: 991px)');
+  const [filtersExpanded, setFiltersExpanded] = useState(!isMobile);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempDia, setTempDia] = useState(selectedDia);
   const [tempSubCanal, setTempSubCanal] = useState(selectedSubCanal);
   const [tempTipoBebida, setTempTipoBebida] = useState(selectedTipoCobertura);
   const [tempMarcas, setTempMarcas] = useState<string[]>(selectedMarcasCobertura);
+
+  useEffect(() => {
+    if (!isMobile) setFiltersExpanded(true);
+  }, [isMobile]);
 
   useEffect(() => {
     if (showFilterModal) {
@@ -107,9 +114,26 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
     : (beverageTypes.find(t => t.id === selectedTipoCobertura)?.nombre?.toUpperCase() || 'TIPO');
 
   return (
-    <div className="d-flex flex-column gap-3 h-100">
-      <div className="admin-border-industrial p-3 flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
-        <div className="d-flex align-items-center gap-3 flex-wrap">
+    <div className="d-flex flex-column gap-2 gap-md-3 h-100">
+      {/* BARRA DE FILTROS: colapsable en mobile */}
+      {isMobile && !filtersExpanded ? (
+        <div className="flex-shrink-0 d-flex align-items-center" style={{ borderLeft: '4px solid var(--color-red-primary)' }}>
+          <Button
+            variant="outline-danger"
+            className="d-flex align-items-center gap-2 fw-black w-100"
+            style={{ fontSize: '0.75rem', borderRadius: '2px', minHeight: '32px' }}
+            onClick={() => setFiltersExpanded(true)}
+          >
+            <FaFilter size={12} />
+            FILTROS
+            {activeFilterCount > 0 && (
+              <Badge bg="danger" className="ms-1" style={{ fontSize: '0.6rem' }}>{activeFilterCount}</Badge>
+            )}
+          </Button>
+        </div>
+      ) : (
+      <div className="admin-border-industrial p-2 p-md-3 flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
+        <div className="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
           <Button
             variant="outline-danger"
             className="d-flex align-items-center gap-2 fw-black px-3 py-2"
@@ -143,8 +167,15 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
               <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedMarcasCobertura([]); setSelectedTipoCobertura('ALL'); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
             )}
           </div>
+
+          {isMobile && (
+            <Button variant="link" className="text-secondary p-0 ms-auto text-decoration-none" onClick={() => setFiltersExpanded(false)}>
+              <FaChevronUp size={14} />
+            </Button>
+          )}
         </div>
       </div>
+      )}
 
       {selectedMarcasCobertura.length > 0 && typeColumnHeaders.length > 0 ? (
         <div className="admin-border-industrial flex-grow-1 overflow-auto custom-scrollbar position-relative" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
@@ -154,8 +185,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 <th rowSpan={2} className="align-middle text-center ps-4 sticky-column" style={{ width: '180px', minWidth: '180px', fontSize: '0.65rem', backgroundColor: 'var(--theme-background-tertiary)', zIndex: 11 }}>ID RUTA</th>
                 {typeColumnHeaders.map(({ tipoId, typeName, brandIds }) => (
                   <th key={tipoId} colSpan={2} className="text-center text-uppercase fw-black text-white py-2 brand-header-cell brand-separator" style={{ fontSize: '0.7rem', letterSpacing: '1px', backgroundColor: 'var(--color-red-primary)' }}>
-                    {typeName}
-                    <span className="d-block text-white-50" style={{ fontSize: '0.5rem', opacity: 0.7 }}>{brandIds.length} marcas</span>
+                    {typeName} <span className="text-white-50" style={{ fontSize: '0.55rem', opacity: 0.7 }}>({brandIds.length})</span>
                   </th>
                 ))}
               </tr>
