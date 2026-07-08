@@ -1,8 +1,9 @@
 import type { FC } from 'react';
-import { memo, Fragment, useState, useEffect, useMemo } from 'react';
-import { Badge, Table, Button, Form, Modal } from 'react-bootstrap';
-import { FaMapMarkerAlt, FaChevronRight, FaCheck, FaTimes, FaFilter, FaChevronUp } from 'react-icons/fa';
+import { memo, Fragment, useState, useEffect, useMemo, useRef } from 'react';
+import { Badge, Table, Button, Form, Modal, Spinner } from 'react-bootstrap';
+import { FaMapMarkerAlt, FaChevronRight, FaCheck, FaTimes, FaFilter, FaChevronUp, FaCamera } from 'react-icons/fa';
 import useMediaQuery from '../../hooks/useMediaQuery';
+import html2canvas from 'html2canvas';
 
 interface CoberturaTabProps {
   marcas: any[];
@@ -30,6 +31,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   const isMobile = useMediaQuery('(max-width: 991px)');
   const [filtersExpanded, setFiltersExpanded] = useState(!isMobile);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   const [tempDia, setTempDia] = useState(selectedDia);
   const [tempSubCanal, setTempSubCanal] = useState(selectedSubCanal);
   const [tempTipoBebida, setTempTipoBebida] = useState(selectedTipoCobertura);
@@ -77,6 +80,58 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
 
   const handleCancel = () => {
     setShowFilterModal(false);
+  };
+
+  const handleExportImage = async () => {
+    if (!matrixCoberturaData.rutas.length || !tableContainerRef.current) return;
+    setIsCapturing(true);
+
+    await new Promise(r => setTimeout(r, 50));
+
+    try {
+      const original = tableContainerRef.current;
+      const clone = original.cloneNode(true) as HTMLElement;
+      clone.style.position = 'fixed';
+      clone.style.top = '-9999px';
+      clone.style.left = '0px';
+      clone.style.overflow = 'visible';
+      clone.style.height = 'auto';
+      clone.style.width = original.scrollWidth + 'px';
+      clone.style.maxHeight = 'none';
+
+      clone.querySelectorAll('.sticky-column, thead').forEach(el => {
+        (el as HTMLElement).style.position = 'static';
+        (el as HTMLElement).style.zIndex = 'auto';
+      });
+      clone.querySelectorAll('.sticky-column').forEach(el => {
+        (el as HTMLElement).style.boxShadow = 'none';
+      });
+
+      const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--theme-background-secondary').trim() || '#1a1a1a';
+      clone.style.backgroundColor = bgColor;
+      document.body.appendChild(clone);
+
+      await new Promise(r => setTimeout(r, 150));
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: bgColor,
+        logging: false,
+      });
+
+      document.body.removeChild(clone);
+
+      const link = document.createElement('a');
+      link.download = `cobertura_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   // Agrupar marcas seleccionadas por tipo de bebida
@@ -147,6 +202,23 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
             )}
           </Button>
 
+          {selectedMarcasCobertura.length > 0 && (
+            <Button
+              variant="outline-success"
+              className="d-flex align-items-center gap-2 fw-black px-3 py-2"
+              style={{ fontSize: '0.75rem', borderRadius: '2px' }}
+              onClick={handleExportImage}
+              disabled={isCapturing}
+            >
+              {isCapturing ? (
+                <Spinner size="sm" animation="border" />
+              ) : (
+                <FaCamera size={12} />
+              )}
+              {isCapturing ? 'CAPTURANDO...' : 'EXPORTAR'}
+            </Button>
+          )}
+
           <div className="d-flex align-items-center gap-2 flex-wrap">
             {selectedDia !== 'ALL' && (
               <Badge bg="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>
@@ -178,7 +250,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
       )}
 
       {selectedMarcasCobertura.length > 0 && typeColumnHeaders.length > 0 ? (
-        <div className="admin-border-industrial flex-grow-1 overflow-auto custom-scrollbar position-relative" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+        <div ref={tableContainerRef} className="admin-border-industrial flex-grow-1 overflow-auto custom-scrollbar position-relative" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
           <Table hover className="mb-0 industrial-table-v2 matrix-table" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: 'max-content' }}>
             <thead style={{ backgroundColor: 'var(--theme-background-tertiary)' }} className="sticky-top">
               <tr>
