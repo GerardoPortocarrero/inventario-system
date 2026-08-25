@@ -31,12 +31,6 @@ const ClientsTab: FC<ClientsTabProps> = memo(({
 
   return (
     <div className="d-flex flex-column h-100">
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-shrink-0">
-        <div className="d-flex align-items-center gap-2">
-          <h5 className="fw-black mb-0 text-uppercase"><FaUsers className="text-danger" /> Maestro de Clientes</h5>
-        </div>
-        <Badge bg="secondary" className="border border-secondary px-3 py-2 fw-black">TOTAL: {finalRfmResults.length} REGISTROS</Badge>
-      </div>
 
       <div className="admin-border-industrial d-flex flex-column flex-grow-1 overflow-hidden" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
         <div className="p-3 border-bottom border-secondary border-opacity-10 flex-shrink-0">

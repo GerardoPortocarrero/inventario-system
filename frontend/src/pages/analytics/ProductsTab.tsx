@@ -31,12 +31,6 @@ const ProductsTab: FC<ProductsTabProps> = memo(({
 
   return (
     <div className="d-flex flex-column h-100">
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-shrink-0">
-        <div className="d-flex align-items-center gap-2">
-          <h5 className="fw-black mb-0 text-uppercase"><FaBox className="text-danger" /> Maestro de Productos (SKU)</h5>
-        </div>
-        <Badge bg="secondary" className="border border-secondary px-3 py-2 fw-black">TOTAL: {finalProductPerformance.length} SKU</Badge>
-      </div>
 
       <div className="admin-border-industrial d-flex flex-column flex-grow-1 overflow-hidden" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
         <div className="p-3 border-bottom border-secondary border-opacity-10 flex-shrink-0">
