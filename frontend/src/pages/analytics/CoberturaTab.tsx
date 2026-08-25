@@ -296,10 +296,10 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                           if (b) {
                             acc.cf += b.cf || 0;
                             acc.cu += b.cu || 0;
-                            acc.cliConVenta += b.cliConVenta || 0;
                           }
                           return acc;
-                        }, { cf: 0, cu: 0, cliConVenta: 0 });
+                        }, { cf: 0, cu: 0 });
+                        const cliConVentaUnicos = routeData?.cliConVentaPorTipo?.[tipoId] || 0;
                         const hasData = vals.cf > 0 || vals.cu > 0;
                         return (
                           <Fragment key={`${rutaId}-${tipoId}`}>
@@ -310,9 +310,9 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                             </td>
                             <td className={`text-center align-middle fw-black brand-separator`} style={{ fontSize: '1rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
                               <span className={hasData ? 'text-info' : 'text-secondary opacity-25'}>
-                                {vals.cliConVenta} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
+                                {cliConVentaUnicos} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
                                 <span className="text-secondary ms-1" style={{ fontSize: '0.7rem' }}>
-                                  ({routeData.totalClientesRuta > 0 ? ((vals.cliConVenta / routeData.totalClientesRuta) * 100).toFixed(1) : 0}%)
+                                  ({routeData.totalClientesRuta > 0 ? ((cliConVentaUnicos / routeData.totalClientesRuta) * 100).toFixed(1) : 0}%)
                                 </span>
                               </span>
                             </td>

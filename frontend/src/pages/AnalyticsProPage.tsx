@@ -207,6 +207,7 @@ const AnalyticsProPage: FC = () => {
     const matrix: Record<string, any> = {};
     const routeSet = new Set<string>();
     const prodMap = products.reduce((acc, p) => ({ ...acc, [String(p.sap).trim()]: p }), {} as any);
+    const marcasMap = marcas.reduce((acc, m) => ({ ...acc, [m.id]: m }), {} as any);
 
     // 1. Identificar clientes que cumplen los filtros (Día y SubCanal)
     const validClients = new Set<string>();
@@ -244,6 +245,9 @@ const AnalyticsProPage: FC = () => {
       }
     });
 
+    // Trackear clientes únicos por ruta y tipo de bebida
+    const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
+
     // 2. Llenar con ventas (solo para clientes válidos)
     filteredData.forEach(d => {
       const cid = String(d.solicitante || '').trim();
@@ -266,12 +270,28 @@ const AnalyticsProPage: FC = () => {
           matrix[rid].total[mid].cu += m.cu || 0;
           
           if (!hadS && (m.cf > 0 || m.cu > 0)) matrix[rid].total[mid].cliConVenta++;
+
+          // Contar clientes únicos por ruta+tipo (para cobertura correcta)
+          const tipoId = marcasMap[mid]?.tipoBebidaId;
+          if (tipoId) {
+            if (!routeTypeClients[rid]) routeTypeClients[rid] = {};
+            if (!routeTypeClients[rid][tipoId]) routeTypeClients[rid][tipoId] = new Set();
+            routeTypeClients[rid][tipoId].add(cid);
+          }
         }
       });
     });
 
+    // Calcular cliConVentaPorTipo (clientes únicos con venta por tipo de bebida)
+    Object.keys(routeTypeClients).forEach(rid => {
+      matrix[rid].cliConVentaPorTipo = {};
+      Object.keys(routeTypeClients[rid]).forEach(tipoId => {
+        matrix[rid].cliConVentaPorTipo[tipoId] = routeTypeClients[rid][tipoId].size;
+      });
+    });
+
     return { rutas: Array.from(routeSet).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})), data: matrix };
-  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede]);
+  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede, marcas]);
 
   // OPTIMIZACIÓN: Separar agregación de filtrado de productos
   const groupedProducts = useMemo(() => {
