@@ -52,6 +52,8 @@ const ClientsTab: FC<ClientsTabProps> = memo(({
           <Table responsive hover className="mb-0 industrial-table-v2">
             <thead className="sticky-top" style={{ backgroundColor: 'var(--theme-background-tertiary)', zIndex: 10 }}>
               <tr>
+                <SortHeader label="SEDE" sortKey="sedeNombre" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} />
+                <SortHeader label="RUTA" sortKey="ruta" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} />
                 <SortHeader label="CLIENTE" sortKey="clientName" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} />
                 <SortHeader label="V. MONETARIO ($)" sortKey="monetary" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
                 <SortHeader label="VOLUMEN (CF)" sortKey="cf" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
@@ -61,6 +63,8 @@ const ClientsTab: FC<ClientsTabProps> = memo(({
             <tbody>
               {displayedResults.map((r) => (
                 <tr key={r.clientId}>
+                  <td className="align-middle fw-black text-uppercase" style={{ fontSize: '0.8rem' }}>{r.sedeNombre}</td>
+                  <td className="align-middle fw-black text-uppercase" style={{ fontSize: '0.8rem' }}>{r.ruta}</td>
                   <td className="ps-4">
                     <div className="d-flex flex-column">
                       <span className="fw-black text-uppercase" style={{ fontSize: '0.85rem' }}>{r.clientName}</span>

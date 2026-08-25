@@ -171,13 +171,23 @@ const AnalyticsProPage: FC = () => {
     const cMap: Record<string, any> = {};
     filteredData.forEach(d => {
       const id = String(d.solicitante || '').trim();
-      if (!cMap[id]) cMap[id] = { clientId: id, clientName: String(d.nombreCliente || 'SIN NOMBRE'), monetary: 0, cf: 0, cu: 0 };
+      if (!cMap[id]) {
+        const sedeCodigo = String(d.sede || '').trim();
+        const sedeMatch = sedes.find(s => s.codigo === sedeCodigo);
+        cMap[id] = {
+          clientId: id,
+          clientName: String(d.nombreCliente || 'SIN NOMBRE'),
+          sedeNombre: sedeMatch?.nombre || sedeCodigo || 'SIN SEDE',
+          ruta: String(d.ruta || 'S/R').trim(),
+          monetary: 0, cf: 0, cu: 0
+        };
+      }
       cMap[id].monetary += d.totalValor || 0;
       cMap[id].cf += d.totalCF || 0;
       cMap[id].cu += d.totalCU || 0;
     });
     return Object.values(cMap);
-  }, [filteredData, activeTab]);
+  }, [filteredData, activeTab, sedes]);
 
   const clientMetrics = useMemo(() => {
     let res = [...groupedClients];
