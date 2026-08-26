@@ -46,10 +46,16 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
     if (showFilterModal) {
       setTempDia(selectedDia);
       setTempSubCanal(selectedSubCanal);
-      setTempTipoBebida(selectedTipoCobertura);
-      setTempMarcas(selectedMarcasCobertura);
+      const tipoValido = beverageTypes.some(t => t.id === selectedTipoCobertura)
+        ? selectedTipoCobertura
+        : (beverageTypes[0]?.id || '');
+      setTempTipoBebida(tipoValido);
+      setTempMarcas(selectedTipoCobertura
+        ? selectedMarcasCobertura
+        : marcas.filter(m => m.tipoBebidaId === tipoValido).map(m => m.id)
+      );
     }
-  }, [showFilterModal, selectedDia, selectedSubCanal, selectedTipoCobertura, selectedMarcasCobertura]);
+  }, [showFilterModal, selectedDia, selectedSubCanal, selectedTipoCobertura, selectedMarcasCobertura, beverageTypes, marcas]);
 
   const handleTipoBebidaChange = (tipoId: string) => {
     setTempTipoBebida(tipoId);
@@ -180,6 +186,68 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
         </div>
       ) : (
       <div className="admin-border-industrial p-2 p-md-3 flex-shrink-0 mb-2 mb-md-3" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
+        {isMobile ? (
+          <div className="d-flex flex-column gap-2">
+            <div className="d-flex align-items-center gap-2">
+              <Button
+                variant="outline-danger"
+                className="d-flex align-items-center gap-2 fw-black px-3 py-2"
+                style={{ fontSize: '0.75rem', borderRadius: '2px' }}
+                onClick={() => setShowFilterModal(true)}
+              >
+                <FaFilter size={12} />
+                FILTROS
+                {activeFilterCount > 0 && (
+                  <Badge bg="danger" className="ms-1" style={{ fontSize: '0.6rem' }}>{activeFilterCount}</Badge>
+                )}
+              </Button>
+
+              {selectedMarcasCobertura.length > 0 && (
+                <Button
+                  variant="outline-success"
+                  className="d-flex align-items-center gap-2 fw-black px-3 py-2"
+                  style={{ fontSize: '0.75rem', borderRadius: '2px' }}
+                  onClick={handleExportImage}
+                  disabled={isCapturing}
+                >
+                  {isCapturing ? (
+                    <Spinner size="sm" animation="border" />
+                  ) : (
+                    <FaCamera size={12} />
+                  )}
+                  {isCapturing ? 'CAPTURANDO...' : 'EXPORTAR'}
+                </Button>
+              )}
+
+              <Button variant="link" className="text-secondary p-0 ms-auto text-decoration-none" onClick={() => setFiltersExpanded(false)}>
+                <FaChevronUp size={14} />
+              </Button>
+            </div>
+
+            {(selectedDia !== 'ALL' || selectedSubCanal !== 'ALL' || selectedTipoCobertura) && (
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                {selectedDia !== 'ALL' && (
+                  <Badge bg="danger" className="fw-black text-uppercase px-2 py-1" style={{ fontSize: '0.65rem' }}>
+                    {selectedDia}
+                  </Badge>
+                )}
+                {selectedSubCanal !== 'ALL' && (
+                  <Badge bg="danger" className="fw-black text-uppercase px-2 py-1" style={{ fontSize: '0.65rem' }}>
+                    {selectedSubCanal}
+                  </Badge>
+                )}
+                {selectedTipoCobertura && (
+                  <Badge bg="danger" className="fw-black text-uppercase px-2 py-1" style={{ fontSize: '0.65rem' }}>
+                    {selectedTipoNombre}
+                  </Badge>
+                )}
+                <Button variant="link" className="text-danger p-0 ms-1 text-decoration-none d-flex align-items-center" onClick={() => { setSelectedDia('ALL'); setSelectedSubCanal('ALL'); setSelectedTipoCobertura(''); setSelectedMarcasCobertura([]); }}>
+                  <FaTimes size={10} />
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
           <Button
             variant="outline-danger"
@@ -231,13 +299,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
               <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedMarcasCobertura([]); setSelectedTipoCobertura(beverageTypes[0]?.id || ''); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
             )}
           </div>
-
-          {isMobile && (
-            <Button variant="link" className="text-secondary p-0 ms-auto text-decoration-none" onClick={() => setFiltersExpanded(false)}>
-              <FaChevronUp size={14} />
-            </Button>
-          )}
         </div>
+        )}
       </div>
       )}
 
