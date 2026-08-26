@@ -454,7 +454,7 @@ const AnalyticsProPage: FC = () => {
                 )}
               </Tab.Pane>
               
-              <Tab.Pane eventKey="cobertura" className="h-100 overflow-auto custom-scrollbar p-3">
+              <Tab.Pane eventKey="cobertura" className="h-100 overflow-hidden custom-scrollbar p-3">
                 {activeTab === 'cobertura' && (
                   <CoberturaTab 
                     marcas={marcas} 
