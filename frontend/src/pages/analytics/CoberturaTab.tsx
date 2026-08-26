@@ -159,7 +159,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   const activeFilterCount = [
     selectedDia !== 'ALL' && 1,
     selectedSubCanal !== 'ALL' && 1,
-    1
+    selectedTipoCobertura && 1
   ].filter(Boolean).length;
 
   const filteredMarcas = marcas.filter(m => m.tipoBebidaId === tempTipoBebida);
@@ -295,8 +295,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 {selectedTipoNombre}
               </Badge>
             )}
-            {selectedMarcasCobertura.length > 0 && (
-              <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedMarcasCobertura([]); setSelectedTipoCobertura(beverageTypes[0]?.id || ''); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
+            {activeFilterCount > 0 && (
+              <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedDia('ALL'); setSelectedSubCanal('ALL'); setSelectedTipoCobertura(''); setSelectedMarcasCobertura([]); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
             )}
           </div>
         </div>
