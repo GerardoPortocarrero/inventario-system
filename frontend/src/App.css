@@ -28,14 +28,6 @@
   --theme-icon-bg: #000000;
   --theme-icon-color: rgba(255,255,255,0.7);
   --theme-calendar-invert: 1;
-
-  /* Colores Segmentación RFM (Accesibilidad) */
-  --rfm-campeon: #ff4d4d;
-  --rfm-fiel: #ff7676;
-  --rfm-nueva-promesa: #ff9b9b;
-  --rfm-potencial: #ffbebe;
-  --rfm-en-riesgo: #ffc107;
-  --rfm-hibernando: #888888;
 }
 
 /* 2. Sobrescribir variables para el tema claro cuando el body tiene clase .theme-light */
@@ -52,14 +44,6 @@ body.theme-light {
   --theme-icon-bg: #e4e6e9;
   --theme-icon-color: #1c1e21;
   --theme-calendar-invert: 0;
-
-  /* Colores Segmentación RFM (Accesibilidad - Más oscuros para fondo claro) */
-  --rfm-campeon: #d32f2f;
-  --rfm-fiel: #e53935;
-  --rfm-nueva-promesa: #f44336;
-  --rfm-potencial: #ef5350;
-  --rfm-en-riesgo: #f57c00;
-  --rfm-hibernando: #616161;
 }
 
 html, body, #root { /* Asegura que html y body y el div #root ocupen el 100% del alto */
@@ -436,4 +420,54 @@ hr {
     flex: 1;
     height: 100%;
   }
+}
+
+/* ===== AnalyticsProPage Styles ===== */
+.fw-black { font-weight: 900 !important; }
+.info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
+.pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; }
+.pill-main-icon { font-size: 14px; }
+.pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; }
+.pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; appearance: none; }
+.custom-tabs-industrial .nav-link { color: var(--theme-text-secondary); border: none !important; border-bottom: 3px solid transparent !important; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; padding: 10px 20px; border-radius: 0; transition: all 0.2s ease; }
+.custom-tabs-industrial .nav-link:hover { color: var(--theme-text-primary); background: rgba(244, 0, 9, 0.05); border-color: transparent !important; border-bottom-color: var(--color-red-primary) !important; }
+.custom-tabs-industrial .nav-link.active { color: var(--color-red-primary) !important; background: transparent !important; border-color: transparent !important; border-bottom-color: var(--color-red-primary) !important; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-red-primary); }
+.date-picker-industrial { background: transparent; border: none; font-weight: 900; font-size: 0.75rem; color: var(--theme-text-primary); text-align: center; width: 100px; outline: none; }
+.react-datepicker-popper { z-index: 9999 !important; }
+.date-wrapper-flex { flex: 1; display: flex; }
+.date-wrapper-flex .react-datepicker-wrapper { width: 100%; }
+.date-wrapper-flex .react-datepicker__input-container { width: 100%; }
+.date-wrapper-flex .react-datepicker__input-container input { width: 100%; }
+.industrial-table-v2 thead th { background-color: var(--theme-background-tertiary) !important; color: var(--theme-text-secondary); font-weight: 900; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--theme-border-default); padding: 15px 10px; }
+.industrial-table-v2 tbody tr { border-bottom: 1px solid var(--theme-table-border-color); transition: background 0.2s ease; }
+.industrial-table-v2 tbody tr:hover { background-color: rgba(244, 0, 9, 0.05) !important; }
+
+/* ===== CoberturaTab Styles ===== */
+.sticky-column {
+  position: sticky !important;
+  left: 0;
+  box-shadow: 6px 0 10px rgba(0,0,0,0.2);
+  z-index: 10;
+  border-right: 1px solid var(--theme-table-border-color) !important;
+}
+.matrix-table {
+  border-collapse: separate !important;
+}
+.matrix-table thead th {
+  border-bottom: 1px solid var(--theme-border-default) !important;
+}
+.matrix-table tbody td {
+  border-bottom: 1px solid var(--theme-table-border-color) !important;
+}
+.matrix-table thead th.brand-separator {
+  border-right: 1px solid var(--theme-border-default) !important;
+}
+.matrix-table tbody td.brand-separator {
+  border-right: 1px solid var(--theme-table-border-color) !important;
+}
+.matrix-table tbody td.sticky-column {
+  border-right: 1px solid var(--theme-table-border-color) !important;
 }

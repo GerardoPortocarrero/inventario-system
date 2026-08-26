@@ -346,14 +346,14 @@ const AnalyticsProPage: FC = () => {
               <FaChartLine className="text-danger" size={16} /> ANALÍTICA PRO
             </h3>
             <div className="d-flex gap-1">
-              <div className="d-flex align-items-center p-1" style={{ flex: 1, minWidth: 0, borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
+              <div className="d-flex align-items-center p-1" style={{ flex: 1, minWidth: 0, backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
                 <FaMapMarkerAlt className="text-danger ms-1 flex-shrink-0" size={9} />
                 <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-1 py-0" style={{ fontSize: '0.65rem', width: '100%', minWidth: 0, color: 'var(--theme-text-primary)' }}>
                   <option value="ALL">GLOBAL</option>
                   {sedes.map(s => <option key={s.id} value={s.codigo}>{s.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
-              <div className="d-flex align-items-center p-1" style={{ flex: 1, minWidth: 0, borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
+              <div className="d-flex align-items-center p-1" style={{ flex: 1, minWidth: 0, backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
                 <FaRoute className="text-danger ms-1 flex-shrink-0" size={9} />
                 <Form.Select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className="bg-transparent border-0 small fw-bold px-1 py-0" style={{ fontSize: '0.65rem', width: '100%', minWidth: 0, color: 'var(--theme-text-primary)' }}>
                   <option value="ALL">RUTAS</option>
@@ -361,9 +361,9 @@ const AnalyticsProPage: FC = () => {
                 </Form.Select>
               </div>
             </div>
-            <div className="d-flex align-items-center p-1 gap-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
+            <div className="d-flex align-items-center p-1 gap-1" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
               <DatePicker selected={new Date(dateRange.start + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" wrapperClassName="date-wrapper-flex" />
-              <span className="text-secondary fw-black flex-shrink-0" style={{ fontSize: '0.65rem' }}>–</span>
+              <span className="text-secondary fw-black flex-shrink-0" style={{ fontSize: '0.65rem' }}>-</span>
               <DatePicker selected={new Date(dateRange.end + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" wrapperClassName="date-wrapper-flex" />
             </div>
           </div>
@@ -373,21 +373,21 @@ const AnalyticsProPage: FC = () => {
               <FaChartLine className="text-danger" /> ANALÍTICA PRO
             </h3>
             <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-              <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <div className="d-flex align-items-center p-1" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
                 <FaMapMarkerAlt className="text-danger ms-2" size={12} />
                 <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '85px', color: 'var(--theme-text-primary)' }}>
                   <option value="ALL">GLOBAL</option>
                   {sedes.map(s => <option key={s.id} value={s.codigo}>{s.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
-              <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <div className="d-flex align-items-center p-1" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
                 <FaRoute className="text-danger ms-2" size={12} />
                 <Form.Select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '80px', color: 'var(--theme-text-primary)' }}>
                   <option value="ALL">RUTAS</option>
                   {availableRoutes.map(r => <option key={r} value={r}>RUTA {r}</option>)}
                 </Form.Select>
               </div>
-              <div className="d-flex align-items-center p-1 gap-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <div className="d-flex align-items-center p-1 gap-1" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
                 <DatePicker selected={new Date(dateRange.start + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" />
                 <span className="text-secondary fw-black" style={{ fontSize: '0.7rem' }}>-</span>
                 <DatePicker selected={new Date(dateRange.end + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" />
@@ -428,7 +428,7 @@ const AnalyticsProPage: FC = () => {
               <Tab.Pane eventKey="dashboard" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex justify-content-between align-items-center p-3 mb-3 border-start border-danger border-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <div><h6 className="fw-black mb-0 text-uppercase">Dimensión del Análisis</h6><span className="text-secondary small fw-bold">Unidad de medida para gráficos</span></div>
-                  <div className="d-flex p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)' }}>
+                  <div className="d-flex p-1" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
                     {([['valor', '$'], ['cf', 'CF'], ['cu', 'CU']] as const).map(([m, label]) => (
                       <button key={m} onClick={() => setMetric(m)} className={`btn btn-sm px-4 fw-black ${metric === m ? 'btn-danger' : 'btn-link text-secondary text-decoration-none'}`} style={{ fontSize: '0.75rem', borderRadius: '2px' }}>{label}</button>
                     ))}
@@ -481,30 +481,6 @@ const AnalyticsProPage: FC = () => {
           </div>
         </Tab.Container>
       </div>
-
-      <style>{`
-        .fw-black { font-weight: 900 !important; }
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
-        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; }
-        .pill-main-icon { font-size: 14px; }
-        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; }
-        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; appearance: none; }
-        .custom-tabs-industrial .nav-link { color: var(--theme-text-secondary); border: none; border-bottom: 3px solid transparent; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; padding: 10px 20px; border-radius: 0; transition: all 0.2s ease; }
-        .custom-tabs-industrial .nav-link:hover { color: var(--theme-text-primary); background: rgba(244, 0, 9, 0.05); }
-        .custom-tabs-industrial .nav-link.active { color: var(--color-red-primary) !important; background: transparent !important; border-bottom-color: var(--color-red-primary) !important; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-red-primary); }
-        .date-picker-industrial { background: transparent; border: none; font-weight: 900; font-size: 0.75rem; color: var(--theme-text-primary); text-align: center; width: 100px; outline: none; }
-        .react-datepicker-popper { z-index: 9999 !important; }
-        .date-wrapper-flex { flex: 1; display: flex; }
-        .date-wrapper-flex .react-datepicker-wrapper { width: 100%; }
-        .date-wrapper-flex .react-datepicker__input-container { width: 100%; }
-        .date-wrapper-flex .react-datepicker__input-container input { width: 100%; }
-        .industrial-table-v2 thead th { background-color: var(--theme-background-tertiary) !important; color: var(--theme-text-secondary); font-weight: 900; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--theme-border-default); padding: 15px 10px; }
-        .industrial-table-v2 tbody tr { border-bottom: 1px solid var(--theme-table-border-color); transition: background 0.2s ease; }
-        .industrial-table-v2 tbody tr:hover { background-color: rgba(244, 0, 9, 0.05) !important; }
-      `}</style>
     </div>
   );
 };

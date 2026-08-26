@@ -403,7 +403,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           </Table>
         </div>
       ) : (
-        <div className="flex-grow-1 d-flex flex-column align-items-center justify-content-center p-5" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: '4px' }}>
+        <div className="flex-grow-1 d-flex flex-column align-items-center justify-content-center p-5" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)' }}>
           <div className="p-4 rounded-circle mb-4" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
             <FaMapMarkerAlt className="text-danger opacity-50" size={64} />
           </div>
@@ -497,7 +497,6 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 style={{ 
                   backgroundColor: 'var(--theme-background-secondary)', 
                   border: '1px solid var(--theme-border-default)', 
-                  borderRadius: '4px',
                   maxHeight: '180px',
                   overflowY: 'auto'
                 }}
@@ -544,38 +543,6 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           </Button>
         </Modal.Footer>
       </Modal>
-
-      <style>{`
-        .sticky-column {
-          position: sticky !important;
-          left: 0;
-          box-shadow: 6px 0 10px rgba(0,0,0,0.2);
-          z-index: 10;
-          border-right: 1px solid var(--theme-table-border-color) !important;
-        }
-        .matrix-table {
-          border-collapse: separate !important;
-        }
-        .matrix-table thead th {
-          border-bottom: 1px solid var(--theme-border-default) !important;
-        }
-        .matrix-table tbody td {
-          border-bottom: 1px solid var(--theme-table-border-color) !important;
-        }
-        .matrix-table thead th.brand-separator {
-          border-right: 1px solid var(--theme-border-default) !important;
-        }
-        .matrix-table tbody td.brand-separator {
-          border-right: 1px solid var(--theme-table-border-color) !important;
-        }
-        .matrix-table tbody td.sticky-column {
-          border-right: 1px solid var(--theme-table-border-color) !important;
-        }
-        .admin-border-industrial {
-          overflow-x: auto !important;
-          overflow-y: auto !important;
-        }
-      `}</style>
     </div>
   );
 });

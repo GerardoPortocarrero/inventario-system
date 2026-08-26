@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { memo, useState, useMemo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Table, Button } from 'react-bootstrap';
 import SearchInput from '../../components/SearchInput';
 
@@ -21,7 +21,7 @@ const ProductsTab: FC<ProductsTabProps> = memo(({
   const [visibleRows, setVisibleRows] = useState(ROWS_PER_PAGE);
 
   // Resetear scroll al buscar o ordenar
-  useMemo(() => {
+  useEffect(() => {
     setVisibleRows(ROWS_PER_PAGE);
   }, [productSearch, productSort]);
 
