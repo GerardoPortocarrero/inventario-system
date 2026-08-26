@@ -449,6 +449,7 @@ const AnalyticsProPage: FC = () => {
                     handleSort={handleSort}
                     setClientSort={setClientSort}
                     SortHeader={SortHeader}
+                    isMobile={isMobile}
                   />
                 )}
               </Tab.Pane>
