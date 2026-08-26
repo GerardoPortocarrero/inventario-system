@@ -476,7 +476,7 @@ const AnalyticsProPage: FC = () => {
               </Tab.Pane>
 
               <Tab.Pane eventKey="productos" className="h-100 overflow-hidden custom-scrollbar p-3">
-                {activeTab === 'productos' && <ProductsTab productSearch={productSearch} setProductSearch={setProductSearch} productSort={productSort} handleSort={handleSort} setProductSort={setProductSort} finalProductPerformance={productMetrics} SortHeader={SortHeader} />}
+                {activeTab === 'productos' && <ProductsTab productSearch={productSearch} setProductSearch={setProductSearch} productSort={productSort} handleSort={handleSort} setProductSort={setProductSort} finalProductPerformance={productMetrics} SortHeader={SortHeader} isMobile={isMobile} />}
               </Tab.Pane>
             </Tab.Content>
           </div>
