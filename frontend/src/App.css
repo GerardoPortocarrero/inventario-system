@@ -219,7 +219,7 @@ a:hover {
 /* Action Buttons Utilities for Responsive Tables */
 .text-mobile { display: none; }
 
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .icon-desktop { display: none !important; }
   .text-mobile { display: inline !important; }
   

@@ -414,7 +414,7 @@ const ProductForm: React.FC<{
 
 const AdminProductsPage: FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 992px)');
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -459,6 +459,7 @@ const AdminProductsPage: FC = () => {
         resetForm();
       }
       setShowModal(false);
+      toast.success(isEditing ? 'Producto actualizado' : 'Producto creado');
     } catch (error) {
       console.error(error);
     } finally {
@@ -560,7 +561,6 @@ const AdminProductsPage: FC = () => {
             <GenericTable 
               data={filteredProducts} 
               columns={columns} 
-              variant={isDarkMode ? 'dark' : ''} 
               isLoading={loading}
             />
           </div>
@@ -580,12 +580,20 @@ const AdminProductsPage: FC = () => {
         <p>¿Eliminar producto <strong>{deletingProduct?.nombre}</strong>?</p>
         <div className="d-flex justify-content-end gap-2">
           <Button variant="secondary" onClick={() => setDeletingProduct(null)}>{UI_TEXTS.CLOSE}</Button>
-          <Button variant="danger" onClick={async () => {
+          <Button variant="danger" disabled={isSubmitting} onClick={async () => {
             if (deletingProduct) {
-              await deleteDoc(doc(db, 'productos', deletingProduct.id));
-              setDeletingProduct(null);
+              try {
+                setIsSubmitting(true);
+                await deleteDoc(doc(db, 'productos', deletingProduct.id));
+                setDeletingProduct(null);
+                toast.success('Producto eliminado');
+              } catch (error) {
+                toast.error('Error al eliminar producto');
+              } finally {
+                setIsSubmitting(false);
+              }
             }
-          }}>{UI_TEXTS.DELETE}</Button>
+          }}>{isSubmitting ? <Spinner size="sm" animation="border" /> : UI_TEXTS.DELETE}</Button>
         </div>
       </GenericCreationModal>
       <ProductQRModal 

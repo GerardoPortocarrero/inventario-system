@@ -5,6 +5,7 @@ import { db } from '../api/firebase';
 import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 
 import { FaPencilAlt, FaTrash } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 import SearchInput from '../components/SearchInput';
@@ -80,16 +81,7 @@ const BeverageTypeForm: React.FC<{
 };
 
 const AdminTipoBebidaPage: FC = () => {
-  const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
   const isMobile = useMediaQuery('(max-width: 992px)');
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDarkMode(document.body.classList.contains('theme-dark'));
-    });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
   
   const { loadingMasterData } = useData();
   const [beverageTypes, setBeverageTypes] = useState<BeverageType[]>([]);
@@ -119,6 +111,7 @@ const AdminTipoBebidaPage: FC = () => {
         resetForm();
       }
       setShowModal(false);
+      toast.success(isEditing ? 'Tipo actualizado' : 'Tipo creado');
     } catch (error) {
       console.error(error);
     } finally {
@@ -173,7 +166,6 @@ const AdminTipoBebidaPage: FC = () => {
             <GenericTable 
               data={filteredTypes} 
               columns={columns} 
-              variant={isDarkMode ? 'dark' : ''} 
               isLoading={loading}
             />
           </div>
@@ -193,12 +185,20 @@ const AdminTipoBebidaPage: FC = () => {
         <p>¿Eliminar tipo de bebida <strong>{deletingType?.nombre}</strong>?</p>
         <div className="d-flex justify-content-end gap-2">
           <Button variant="secondary" onClick={() => setDeletingType(null)}>{UI_TEXTS.CLOSE}</Button>
-          <Button variant="danger" onClick={async () => {
+          <Button variant="danger" disabled={isSubmitting} onClick={async () => {
             if (deletingType) {
-              await deleteDoc(doc(db, 'tiposBebida', deletingType.id));
-              setDeletingType(null);
+              try {
+                setIsSubmitting(true);
+                await deleteDoc(doc(db, 'tiposBebida', deletingType.id));
+                setDeletingType(null);
+                toast.success('Tipo eliminado');
+              } catch (error) {
+                toast.error('Error al eliminar tipo');
+              } finally {
+                setIsSubmitting(false);
+              }
             }
-          }}>{UI_TEXTS.DELETE}</Button>
+          }}>{isSubmitting ? <Spinner size="sm" animation="border" /> : UI_TEXTS.DELETE}</Button>
         </div>
       </GenericCreationModal>
     </Fragment>
