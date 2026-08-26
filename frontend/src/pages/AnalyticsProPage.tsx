@@ -39,7 +39,7 @@ const AnalyticsProPage: FC = () => {
   // --- FILTROS EXCLUSIVOS COBERTURA ---
   const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
   const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string>('ALL');
-  const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('ALL');
+  const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('');
 
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],

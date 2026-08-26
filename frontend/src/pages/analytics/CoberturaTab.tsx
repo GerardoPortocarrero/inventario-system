@@ -53,13 +53,9 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
 
   const handleTipoBebidaChange = (tipoId: string) => {
     setTempTipoBebida(tipoId);
-    if (tipoId === 'ALL') {
-      setTempMarcas(marcas.map(m => m.id));
-    } else {
-      setTempMarcas(
-        marcas.filter(m => m.tipoBebidaId === tipoId).map(m => m.id)
-      );
-    }
+    setTempMarcas(
+      marcas.filter(m => m.tipoBebidaId === tipoId).map(m => m.id)
+    );
   };
 
   const handleToggleMarca = (marcaId: string) => {
@@ -157,16 +153,12 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   const activeFilterCount = [
     selectedDia !== 'ALL' && 1,
     selectedSubCanal !== 'ALL' && 1,
-    selectedTipoCobertura !== 'ALL' && 1
+    1
   ].filter(Boolean).length;
 
-  const filteredMarcas = tempTipoBebida === 'ALL'
-    ? marcas
-    : marcas.filter(m => m.tipoBebidaId === tempTipoBebida);
+  const filteredMarcas = marcas.filter(m => m.tipoBebidaId === tempTipoBebida);
 
-  const selectedTipoNombre = selectedTipoCobertura === 'ALL'
-    ? 'TODOS LOS TIPOS'
-    : (beverageTypes.find(t => t.id === selectedTipoCobertura)?.nombre?.toUpperCase() || 'TIPO');
+  const selectedTipoNombre = beverageTypes.find(t => t.id === selectedTipoCobertura)?.nombre?.toUpperCase() || 'TIPO';
 
   return (
     <div className="d-flex flex-column h-100">
@@ -230,13 +222,13 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 CANAL: {selectedSubCanal}
               </Badge>
             )}
-            {selectedTipoCobertura !== 'ALL' && (
+            {selectedTipoCobertura && (
               <Badge bg="danger" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>
                 {selectedTipoNombre}
               </Badge>
             )}
             {selectedMarcasCobertura.length > 0 && (
-              <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedMarcasCobertura([]); setSelectedTipoCobertura('ALL'); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
+              <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedMarcasCobertura([]); setSelectedTipoCobertura(beverageTypes[0]?.id || ''); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
             )}
           </div>
 
@@ -549,15 +541,13 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 className="fw-black text-uppercase"
                 style={{ fontSize: '0.8rem' }}
               >
-                <option value="ALL">TODOS</option>
                 {beverageTypes.map(t => (
                   <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>
                 ))}
               </Form.Select>
             </div>
 
-            {/* MARCAS: solo se muestran cuando hay un tipo específico seleccionado */}
-            {tempTipoBebida !== 'ALL' && (
+            {/* MARCAS */}
             <div>
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <label className="text-danger fw-black text-uppercase mb-0" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
@@ -611,7 +601,6 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 )}
               </div>
             </div>
-            )}
           </div>
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: 'var(--theme-background-secondary)', borderTop: '1px solid var(--theme-border-default)' }}>
@@ -626,6 +615,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           <Button 
             variant="danger" 
             onClick={handleApply}
+            disabled={!tempTipoBebida}
             className="fw-black px-4"
             style={{ fontSize: '0.75rem', borderRadius: '2px' }}
           >
