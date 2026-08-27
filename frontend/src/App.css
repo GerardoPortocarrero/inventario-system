@@ -14,6 +14,8 @@
 
   /* Variable para el ancho del sidebar en desktop */
   --sidebar-width-desktop: 200px;
+  /* Variable para el ancho del sidebar colapsado (solo iconos) */
+  --sidebar-width-collapsed: 56px;
 
   /* Tema Oscuro (Por Defecto) */
   --theme-background-primary: #111111;
@@ -66,6 +68,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: row; /* Sidebar a la izquierda, contenido a la derecha */
+  position: relative; /* Para que el sidebar absoluto se posicione respecto a él en desktop */
 }
 
 /* Contenido principal que se ajusta con el sidebar */
@@ -77,6 +80,14 @@ body {
 }
 
 /* No hay margin-left fijo en main-content para desktop */
+
+/* En desktop el sidebar colapsado deja espacio reservado; el expandido se superpone sin empujar */
+@media (min-width: 992px) {
+  .main-content {
+    margin-left: var(--sidebar-width-collapsed, 56px);
+    transition: none; /* No se mueve al expandir el sidebar */
+  }
+}
 
 /* Sobrescribir estilos de Bootstrap para que coincidan con la guía de estilo */
 /* Todos los elementos con border-radius a 0 */
