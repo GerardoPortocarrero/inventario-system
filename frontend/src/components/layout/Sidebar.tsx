@@ -50,7 +50,7 @@ const Sidebar: FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
         onMouseLeave={() => isDesktop && setDesktopHovered(false)}
       >
         <div className="sidebar-brand">
-          <h4 className={`sidebar-title text-center ${collapsed ? 'is-collapsed' : ''}`} style={{ color: 'var(--theme-text-primary)' }}>
+          <h4 className={`sidebar-title text-center ${collapsed ? 'is-collapsed' : ''}`} style={{ color: 'var(--theme-text-primary)', marginBottom: '0' }}>
             Ventas A Y A
           </h4>
         </div>
