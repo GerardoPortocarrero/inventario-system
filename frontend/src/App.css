@@ -16,6 +16,8 @@
   --sidebar-width-desktop: 200px;
   /* Variable para el ancho del sidebar colapsado (solo iconos) */
   --sidebar-width-collapsed: 56px;
+  /* Altura del header/navbar; el sidebar-brand debe coincidir para verse conectado */
+  --header-height: 56px;
 
   /* Tema Oscuro (Por Defecto) */
   --theme-background-primary: #111111;
@@ -266,6 +268,9 @@ a:hover {
   background-color: var(--theme-background-primary) !important; /* Fondo principal */
   border-bottom: 1px solid var(--theme-border-default) !important; /* Borde inferior */
   padding: 0 !important; /* Remove default padding from Navbar */
+  min-height: var(--header-height);
+  height: var(--header-height); /* Altura fija para que coincida con el sidebar-brand */
+  box-sizing: border-box;
 }
 
 /* Estilos para los botones de link dentro del header (iconos) */

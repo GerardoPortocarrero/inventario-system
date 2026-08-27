@@ -76,15 +76,16 @@
   }
 }
 
-/* Cabecera del sidebar (zona del título). Tamaño fijo e inmutable: nunca crece ni encoge */
+/* Cabecera del sidebar (zona del título). Misma altura que el navbar para verse conectado */
 .sidebar-brand {
-  flex: 0 0 56px; /* Ancho/alto fijo: 56px garantizados, no responde a cambios de contenido */
-  height: 56px; /* Altura igual que el header */
+  flex: 0 0 var(--header-height, 56px); /* Ancho/alto fijo, igual al header */
+  height: var(--header-height, 56px); /* Altura identica al navbar */
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   white-space: nowrap;
+  border-bottom: 1px solid var(--theme-border-default); /* Separador para que 'Mi Perfil' se vea alineado */
 }
 
 .sidebar-title {
@@ -93,7 +94,14 @@
 }
 
 .sidebar .nav-item {
-  padding: 0;
+  padding: 0; /* padding 0 para los nav-item */
+}
+
+/* Neutralizar los margins del hr dentro del sidebar para lograr uniformidad en los separadores */
+.sidebar hr {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
 }
 
 /* Lista de enlaces: altura constante (100vh - 56px del brand), con scroll interno propio */
