@@ -375,6 +375,7 @@ hr {
   border: 1px solid var(--theme-border-default) !important;
   background-color: var(--theme-background-secondary) !important;
   border-radius: 0 !important;
+  padding: 0 10px !important;
   transition: border-color 0.2s ease-in-out;
   cursor: pointer;
 }
