@@ -301,32 +301,32 @@ const AdminUsersPage: FC = () => {
             </div>
           )}
           <div className="admin-section-table">
-            <div className="d-flex flex-column flex-md-row gap-3 mb-3">
+            <div className="filters-bar mb-3">
               <SearchInput 
                 searchTerm={searchTerm} 
                 onSearchChange={setSearchTerm} 
                 placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS} 
-                className="flex-grow-1 mb-0" 
+                className="w-100" 
               />
-              <GenericFilter
-                prefix="Rol"
-                value={selectedRole}
-                onChange={setSelectedRole}
-                options={roles.map(r => ({ value: r.id, label: r.nombre }))}
-                className="flex-shrink-0"
-              />
-              <GenericFilter
-                prefix="Sede"
-                value={selectedSede}
-                onChange={setSelectedSede}
-                options={sedes.map(s => ({ value: s.id, label: s.nombre }))}
-                className="flex-shrink-0"
-              />
+              <div className="filters-grid">
+                <GenericFilter
+                  prefix="Rol"
+                  value={selectedRole}
+                  onChange={setSelectedRole}
+                  options={roles.map(r => ({ value: r.id, label: r.nombre }))}
+                />
+                <GenericFilter
+                  prefix="Sede"
+                  value={selectedSede}
+                  onChange={setSelectedSede}
+                  options={sedes.map(s => ({ value: s.id, label: s.nombre }))}
+                />
+              </div>
               <Button 
                 variant="outline-danger" 
                 onClick={syncAllRolesToRTDB} 
                 disabled={isSubmitting}
-                className="flex-shrink-0 d-flex align-items-center gap-2"
+                className="w-100 d-flex align-items-center justify-content-center gap-2"
                 title="Sincronizar todos los roles con RTDB"
               >
                 <FaSync className={isSubmitting ? 'spinner-animation' : ''} />

@@ -372,7 +372,9 @@ hr {
 
 /* Generic Filter Unified Styling */
 .generic-filter-wrapper {
-  border-bottom: 1px solid var(--theme-border-default) !important;
+  border: 1px solid var(--theme-border-default) !important;
+  background-color: var(--theme-background-secondary) !important;
+  border-radius: 0 !important;
   transition: border-color 0.2s ease-in-out;
   cursor: pointer;
 }
@@ -388,7 +390,7 @@ hr {
   color: var(--theme-text-primary) !important;
   font-size: 0.9rem;
   font-weight: 500;
-  padding: 4px 24px 4px 0; /* Un poco más de espacio para la flecha */
+  padding: 10px 24px 10px 4px; /* igual padding vertical que el input del buscador + espacio para la flecha */
   outline: none !important;
   cursor: pointer;
   -webkit-appearance: none;
@@ -398,14 +400,63 @@ hr {
   background-repeat: no-repeat !important;
   background-position: right center !important;
   background-size: 12px !important;
-  width: auto !important;
-  min-width: max-content !important;
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 .unified-filter-select option {
   background-color: var(--theme-background-secondary) !important;
   color: var(--theme-text-primary) !important;
   padding: 10px;
+}
+
+/* Filtros: móvil busca arriba + grid 2 por fila; desktop todo en la misma fila */
+.filters-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.filters-grid .generic-filter-wrapper {
+  width: 100%;
+}
+
+/* Desktop: buscador y filtros en la misma fila (sin que bajen) */
+@media (min-width: 993px) {
+  .filters-bar {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 1rem;
+  }
+  .filters-bar > .form-group {
+    flex: 1 1 auto;
+    width: auto !important; /* neutralizar w-100 del buscador */
+    min-width: 0;
+  }
+  .filters-bar > .btn {
+    flex: 0 0 auto;
+    width: auto !important; /* neutralizar w-100 del botón Sync */
+  }
+  .filters-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    width: auto;
+    flex: 0 0 auto;
+  }
+  .filters-grid .generic-filter-wrapper {
+    width: auto !important;
+    flex: 1 1 auto;
+  }
 }
 
 /* El buscador se queda fijo arriba */
