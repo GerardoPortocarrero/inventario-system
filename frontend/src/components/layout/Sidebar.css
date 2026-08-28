@@ -50,15 +50,6 @@
     justify-content: flex-start; /* SIEMPRE flex-start: el icono nunca se mueve */
   }
 
-  /* Icono en columna fija: posición X constante en ambos estados */
-  .sidebar .sidebar-link-icon {
-    flex-shrink: 0;
-    width: 40px; /* Ancho fijo de la columna del icono */
-    display: flex;
-    justify-content: center;
-    font-size: 1.2rem;
-  }
-
   /* Texto: siempre en el DOM (no causa reflow). Solo cambia opacidad/visibilidad */
   .sidebar .sidebar-link-text {
     visibility: hidden;
@@ -102,7 +93,6 @@
   margin-top: 0 !important;
   margin-bottom: 0 !important;
 }
-}
 
 /* Lista de enlaces: altura constante (100vh - 56px del brand), con scroll interno propio */
 .sidebar-sticky {
@@ -131,8 +121,19 @@
 .sidebar .nav-link {
   display: flex; /* Para alinear ícono y texto */
   align-items: center; /* Centrado vertical */
+  justify-content: flex-start; /* SIEMPRE flex-start: el icono nunca se mueve */
+  gap: 0.5rem; /* Separación icono ↔ texto */
   color: var(--theme-text-primary) !important;
   padding: 0.75rem 0.5rem; /* Padding consistente */
+}
+
+/* Icono en columna fija: posición X constante en todas las vistas */
+.sidebar .sidebar-link-icon {
+  flex-shrink: 0;
+  width: 40px; /* Ancho fijo de la columna del icono */
+  display: flex;
+  justify-content: center;
+  font-size: 1.2rem;
 }
 
 .sidebar .nav-link:hover {
