@@ -1,11 +1,12 @@
 import type { FC } from 'react';
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { Row, Col, Form, Badge, Accordion, ListGroup, Dropdown } from 'react-bootstrap';
+import { Row, Col, Form, Badge, Accordion, ListGroup, Dropdown, Spinner } from 'react-bootstrap';
 import { rtdb } from '../api/firebase';
 import { ref, onValue } from 'firebase/database';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
-import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy } from 'react-icons/fa';
+import html2canvas from 'html2canvas';
 import GlobalSpinner from '../components/GlobalSpinner';
 
 type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'BEBIDAS' | 'DUPLICADOS';
@@ -122,6 +123,7 @@ const SupervisorPage: FC = () => {
 
   // Estado para controlar qué sede está abierta en el acordeón (Lazy Rendering técnico)
   const [activeLocId, setActiveLocId] = useState<string | null>(null);
+  const [capturingLocId, setCapturingLocId] = useState<string | null>(null);
 
   // Inicializar tipos de bebida solo si no hay persistencia
   useEffect(() => {
@@ -360,6 +362,69 @@ const SupervisorPage: FC = () => {
 
   const toggleRuta = useCallback((rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] })), []);
 
+  const handleCaptureSede = useCallback(async (locId: string, reportType: ReportType) => {
+    if (capturingLocId) return;
+    const el = document.getElementById(`sup-capture-${reportType}-${locId}`);
+    if (!el) return;
+    setCapturingLocId(locId);
+
+    await new Promise(r => setTimeout(r, 50));
+
+    try {
+      const original = el;
+      const clone = original.cloneNode(true) as HTMLElement;
+      clone.style.position = 'fixed';
+      clone.style.top = '-9999px';
+      clone.style.left = '0px';
+      clone.style.overflow = 'visible';
+      clone.style.height = 'auto';
+      clone.style.width = original.scrollWidth + 'px';
+      clone.style.maxHeight = 'none';
+
+      clone.querySelectorAll('.sticky-column, thead').forEach(node => {
+        (node as HTMLElement).style.position = 'static';
+        (node as HTMLElement).style.zIndex = 'auto';
+      });
+      clone.querySelectorAll('.sticky-column').forEach(node => {
+        (node as HTMLElement).style.boxShadow = 'none';
+      });
+
+      const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--theme-background-secondary').trim() || '#1a1a1a';
+      clone.style.backgroundColor = bgColor;
+      document.body.appendChild(clone);
+
+      await new Promise(r => setTimeout(r, 150));
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: bgColor,
+        logging: false,
+      });
+
+      document.body.removeChild(clone);
+
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          } catch (err) {
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = `supervision_${reportType.toLowerCase()}_${locId}_${new Date().toISOString().split('T')[0]}.png`;
+            link.click();
+          }
+        }
+      }, 'image/png', 1.0);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCapturingLocId(null);
+    }
+  }, [capturingLocId]);
+
   const renderVolumenReport = () => (
     <div className="report-container-stable">
       {filteredVolumenData.length === 0 ? (
@@ -370,7 +435,7 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredVolumenData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
+            <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-VOLUMEN-${loc.id}`} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -387,6 +452,10 @@ const SupervisorPage: FC = () => {
                     <Badge bg="success" className="badge-industrial">
                       <span className="b-label">CU</span><span className="fw-black b-val">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
+                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'VOLUMEN'); }}>
+                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                    </span>
                   </div>
                 </div>
               </Accordion.Header>
@@ -429,7 +498,7 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredBebidasData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
+            <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-BEBIDAS-${loc.id}`} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -446,6 +515,10 @@ const SupervisorPage: FC = () => {
                     <Badge bg="success" className="badge-industrial">
                       <span className="b-label">CU</span><span className="fw-black b-val">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
+                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'BEBIDAS'); }}>
+                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                    </span>
                   </div>
                 </div>
               </Accordion.Header>
@@ -488,7 +561,7 @@ const SupervisorPage: FC = () => {
           onSelect={(k) => setActiveLocId(k as string)}
         >
           {filteredEficienciaData.map((loc: any) => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
+            <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-EFICIENCIA-${loc.id}`} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -511,6 +584,10 @@ const SupervisorPage: FC = () => {
                     <Badge bg="dark" className="badge-industrial border border-secondary">
                       <span className="b-label text-info">EF (%)</span><span className="fw-black b-val text-info">{((loc.totalEfec / loc.totalProg) * 100).toFixed(0)}%</span>
                     </Badge>
+                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'EFICIENCIA'); }}>
+                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                    </span>
                   </div>
                 </div>
               </Accordion.Header>
@@ -551,7 +628,7 @@ const SupervisorPage: FC = () => {
       ) : (
         <Accordion defaultActiveKey={filteredDuplicadosData[0]?.id}>
           {filteredDuplicadosData.map(loc => (
-            <Accordion.Item eventKey={loc.id} key={loc.id} className="loc-accordion-item border-0">
+            <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-DUPLICADOS-${loc.id}`} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
                 <div className="d-flex justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -561,10 +638,16 @@ const SupervisorPage: FC = () => {
                       <div className="fw-black sub-label-new">DUPLICADOS</div>
                     </div>
                   </div>
-                  <Badge bg="danger" className="badge-industrial">
-                    <span className="b-label">CONFLICTOS</span>
-                    <span className="fw-black b-val">{Object.keys(loc.clientes).length}</span>
-                  </Badge>
+                  <div className="d-flex gap-1 gap-md-2">
+                    <Badge bg="danger" className="badge-industrial">
+                      <span className="b-label">CONFLICTOS</span>
+                      <span className="fw-black b-val">{Object.keys(loc.clientes).length}</span>
+                    </Badge>
+                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'DUPLICADOS'); }}>
+                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                    </span>
+                  </div>
                 </div>
               </Accordion.Header>
               <Accordion.Body className="bg-transparent p-0 pt-1">
@@ -851,6 +934,8 @@ const SupervisorPage: FC = () => {
         .loc-header-compact .accordion-button:after { display: none; }
         .loc-avatar { width: 28px; height: 28px; background: var(--color-red-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem; flex-shrink: 0; border-radius: 1px; }
         .badge-industrial { padding: 1px 5px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 42px; height: 26px; justify-content: center; }
+        .capture-btn { display: inline-flex; align-items: center; justify-content: center; align-self: center; width: 26px; height: 26px; color: var(--theme-text-secondary, #bbb); cursor: pointer; line-height: 1; flex-shrink: 0; }
+        .capture-btn:hover { color: var(--theme-text-primary, #fff); }
         .b-label { font-size: 0.45rem; font-weight: 800; line-height: 1; margin-bottom: -2px; opacity: 0.8; }
         .b-val { font-size: 1rem !important; line-height: 1; }
 

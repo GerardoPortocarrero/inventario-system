@@ -125,10 +125,19 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
 
       document.body.removeChild(clone);
 
-      const link = document.createElement('a');
-      link.download = `cobertura_${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          } catch (err) {
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = `cobertura_${new Date().toISOString().split('T')[0]}.png`;
+            link.click();
+          }
+        }
+      }, 'image/png', 1.0);
     } catch (err) {
       console.error(err);
     } finally {
@@ -215,7 +224,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                   ) : (
                     <FaCamera size={12} />
                   )}
-                  {isCapturing ? 'CAPTURANDO...' : 'EXPORTAR'}
+                  {isCapturing ? 'COPIANDO...' : 'COPIAR'}
                 </Button>
               )}
 
@@ -275,7 +284,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
               ) : (
                 <FaCamera size={12} />
               )}
-              {isCapturing ? 'CAPTURANDO...' : 'EXPORTAR'}
+              {isCapturing ? 'COPIANDO...' : 'COPIAR'}
             </Button>
           )}
 
