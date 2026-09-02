@@ -15,7 +15,6 @@ export interface Column<T> {
 interface GenericTableProps<T> {
   data: T[];
   columns: Column<T>[];
-  variant?: 'dark' | 'light' | '';
   noRecordsMessage?: string;
   isLoading?: boolean;
 }
@@ -26,7 +25,7 @@ const GenericTable = <T extends { id: string }>({
   noRecordsMessage = UI_TEXTS.NO_RECORDS_FOUND,
   isLoading = false
 }: GenericTableProps<T>) => {
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 992px)');
 
   if (isLoading) {
     return (

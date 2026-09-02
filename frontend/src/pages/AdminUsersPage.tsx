@@ -137,16 +137,8 @@ const UserForm: React.FC<{
 };
 
 const AdminUsersPage: FC = () => {
-  const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 992px)');
 
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDarkMode(document.body.classList.contains('theme-dark'));
-    });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
   const { roles, sedes, loadingMasterData } = useData();
   
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -182,6 +174,7 @@ const AdminUsersPage: FC = () => {
         
         setShowModal(false);
         setEditingUser(null);
+        toast.success('Usuario actualizado');
       } else {
         const secondaryAppName = `SecondaryApp_${Date.now()}`;
         const secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
@@ -208,6 +201,7 @@ const AdminUsersPage: FC = () => {
           // Cerrar modal tras creación exitosa
           setShowModal(false);
           resetForm();
+          toast.success('Usuario creado');
         } catch (error) {
           await deleteApp(secondaryApp);
           throw error;
@@ -219,7 +213,6 @@ const AdminUsersPage: FC = () => {
   };
 
   const syncAllRolesToRTDB = async () => {
-    if (!window.confirm("¿Sincronizar todos los roles de Firestore a RTDB?")) return;
     setIsSubmitting(true);
     try {
       // Forzamos una lectura fresca de Firestore para asegurar que hay datos
@@ -308,32 +301,32 @@ const AdminUsersPage: FC = () => {
             </div>
           )}
           <div className="admin-section-table">
-            <div className="d-flex flex-column flex-md-row gap-3 mb-3">
+            <div className="filters-bar mb-3">
               <SearchInput 
                 searchTerm={searchTerm} 
                 onSearchChange={setSearchTerm} 
                 placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_USERS} 
-                className="flex-grow-1 mb-0" 
+                className="w-100" 
               />
-              <GenericFilter
-                prefix="Rol"
-                value={selectedRole}
-                onChange={setSelectedRole}
-                options={roles.map(r => ({ value: r.id, label: r.nombre }))}
-                className="flex-shrink-0"
-              />
-              <GenericFilter
-                prefix="Sede"
-                value={selectedSede}
-                onChange={setSelectedSede}
-                options={sedes.map(s => ({ value: s.id, label: s.nombre }))}
-                className="flex-shrink-0"
-              />
+              <div className="filters-grid">
+                <GenericFilter
+                  prefix="Rol"
+                  value={selectedRole}
+                  onChange={setSelectedRole}
+                  options={roles.map(r => ({ value: r.id, label: r.nombre }))}
+                />
+                <GenericFilter
+                  prefix="Sede"
+                  value={selectedSede}
+                  onChange={setSelectedSede}
+                  options={sedes.map(s => ({ value: s.id, label: s.nombre }))}
+                />
+              </div>
               <Button 
                 variant="outline-danger" 
                 onClick={syncAllRolesToRTDB} 
                 disabled={isSubmitting}
-                className="flex-shrink-0 d-flex align-items-center gap-2"
+                className="w-100 d-flex align-items-center justify-content-center gap-2"
                 title="Sincronizar todos los roles con RTDB"
               >
                 <FaSync className={isSubmitting ? 'spinner-animation' : ''} />
@@ -343,7 +336,6 @@ const AdminUsersPage: FC = () => {
             <GenericTable 
               data={filteredUsers} 
               columns={columns} 
-              variant={isDarkMode ? 'dark' : ''} 
               isLoading={loading}
             />
           </div>
@@ -363,14 +355,21 @@ const AdminUsersPage: FC = () => {
         <p>¿Eliminar a <strong>{deletingUser?.nombre}</strong>?</p>
         <div className="d-flex justify-content-end gap-2">
           <Button variant="secondary" onClick={() => setDeletingUser(null)}>{UI_TEXTS.CLOSE}</Button>
-          <Button variant="danger" onClick={async () => {
+          <Button variant="danger" disabled={isSubmitting} onClick={async () => {
             if (deletingUser) {
-              await deleteDoc(doc(db, 'usuarios', deletingUser.id));
-              // Sincronización con RTDB para seguridad
-              await remove(ref(rtdb, `user_roles/${deletingUser.id}`));
-              setDeletingUser(null);
+              try {
+                setIsSubmitting(true);
+                await deleteDoc(doc(db, 'usuarios', deletingUser.id));
+                await remove(ref(rtdb, `user_roles/${deletingUser.id}`));
+                setDeletingUser(null);
+                toast.success('Usuario eliminado');
+              } catch (error) {
+                toast.error('Error al eliminar usuario');
+              } finally {
+                setIsSubmitting(false);
+              }
             }
-          }}>{UI_TEXTS.DELETE}</Button>
+          }}>{isSubmitting ? <Spinner size="sm" animation="border" /> : UI_TEXTS.DELETE}</Button>
         </div>
       </GenericCreationModal>
     </Fragment>

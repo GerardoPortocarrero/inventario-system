@@ -414,7 +414,7 @@ const ProductForm: React.FC<{
 
 const AdminProductsPage: FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 992px)');
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -459,6 +459,7 @@ const AdminProductsPage: FC = () => {
         resetForm();
       }
       setShowModal(false);
+      toast.success(isEditing ? 'Producto actualizado' : 'Producto creado');
     } catch (error) {
       console.error(error);
     } finally {
@@ -535,32 +536,31 @@ const AdminProductsPage: FC = () => {
             </div>
           )}
           <div className="admin-section-table">
-            <div className="d-flex flex-column flex-md-row gap-3 mb-3">
+            <div className="filters-bar mb-3">
               <SearchInput 
                 searchTerm={searchTerm} 
                 onSearchChange={setSearchTerm} 
                 placeholder={UI_TEXTS.PLACEHOLDER_SEARCH_PRODUCTS} 
-                className="flex-grow-1 mb-0" 
+                className="w-100" 
               />
-              <GenericFilter
-                prefix="Tipo"
-                value={selectedType}
-                onChange={setSelectedType}
-                options={beverageTypes.map(t => ({ value: t.id, label: t.nombre }))}
-                className="flex-shrink-0"
-              />
-              <GenericFilter
-                prefix="Marca"
-                value={selectedMarca}
-                onChange={setSelectedMarca}
-                options={filteredMarcasForFilter.map(m => ({ value: m.id, label: m.nombre }))}
-                className="flex-shrink-0"
-              />
+              <div className="filters-grid">
+                <GenericFilter
+                  prefix="Tipo"
+                  value={selectedType}
+                  onChange={setSelectedType}
+                  options={beverageTypes.map(t => ({ value: t.id, label: t.nombre }))}
+                />
+                <GenericFilter
+                  prefix="Marca"
+                  value={selectedMarca}
+                  onChange={setSelectedMarca}
+                  options={filteredMarcasForFilter.map(m => ({ value: m.id, label: m.nombre }))}
+                />
+              </div>
             </div>
             <GenericTable 
               data={filteredProducts} 
               columns={columns} 
-              variant={isDarkMode ? 'dark' : ''} 
               isLoading={loading}
             />
           </div>
@@ -580,12 +580,20 @@ const AdminProductsPage: FC = () => {
         <p>¿Eliminar producto <strong>{deletingProduct?.nombre}</strong>?</p>
         <div className="d-flex justify-content-end gap-2">
           <Button variant="secondary" onClick={() => setDeletingProduct(null)}>{UI_TEXTS.CLOSE}</Button>
-          <Button variant="danger" onClick={async () => {
+          <Button variant="danger" disabled={isSubmitting} onClick={async () => {
             if (deletingProduct) {
-              await deleteDoc(doc(db, 'productos', deletingProduct.id));
-              setDeletingProduct(null);
+              try {
+                setIsSubmitting(true);
+                await deleteDoc(doc(db, 'productos', deletingProduct.id));
+                setDeletingProduct(null);
+                toast.success('Producto eliminado');
+              } catch (error) {
+                toast.error('Error al eliminar producto');
+              } finally {
+                setIsSubmitting(false);
+              }
             }
-          }}>{UI_TEXTS.DELETE}</Button>
+          }}>{isSubmitting ? <Spinner size="sm" animation="border" /> : UI_TEXTS.DELETE}</Button>
         </div>
       </GenericCreationModal>
       <ProductQRModal 

@@ -5,6 +5,7 @@ import { db } from '../api/firebase';
 import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 
 import { FaPencilAlt, FaTrash } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 import SearchInput from '../components/SearchInput';
@@ -114,16 +115,7 @@ const SedeForm: React.FC<{
 };
 
 const AdminSedesPage: FC = () => {
-  const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('theme-dark'));
-  const isMobile = useMediaQuery('(max-width: 768px)');
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDarkMode(document.body.classList.contains('theme-dark'));
-    });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
+  const isMobile = useMediaQuery('(max-width: 992px)');
   
   const { loadingMasterData } = useData();
   const [sedes, setSedes] = useState<Sede[]>([]);
@@ -158,6 +150,7 @@ const AdminSedesPage: FC = () => {
         resetForm();
       }
       setShowModal(false);
+      toast.success(isEditing ? 'Sede actualizada' : 'Sede creada');
     } catch (error) {
       console.error(error);
     } finally {
@@ -214,7 +207,6 @@ const AdminSedesPage: FC = () => {
             <GenericTable 
               data={filteredSedes} 
               columns={columns} 
-              variant={isDarkMode ? 'dark' : ''} 
               isLoading={loading}
             />
           </div>
@@ -234,12 +226,20 @@ const AdminSedesPage: FC = () => {
         <p>¿Eliminar sede <strong>{deletingSede?.nombre}</strong>?</p>
         <div className="d-flex justify-content-end gap-2">
           <Button variant="secondary" onClick={() => setDeletingSede(null)}>{UI_TEXTS.CLOSE}</Button>
-          <Button variant="danger" onClick={async () => {
+          <Button variant="danger" disabled={isSubmitting} onClick={async () => {
             if (deletingSede) {
-              await deleteDoc(doc(db, 'sedes', deletingSede.id));
-              setDeletingSede(null);
+              try {
+                setIsSubmitting(true);
+                await deleteDoc(doc(db, 'sedes', deletingSede.id));
+                setDeletingSede(null);
+                toast.success('Sede eliminada');
+              } catch (error) {
+                toast.error('Error al eliminar sede');
+              } finally {
+                setIsSubmitting(false);
+              }
             }
-          }}>{UI_TEXTS.DELETE}</Button>
+          }}>{isSubmitting ? <Spinner size="sm" animation="border" /> : UI_TEXTS.DELETE}</Button>
         </div>
       </GenericCreationModal>
     </Fragment>

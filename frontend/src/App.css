@@ -14,6 +14,10 @@
 
   /* Variable para el ancho del sidebar en desktop */
   --sidebar-width-desktop: 200px;
+  /* Variable para el ancho del sidebar colapsado (solo iconos) */
+  --sidebar-width-collapsed: 56px;
+  /* Altura del header/navbar; el sidebar-brand debe coincidir para verse conectado */
+  --header-height: 56px;
 
   /* Tema Oscuro (Por Defecto) */
   --theme-background-primary: #111111;
@@ -28,14 +32,6 @@
   --theme-icon-bg: #000000;
   --theme-icon-color: rgba(255,255,255,0.7);
   --theme-calendar-invert: 1;
-
-  /* Colores Segmentación RFM (Accesibilidad) */
-  --rfm-campeon: #ff4d4d;
-  --rfm-fiel: #ff7676;
-  --rfm-nueva-promesa: #ff9b9b;
-  --rfm-potencial: #ffbebe;
-  --rfm-en-riesgo: #ffc107;
-  --rfm-hibernando: #888888;
 }
 
 /* 2. Sobrescribir variables para el tema claro cuando el body tiene clase .theme-light */
@@ -52,14 +48,6 @@ body.theme-light {
   --theme-icon-bg: #e4e6e9;
   --theme-icon-color: #1c1e21;
   --theme-calendar-invert: 0;
-
-  /* Colores Segmentación RFM (Accesibilidad - Más oscuros para fondo claro) */
-  --rfm-campeon: #d32f2f;
-  --rfm-fiel: #e53935;
-  --rfm-nueva-promesa: #f44336;
-  --rfm-potencial: #ef5350;
-  --rfm-en-riesgo: #f57c00;
-  --rfm-hibernando: #616161;
 }
 
 html, body, #root { /* Asegura que html y body y el div #root ocupen el 100% del alto */
@@ -82,6 +70,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: row; /* Sidebar a la izquierda, contenido a la derecha */
+  position: relative; /* Para que el sidebar absoluto se posicione respecto a él en desktop */
 }
 
 /* Contenido principal que se ajusta con el sidebar */
@@ -93,6 +82,14 @@ body {
 }
 
 /* No hay margin-left fijo en main-content para desktop */
+
+/* En desktop el sidebar colapsado deja espacio reservado; el expandido se superpone sin empujar */
+@media (min-width: 992px) {
+  .main-content {
+    margin-left: var(--sidebar-width-collapsed, 56px);
+    transition: none; /* No se mueve al expandir el sidebar */
+  }
+}
 
 /* Sobrescribir estilos de Bootstrap para que coincidan con la guía de estilo */
 /* Todos los elementos con border-radius a 0 */
@@ -235,7 +232,7 @@ a:hover {
 /* Action Buttons Utilities for Responsive Tables */
 .text-mobile { display: none; }
 
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .icon-desktop { display: none !important; }
   .text-mobile { display: inline !important; }
   
@@ -271,6 +268,9 @@ a:hover {
   background-color: var(--theme-background-primary) !important; /* Fondo principal */
   border-bottom: 1px solid var(--theme-border-default) !important; /* Borde inferior */
   padding: 0 !important; /* Remove default padding from Navbar */
+  min-height: var(--header-height);
+  height: var(--header-height); /* Altura fija para que coincida con el sidebar-brand */
+  box-sizing: border-box;
 }
 
 /* Estilos para los botones de link dentro del header (iconos) */
@@ -372,7 +372,10 @@ hr {
 
 /* Generic Filter Unified Styling */
 .generic-filter-wrapper {
-  border-bottom: 1px solid var(--theme-border-default) !important;
+  border: 1px solid var(--theme-border-default) !important;
+  background-color: var(--theme-background-secondary) !important;
+  border-radius: 0 !important;
+  padding: 0 10px !important;
   transition: border-color 0.2s ease-in-out;
   cursor: pointer;
 }
@@ -388,7 +391,7 @@ hr {
   color: var(--theme-text-primary) !important;
   font-size: 0.9rem;
   font-weight: 500;
-  padding: 4px 24px 4px 0; /* Un poco más de espacio para la flecha */
+  padding: 10px 24px 10px 4px; /* igual padding vertical que el input del buscador + espacio para la flecha */
   outline: none !important;
   cursor: pointer;
   -webkit-appearance: none;
@@ -398,14 +401,63 @@ hr {
   background-repeat: no-repeat !important;
   background-position: right center !important;
   background-size: 12px !important;
-  width: auto !important;
-  min-width: max-content !important;
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 .unified-filter-select option {
   background-color: var(--theme-background-secondary) !important;
   color: var(--theme-text-primary) !important;
   padding: 10px;
+}
+
+/* Filtros: móvil busca arriba + grid 2 por fila; desktop todo en la misma fila */
+.filters-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.filters-grid .generic-filter-wrapper {
+  width: 100%;
+}
+
+/* Desktop: buscador y filtros en la misma fila (sin que bajen) */
+@media (min-width: 993px) {
+  .filters-bar {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 1rem;
+  }
+  .filters-bar > .form-group {
+    flex: 1 1 auto;
+    width: auto !important; /* neutralizar w-100 del buscador */
+    min-width: 0;
+  }
+  .filters-bar > .btn {
+    flex: 0 0 auto;
+    width: auto !important; /* neutralizar w-100 del botón Sync */
+  }
+  .filters-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    width: auto;
+    flex: 0 0 auto;
+  }
+  .filters-grid .generic-filter-wrapper {
+    width: auto !important;
+    flex: 1 1 auto;
+  }
 }
 
 /* El buscador se queda fijo arriba */
@@ -436,4 +488,54 @@ hr {
     flex: 1;
     height: 100%;
   }
+}
+
+/* ===== AnalyticsProPage Styles ===== */
+.fw-black { font-weight: 900 !important; }
+.info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
+.pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; }
+.pill-main-icon { font-size: 14px; }
+.pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; }
+.pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; appearance: none; }
+.custom-tabs-industrial .nav-link { color: var(--theme-text-secondary); border: none !important; border-bottom: 3px solid transparent !important; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; padding: 10px 20px; border-radius: 0; transition: all 0.2s ease; }
+.custom-tabs-industrial .nav-link:hover { color: var(--theme-text-primary); background: rgba(244, 0, 9, 0.05); border-color: transparent !important; border-bottom-color: var(--color-red-primary) !important; }
+.custom-tabs-industrial .nav-link.active { color: var(--color-red-primary) !important; background: transparent !important; border-color: transparent !important; border-bottom-color: var(--color-red-primary) !important; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-red-primary); }
+.date-picker-industrial { background: transparent; border: none; font-weight: 900; font-size: 0.75rem; color: var(--theme-text-primary); text-align: center; width: 100px; outline: none; }
+.react-datepicker-popper { z-index: 9999 !important; }
+.date-wrapper-flex { flex: 1; display: flex; }
+.date-wrapper-flex .react-datepicker-wrapper { width: 100%; }
+.date-wrapper-flex .react-datepicker__input-container { width: 100%; }
+.date-wrapper-flex .react-datepicker__input-container input { width: 100%; }
+.industrial-table-v2 thead th { background-color: var(--theme-background-tertiary) !important; color: var(--theme-text-secondary); font-weight: 900; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--theme-border-default); padding: 15px 10px; }
+.industrial-table-v2 tbody tr { border-bottom: 1px solid var(--theme-table-border-color); transition: background 0.2s ease; }
+.industrial-table-v2 tbody tr:hover { background-color: rgba(244, 0, 9, 0.05) !important; }
+
+/* ===== CoberturaTab Styles ===== */
+.sticky-column {
+  position: sticky !important;
+  left: 0;
+  box-shadow: 6px 0 10px rgba(0,0,0,0.2);
+  z-index: 10;
+  border-right: 1px solid var(--theme-table-border-color) !important;
+}
+.matrix-table {
+  border-collapse: separate !important;
+}
+.matrix-table thead th {
+  border-bottom: 1px solid var(--theme-border-default) !important;
+}
+.matrix-table tbody td {
+  border-bottom: 1px solid var(--theme-table-border-color) !important;
+}
+.matrix-table thead th.brand-separator {
+  border-right: 1px solid var(--theme-border-default) !important;
+}
+.matrix-table tbody td.brand-separator {
+  border-right: 1px solid var(--theme-table-border-color) !important;
+}
+.matrix-table tbody td.sticky-column {
+  border-right: 1px solid var(--theme-table-border-color) !important;
 }

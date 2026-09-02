@@ -46,20 +46,22 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
     if (showFilterModal) {
       setTempDia(selectedDia);
       setTempSubCanal(selectedSubCanal);
-      setTempTipoBebida(selectedTipoCobertura);
-      setTempMarcas(selectedMarcasCobertura);
+      const tipoValido = beverageTypes.some(t => t.id === selectedTipoCobertura)
+        ? selectedTipoCobertura
+        : (beverageTypes[0]?.id || '');
+      setTempTipoBebida(tipoValido);
+      setTempMarcas(selectedTipoCobertura
+        ? selectedMarcasCobertura
+        : marcas.filter(m => m.tipoBebidaId === tipoValido).map(m => m.id)
+      );
     }
-  }, [showFilterModal, selectedDia, selectedSubCanal, selectedTipoCobertura, selectedMarcasCobertura]);
+  }, [showFilterModal, selectedDia, selectedSubCanal, selectedTipoCobertura, selectedMarcasCobertura, beverageTypes, marcas]);
 
   const handleTipoBebidaChange = (tipoId: string) => {
     setTempTipoBebida(tipoId);
-    if (tipoId === 'ALL') {
-      setTempMarcas(marcas.map(m => m.id));
-    } else {
-      setTempMarcas(
-        marcas.filter(m => m.tipoBebidaId === tipoId).map(m => m.id)
-      );
-    }
+    setTempMarcas(
+      marcas.filter(m => m.tipoBebidaId === tipoId).map(m => m.id)
+    );
   };
 
   const handleToggleMarca = (marcaId: string) => {
@@ -123,10 +125,19 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
 
       document.body.removeChild(clone);
 
-      const link = document.createElement('a');
-      link.download = `cobertura_${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          } catch (err) {
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = `cobertura_${new Date().toISOString().split('T')[0]}.png`;
+            link.click();
+          }
+        }
+      }, 'image/png', 1.0);
     } catch (err) {
       console.error(err);
     } finally {
@@ -157,22 +168,18 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   const activeFilterCount = [
     selectedDia !== 'ALL' && 1,
     selectedSubCanal !== 'ALL' && 1,
-    selectedTipoCobertura !== 'ALL' && 1
+    selectedTipoCobertura && 1
   ].filter(Boolean).length;
 
-  const filteredMarcas = tempTipoBebida === 'ALL'
-    ? marcas
-    : marcas.filter(m => m.tipoBebidaId === tempTipoBebida);
+  const filteredMarcas = marcas.filter(m => m.tipoBebidaId === tempTipoBebida);
 
-  const selectedTipoNombre = selectedTipoCobertura === 'ALL'
-    ? 'TODOS LOS TIPOS'
-    : (beverageTypes.find(t => t.id === selectedTipoCobertura)?.nombre?.toUpperCase() || 'TIPO');
+  const selectedTipoNombre = beverageTypes.find(t => t.id === selectedTipoCobertura)?.nombre?.toUpperCase() || 'TIPO';
 
   return (
-    <div className="d-flex flex-column gap-2 gap-md-3 h-100">
+    <div className="d-flex flex-column h-100">
       {/* BARRA DE FILTROS: colapsable en mobile */}
       {isMobile && !filtersExpanded ? (
-        <div className="flex-shrink-0 d-flex align-items-center" style={{ borderLeft: '4px solid var(--color-red-primary)' }}>
+        <div className="flex-shrink-0 d-flex align-items-center mb-2" style={{ borderLeft: '4px solid var(--color-red-primary)' }}>
           <Button
             variant="outline-danger"
             className="d-flex align-items-center gap-2 fw-black w-100"
@@ -187,7 +194,69 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           </Button>
         </div>
       ) : (
-      <div className="admin-border-industrial p-2 p-md-3 flex-shrink-0" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
+      <div className="admin-border-industrial p-2 p-md-3 flex-shrink-0 mb-2 mb-md-3" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
+        {isMobile ? (
+          <div className="d-flex flex-column gap-2">
+            <div className="d-flex align-items-center gap-2">
+              <Button
+                variant="outline-danger"
+                className="d-flex align-items-center gap-2 fw-black px-3 py-2"
+                style={{ fontSize: '0.75rem', borderRadius: '2px' }}
+                onClick={() => setShowFilterModal(true)}
+              >
+                <FaFilter size={12} />
+                FILTROS
+                {activeFilterCount > 0 && (
+                  <Badge bg="danger" className="ms-1" style={{ fontSize: '0.6rem' }}>{activeFilterCount}</Badge>
+                )}
+              </Button>
+
+              {selectedMarcasCobertura.length > 0 && (
+                <Button
+                  variant="outline-success"
+                  className="d-flex align-items-center gap-2 fw-black px-3 py-2"
+                  style={{ fontSize: '0.75rem', borderRadius: '2px' }}
+                  onClick={handleExportImage}
+                  disabled={isCapturing}
+                >
+                  {isCapturing ? (
+                    <Spinner size="sm" animation="border" />
+                  ) : (
+                    <FaCamera size={12} />
+                  )}
+                  {isCapturing ? 'COPIANDO...' : 'COPIAR'}
+                </Button>
+              )}
+
+              <Button variant="link" className="text-secondary p-0 ms-auto text-decoration-none" onClick={() => setFiltersExpanded(false)}>
+                <FaChevronUp size={14} />
+              </Button>
+            </div>
+
+            {(selectedDia !== 'ALL' || selectedSubCanal !== 'ALL' || selectedTipoCobertura) && (
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                {selectedDia !== 'ALL' && (
+                  <Badge bg="danger" className="fw-black text-uppercase px-2 py-1" style={{ fontSize: '0.65rem' }}>
+                    {selectedDia}
+                  </Badge>
+                )}
+                {selectedSubCanal !== 'ALL' && (
+                  <Badge bg="danger" className="fw-black text-uppercase px-2 py-1" style={{ fontSize: '0.65rem' }}>
+                    {selectedSubCanal}
+                  </Badge>
+                )}
+                {selectedTipoCobertura && (
+                  <Badge bg="danger" className="fw-black text-uppercase px-2 py-1" style={{ fontSize: '0.65rem' }}>
+                    {selectedTipoNombre}
+                  </Badge>
+                )}
+                <Button variant="link" className="text-danger p-0 ms-1 text-decoration-none d-flex align-items-center" onClick={() => { setSelectedDia('ALL'); setSelectedSubCanal('ALL'); setSelectedTipoCobertura(''); setSelectedMarcasCobertura([]); }}>
+                  <FaTimes size={10} />
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
           <Button
             variant="outline-danger"
@@ -215,7 +284,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
               ) : (
                 <FaCamera size={12} />
               )}
-              {isCapturing ? 'CAPTURANDO...' : 'EXPORTAR'}
+              {isCapturing ? 'COPIANDO...' : 'COPIAR'}
             </Button>
           )}
 
@@ -230,27 +299,111 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 CANAL: {selectedSubCanal}
               </Badge>
             )}
-            {selectedTipoCobertura !== 'ALL' && (
+            {selectedTipoCobertura && (
               <Badge bg="danger" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>
                 {selectedTipoNombre}
               </Badge>
             )}
-            {selectedMarcasCobertura.length > 0 && (
-              <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedMarcasCobertura([]); setSelectedTipoCobertura('ALL'); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
+            {activeFilterCount > 0 && (
+              <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedDia('ALL'); setSelectedSubCanal('ALL'); setSelectedTipoCobertura(''); setSelectedMarcasCobertura([]); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
             )}
           </div>
-
-          {isMobile && (
-            <Button variant="link" className="text-secondary p-0 ms-auto text-decoration-none" onClick={() => setFiltersExpanded(false)}>
-              <FaChevronUp size={14} />
-            </Button>
-          )}
         </div>
+        )}
       </div>
       )}
 
       {selectedMarcasCobertura.length > 0 && typeColumnHeaders.length > 0 ? (
-        <div ref={tableContainerRef} className="admin-border-industrial flex-grow-1 overflow-auto custom-scrollbar position-relative" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+        isMobile ? (
+          <div ref={tableContainerRef} className="flex-grow-1 overflow-auto custom-scrollbar d-flex flex-column gap-1 p-2" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+            {matrixCoberturaData.rutas.map(rutaId => {
+              const routeData = matrixCoberturaData.data[rutaId];
+              const isExpanded = expandedCoberturaRutas[rutaId];
+              const tipo = typeColumnHeaders[0];
+              const vals = tipo.brandIds.reduce((acc: { cf: number; cu: number }, bId: string) => {
+                const b = routeData?.total[bId];
+                if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
+                return acc;
+              }, { cf: 0, cu: 0 });
+              const cliConVenta = routeData?.cliConVentaPorTipo?.[tipo.tipoId] || 0;
+              const total = routeData.totalClientesRuta;
+              const pct = total > 0 ? ((cliConVenta / total) * 100).toFixed(1) : '0';
+              const hasData = vals.cf > 0 || vals.cu > 0;
+              return (
+                <div key={rutaId} style={{ border: '1px solid var(--theme-border-default)', backgroundColor: isExpanded ? 'rgba(244, 0, 9, 0.05)' : 'var(--theme-background-primary)' }}>
+                  <div
+                    className="d-flex align-items-center justify-content-between p-3"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setExpandedCoberturaRutas(prev => ({ ...prev, [rutaId]: !prev[rutaId] }))}
+                  >
+                    <div className="d-flex align-items-center gap-2">
+                      <FaChevronRight size={12} style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', color: 'var(--theme-text-primary)' }} />
+                      <span className="fw-black text-uppercase" style={{ fontSize: '1rem', letterSpacing: '1px', color: 'var(--theme-text-primary)' }}>{rutaId}</span>
+                    </div>
+                    <span className="text-secondary fw-bold" style={{ fontSize: '0.65rem' }}>{total} CLIENTES</span>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid var(--theme-table-border-color)', padding: '10px 12px' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <span className="fw-black text-uppercase" style={{ fontSize: '0.7rem', color: 'var(--theme-text-secondary)' }}>{tipo.typeName} <span className="text-secondary" style={{ fontSize: '0.6rem' }}>({tipo.brandIds.length})</span></span>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <span className={hasData ? 'text-success' : 'text-secondary opacity-25'} style={{ fontSize: '0.85rem' }}>{vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                        <span className="mx-1 text-secondary opacity-50" style={{ fontSize: '0.75rem' }}>/</span>
+                        <span className={hasData ? 'text-warning' : 'text-secondary opacity-25'} style={{ fontSize: '0.85rem' }}>{vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                      </div>
+                      <div className={hasData ? '' : 'opacity-25'}>
+                        <span className="fw-black text-info" style={{ fontSize: '0.8rem' }}>{cliConVenta} <span className="text-secondary opacity-50">/</span> {total}</span>
+                        <span className="text-secondary ms-1" style={{ fontSize: '0.65rem' }}>({pct}%)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div style={{ borderTop: '2px solid var(--theme-border-default)' }}>
+                      {Object.entries(routeData.clientes)
+                        .sort((a: any, b: any) => a[1].nombre.localeCompare(b[1].nombre))
+                        .map(([clientId, client]: [string, any]) => {
+                          const cVals = tipo.brandIds.reduce((acc: { cf: number; cu: number }, bId: string) => {
+                            const b = client.marcas[bId];
+                            if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
+                            return acc;
+                          }, { cf: 0, cu: 0 });
+                          const cHasData = cVals.cf > 0 || cVals.cu > 0;
+                          return (
+                            <div key={`${rutaId}-${clientId}`} style={{ borderTop: '1px solid var(--theme-table-border-color)', padding: '10px 12px', backgroundColor: 'var(--theme-background-primary)' }}>
+                              <div className="d-flex justify-content-between align-items-center mb-1">
+                                <span className="fw-black text-uppercase" style={{ fontSize: '0.8rem', color: 'var(--theme-text-primary)' }}>{client.nombre}</span>
+                                <span className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
+                              </div>
+                              <div className="d-flex align-items-center justify-content-between">
+                                <div className="d-flex align-items-center gap-1">
+                                  <span style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)' }}>CF:</span>
+                                  <span className={cHasData ? 'text-success' : 'text-secondary opacity-25'} style={{ fontSize: '0.75rem' }}>{cVals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                  <span className="text-secondary opacity-50 mx-1" style={{ fontSize: '0.65rem' }}>/</span>
+                                  <span style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)' }}>CU:</span>
+                                  <span className={cHasData ? 'text-warning' : 'text-secondary opacity-25'} style={{ fontSize: '0.75rem' }}>{cVals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                </div>
+                                <div>
+                                  {cHasData ? (
+                                    <FaCheck className="text-success" size={14} />
+                                  ) : (
+                                    <FaTimes className="text-danger" size={12} />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div ref={tableContainerRef} className="admin-border-industrial flex-grow-1 overflow-auto custom-scrollbar position-relative" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
           <Table hover className="mb-0 industrial-table-v2 matrix-table" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: 'max-content' }}>
             <thead style={{ backgroundColor: 'var(--theme-background-tertiary)' }} className="sticky-top">
               <tr>
@@ -296,10 +449,10 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                           if (b) {
                             acc.cf += b.cf || 0;
                             acc.cu += b.cu || 0;
-                            acc.cliConVenta += b.cliConVenta || 0;
                           }
                           return acc;
-                        }, { cf: 0, cu: 0, cliConVenta: 0 });
+                        }, { cf: 0, cu: 0 });
+                        const cliConVentaUnicos = routeData?.cliConVentaPorTipo?.[tipoId] || 0;
                         const hasData = vals.cf > 0 || vals.cu > 0;
                         return (
                           <Fragment key={`${rutaId}-${tipoId}`}>
@@ -310,9 +463,9 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                             </td>
                             <td className={`text-center align-middle fw-black brand-separator`} style={{ fontSize: '1rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
                               <span className={hasData ? 'text-info' : 'text-secondary opacity-25'}>
-                                {vals.cliConVenta} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
+                                {cliConVentaUnicos} <span className="text-secondary opacity-50 mx-1">/</span> {routeData.totalClientesRuta}
                                 <span className="text-secondary ms-1" style={{ fontSize: '0.7rem' }}>
-                                  ({routeData.totalClientesRuta > 0 ? ((vals.cliConVenta / routeData.totalClientesRuta) * 100).toFixed(1) : 0}%)
+                                  ({routeData.totalClientesRuta > 0 ? ((cliConVentaUnicos / routeData.totalClientesRuta) * 100).toFixed(1) : 0}%)
                                 </span>
                               </span>
                             </td>
@@ -402,8 +555,9 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
             </tbody>
           </Table>
         </div>
+        )
       ) : (
-        <div className="flex-grow-1 d-flex flex-column align-items-center justify-content-center p-5" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', borderRadius: '4px' }}>
+        <div className="flex-grow-1 d-flex flex-column align-items-center justify-content-center p-5" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)' }}>
           <div className="p-4 rounded-circle mb-4" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
             <FaMapMarkerAlt className="text-danger opacity-50" size={64} />
           </div>
@@ -459,15 +613,13 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 className="fw-black text-uppercase"
                 style={{ fontSize: '0.8rem' }}
               >
-                <option value="ALL">TODOS</option>
                 {beverageTypes.map(t => (
                   <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>
                 ))}
               </Form.Select>
             </div>
 
-            {/* MARCAS: solo se muestran cuando hay un tipo específico seleccionado */}
-            {tempTipoBebida !== 'ALL' && (
+            {/* MARCAS */}
             <div>
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <label className="text-danger fw-black text-uppercase mb-0" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
@@ -497,7 +649,6 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 style={{ 
                   backgroundColor: 'var(--theme-background-secondary)', 
                   border: '1px solid var(--theme-border-default)', 
-                  borderRadius: '4px',
                   maxHeight: '180px',
                   overflowY: 'auto'
                 }}
@@ -522,7 +673,6 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 )}
               </div>
             </div>
-            )}
           </div>
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: 'var(--theme-background-secondary)', borderTop: '1px solid var(--theme-border-default)' }}>
@@ -537,6 +687,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           <Button 
             variant="danger" 
             onClick={handleApply}
+            disabled={!tempTipoBebida}
             className="fw-black px-4"
             style={{ fontSize: '0.75rem', borderRadius: '2px' }}
           >
@@ -544,38 +695,6 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
           </Button>
         </Modal.Footer>
       </Modal>
-
-      <style>{`
-        .sticky-column {
-          position: sticky !important;
-          left: 0;
-          box-shadow: 6px 0 10px rgba(0,0,0,0.2);
-          z-index: 10;
-          border-right: 1px solid var(--theme-table-border-color) !important;
-        }
-        .matrix-table {
-          border-collapse: separate !important;
-        }
-        .matrix-table thead th {
-          border-bottom: 1px solid var(--theme-border-default) !important;
-        }
-        .matrix-table tbody td {
-          border-bottom: 1px solid var(--theme-table-border-color) !important;
-        }
-        .matrix-table thead th.brand-separator {
-          border-right: 1px solid var(--theme-border-default) !important;
-        }
-        .matrix-table tbody td.brand-separator {
-          border-right: 1px solid var(--theme-table-border-color) !important;
-        }
-        .matrix-table tbody td.sticky-column {
-          border-right: 1px solid var(--theme-table-border-color) !important;
-        }
-        .admin-border-industrial {
-          overflow-x: auto !important;
-          overflow-y: auto !important;
-        }
-      `}</style>
     </div>
   );
 });

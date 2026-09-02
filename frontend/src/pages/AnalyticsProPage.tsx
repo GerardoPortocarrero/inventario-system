@@ -39,7 +39,7 @@ const AnalyticsProPage: FC = () => {
   // --- FILTROS EXCLUSIVOS COBERTURA ---
   const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
   const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string>('ALL');
-  const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('ALL');
+  const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('');
 
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -171,13 +171,23 @@ const AnalyticsProPage: FC = () => {
     const cMap: Record<string, any> = {};
     filteredData.forEach(d => {
       const id = String(d.solicitante || '').trim();
-      if (!cMap[id]) cMap[id] = { clientId: id, clientName: String(d.nombreCliente || 'SIN NOMBRE'), monetary: 0, cf: 0, cu: 0 };
+      if (!cMap[id]) {
+        const sedeCodigo = String(d.sede || '').trim();
+        const sedeMatch = sedes.find(s => s.codigo === sedeCodigo);
+        cMap[id] = {
+          clientId: id,
+          clientName: String(d.nombreCliente || 'SIN NOMBRE'),
+          sedeNombre: sedeMatch?.nombre || sedeCodigo || 'SIN SEDE',
+          ruta: String(d.ruta || 'S/R').trim(),
+          monetary: 0, cf: 0, cu: 0
+        };
+      }
       cMap[id].monetary += d.totalValor || 0;
       cMap[id].cf += d.totalCF || 0;
       cMap[id].cu += d.totalCU || 0;
     });
     return Object.values(cMap);
-  }, [filteredData, activeTab]);
+  }, [filteredData, activeTab, sedes]);
 
   const clientMetrics = useMemo(() => {
     let res = [...groupedClients];
@@ -207,6 +217,7 @@ const AnalyticsProPage: FC = () => {
     const matrix: Record<string, any> = {};
     const routeSet = new Set<string>();
     const prodMap = products.reduce((acc, p) => ({ ...acc, [String(p.sap).trim()]: p }), {} as any);
+    const marcasMap = marcas.reduce((acc, m) => ({ ...acc, [m.id]: m }), {} as any);
 
     // 1. Identificar clientes que cumplen los filtros (Día y SubCanal)
     const validClients = new Set<string>();
@@ -244,6 +255,9 @@ const AnalyticsProPage: FC = () => {
       }
     });
 
+    // Trackear clientes únicos por ruta y tipo de bebida
+    const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
+
     // 2. Llenar con ventas (solo para clientes válidos)
     filteredData.forEach(d => {
       const cid = String(d.solicitante || '').trim();
@@ -266,12 +280,28 @@ const AnalyticsProPage: FC = () => {
           matrix[rid].total[mid].cu += m.cu || 0;
           
           if (!hadS && (m.cf > 0 || m.cu > 0)) matrix[rid].total[mid].cliConVenta++;
+
+          // Contar clientes únicos por ruta+tipo (para cobertura correcta)
+          const tipoId = marcasMap[mid]?.tipoBebidaId;
+          if (tipoId) {
+            if (!routeTypeClients[rid]) routeTypeClients[rid] = {};
+            if (!routeTypeClients[rid][tipoId]) routeTypeClients[rid][tipoId] = new Set();
+            routeTypeClients[rid][tipoId].add(cid);
+          }
         }
       });
     });
 
+    // Calcular cliConVentaPorTipo (clientes únicos con venta por tipo de bebida)
+    Object.keys(routeTypeClients).forEach(rid => {
+      matrix[rid].cliConVentaPorTipo = {};
+      Object.keys(routeTypeClients[rid]).forEach(tipoId => {
+        matrix[rid].cliConVentaPorTipo[tipoId] = routeTypeClients[rid][tipoId].size;
+      });
+    });
+
     return { rutas: Array.from(routeSet).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})), data: matrix };
-  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede]);
+  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede, marcas]);
 
   // OPTIMIZACIÓN: Separar agregación de filtrado de productos
   const groupedProducts = useMemo(() => {
@@ -316,14 +346,14 @@ const AnalyticsProPage: FC = () => {
               <FaChartLine className="text-danger" size={16} /> ANALÍTICA PRO
             </h3>
             <div className="d-flex gap-1">
-              <div className="d-flex align-items-center p-1" style={{ flex: 1, minWidth: 0, borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
+              <div className="d-flex align-items-center p-1" style={{ flex: 1, minWidth: 0, backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
                 <FaMapMarkerAlt className="text-danger ms-1 flex-shrink-0" size={9} />
                 <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-1 py-0" style={{ fontSize: '0.65rem', width: '100%', minWidth: 0, color: 'var(--theme-text-primary)' }}>
                   <option value="ALL">GLOBAL</option>
                   {sedes.map(s => <option key={s.id} value={s.codigo}>{s.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
-              <div className="d-flex align-items-center p-1" style={{ flex: 1, minWidth: 0, borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
+              <div className="d-flex align-items-center p-1" style={{ flex: 1, minWidth: 0, backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
                 <FaRoute className="text-danger ms-1 flex-shrink-0" size={9} />
                 <Form.Select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className="bg-transparent border-0 small fw-bold px-1 py-0" style={{ fontSize: '0.65rem', width: '100%', minWidth: 0, color: 'var(--theme-text-primary)' }}>
                   <option value="ALL">RUTAS</option>
@@ -331,9 +361,9 @@ const AnalyticsProPage: FC = () => {
                 </Form.Select>
               </div>
             </div>
-            <div className="d-flex align-items-center p-1 gap-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
+            <div className="d-flex align-items-center p-1 gap-1" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '30px' }}>
               <DatePicker selected={new Date(dateRange.start + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" wrapperClassName="date-wrapper-flex" />
-              <span className="text-secondary fw-black flex-shrink-0" style={{ fontSize: '0.65rem' }}>–</span>
+              <span className="text-secondary fw-black flex-shrink-0" style={{ fontSize: '0.65rem' }}>-</span>
               <DatePicker selected={new Date(dateRange.end + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" wrapperClassName="date-wrapper-flex" />
             </div>
           </div>
@@ -343,21 +373,21 @@ const AnalyticsProPage: FC = () => {
               <FaChartLine className="text-danger" /> ANALÍTICA PRO
             </h3>
             <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-              <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <div className="d-flex align-items-center p-1" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
                 <FaMapMarkerAlt className="text-danger ms-2" size={12} />
                 <Form.Select value={selectedSede} onChange={(e) => setSelectedSede(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '85px', color: 'var(--theme-text-primary)' }}>
                   <option value="ALL">GLOBAL</option>
                   {sedes.map(s => <option key={s.id} value={s.codigo}>{s.nombre.toUpperCase()}</option>)}
                 </Form.Select>
               </div>
-              <div className="d-flex align-items-center p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <div className="d-flex align-items-center p-1" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
                 <FaRoute className="text-danger ms-2" size={12} />
                 <Form.Select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className="bg-transparent border-0 small fw-bold px-2 py-0" style={{ fontSize: '0.75rem', width: 'auto', minWidth: '80px', color: 'var(--theme-text-primary)' }}>
                   <option value="ALL">RUTAS</option>
                   {availableRoutes.map(r => <option key={r} value={r}>RUTA {r}</option>)}
                 </Form.Select>
               </div>
-              <div className="d-flex align-items-center p-1 gap-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
+              <div className="d-flex align-items-center p-1 gap-1" style={{ backgroundColor: 'var(--theme-background-secondary)', height: '32px' }}>
                 <DatePicker selected={new Date(dateRange.start + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" />
                 <span className="text-secondary fw-black" style={{ fontSize: '0.7rem' }}>-</span>
                 <DatePicker selected={new Date(dateRange.end + 'T00:00:00')} onChange={(date: any) => date && setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))} dateFormat="dd/MM/yyyy" locale="es" className="date-picker-industrial" />
@@ -398,7 +428,7 @@ const AnalyticsProPage: FC = () => {
               <Tab.Pane eventKey="dashboard" className="h-100 overflow-auto custom-scrollbar p-3">
                 <div className="d-flex justify-content-between align-items-center p-3 mb-3 border-start border-danger border-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                   <div><h6 className="fw-black mb-0 text-uppercase">Dimensión del Análisis</h6><span className="text-secondary small fw-bold">Unidad de medida para gráficos</span></div>
-                  <div className="d-flex p-1" style={{ borderRadius: '4px', backgroundColor: 'var(--theme-background-tertiary)' }}>
+                  <div className="d-flex p-1" style={{ backgroundColor: 'var(--theme-background-tertiary)' }}>
                     {([['valor', '$'], ['cf', 'CF'], ['cu', 'CU']] as const).map(([m, label]) => (
                       <button key={m} onClick={() => setMetric(m)} className={`btn btn-sm px-4 fw-black ${metric === m ? 'btn-danger' : 'btn-link text-secondary text-decoration-none'}`} style={{ fontSize: '0.75rem', borderRadius: '2px' }}>{label}</button>
                     ))}
@@ -419,11 +449,12 @@ const AnalyticsProPage: FC = () => {
                     handleSort={handleSort}
                     setClientSort={setClientSort}
                     SortHeader={SortHeader}
+                    isMobile={isMobile}
                   />
                 )}
               </Tab.Pane>
               
-              <Tab.Pane eventKey="cobertura" className="h-100 overflow-auto custom-scrollbar p-3">
+              <Tab.Pane eventKey="cobertura" className="h-100 overflow-hidden custom-scrollbar p-3">
                 {activeTab === 'cobertura' && (
                   <CoberturaTab 
                     marcas={marcas} 
@@ -445,36 +476,12 @@ const AnalyticsProPage: FC = () => {
               </Tab.Pane>
 
               <Tab.Pane eventKey="productos" className="h-100 overflow-hidden custom-scrollbar p-3">
-                {activeTab === 'productos' && <ProductsTab productSearch={productSearch} setProductSearch={setProductSearch} productSort={productSort} handleSort={handleSort} setProductSort={setProductSort} finalProductPerformance={productMetrics} SortHeader={SortHeader} />}
+                {activeTab === 'productos' && <ProductsTab productSearch={productSearch} setProductSearch={setProductSearch} productSort={productSort} handleSort={handleSort} setProductSort={setProductSort} finalProductPerformance={productMetrics} SortHeader={SortHeader} isMobile={isMobile} />}
               </Tab.Pane>
             </Tab.Content>
           </div>
         </Tab.Container>
       </div>
-
-      <style>{`
-        .fw-black { font-weight: 900 !important; }
-        .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
-        .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; }
-        .pill-main-icon { font-size: 14px; }
-        .pill-content { padding: 0 10px; display: flex; flex-direction: column; justify-content: center; min-width: 0; flex-grow: 1; position: relative; }
-        .pill-select-v2 { background: transparent !important; border: none !important; color: var(--theme-text-primary) !important; font-weight: 600; font-size: 0.85rem; padding: 0 !important; margin-top: -2px; box-shadow: none !important; appearance: none; }
-        .custom-tabs-industrial .nav-link { color: var(--theme-text-secondary); border: none; border-bottom: 3px solid transparent; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; padding: 10px 20px; border-radius: 0; transition: all 0.2s ease; }
-        .custom-tabs-industrial .nav-link:hover { color: var(--theme-text-primary); background: rgba(244, 0, 9, 0.05); }
-        .custom-tabs-industrial .nav-link.active { color: var(--color-red-primary) !important; background: transparent !important; border-bottom-color: var(--color-red-primary) !important; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-red-primary); }
-        .date-picker-industrial { background: transparent; border: none; font-weight: 900; font-size: 0.75rem; color: var(--theme-text-primary); text-align: center; width: 100px; outline: none; }
-        .react-datepicker-popper { z-index: 9999 !important; }
-        .date-wrapper-flex { flex: 1; display: flex; }
-        .date-wrapper-flex .react-datepicker-wrapper { width: 100%; }
-        .date-wrapper-flex .react-datepicker__input-container { width: 100%; }
-        .date-wrapper-flex .react-datepicker__input-container input { width: 100%; }
-        .industrial-table-v2 thead th { background-color: var(--theme-background-tertiary) !important; color: var(--theme-text-secondary); font-weight: 900; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--theme-border-default); padding: 15px 10px; }
-        .industrial-table-v2 tbody tr { border-bottom: 1px solid var(--theme-table-border-color); transition: background 0.2s ease; }
-        .industrial-table-v2 tbody tr:hover { background-color: rgba(244, 0, 9, 0.05) !important; }
-      `}</style>
     </div>
   );
 };
