@@ -437,7 +437,7 @@ const SupervisorPage: FC = () => {
           {filteredVolumenData.map(loc => (
             <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-VOLUMEN-${loc.id}`} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
-                <div className="d-flex justify-content-between align-items-center w-100">
+                <div className="d-flex flex-wrap justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
                     <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -445,17 +445,17 @@ const SupervisorPage: FC = () => {
                       <div className="fw-black sub-label-new">VOLUMEN</div>
                     </div>
                   </div>
-                  <div className="d-flex gap-1 gap-md-2">
+                  <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'VOLUMEN'); }}>
+                    {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                  </span>
+                  <div className="loc-header-badges d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
                       <span className="b-label">CF</span><span className="fw-black b-val">{loc.totalCF.toFixed(1)}</span>
                     </Badge>
                     <Badge bg="success" className="badge-industrial">
                       <span className="b-label">CU</span><span className="fw-black b-val">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
-                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
-                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'VOLUMEN'); }}>
-                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
-                    </span>
                   </div>
                 </div>
               </Accordion.Header>
@@ -500,7 +500,7 @@ const SupervisorPage: FC = () => {
           {filteredBebidasData.map(loc => (
             <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-BEBIDAS-${loc.id}`} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
-                <div className="d-flex justify-content-between align-items-center w-100">
+                <div className="d-flex flex-wrap justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
                     <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -508,17 +508,17 @@ const SupervisorPage: FC = () => {
                       <div className="fw-black sub-label-new">BEBIDAS</div>
                     </div>
                   </div>
-                  <div className="d-flex gap-1 gap-md-2">
+                  <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'BEBIDAS'); }}>
+                    {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                  </span>
+                  <div className="loc-header-badges d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
                       <span className="b-label">CF</span><span className="fw-black b-val">{loc.totalCF.toFixed(1)}</span>
                     </Badge>
                     <Badge bg="success" className="badge-industrial">
                       <span className="b-label">CU</span><span className="fw-black b-val">{loc.totalUC.toFixed(2)}</span>
                     </Badge>
-                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
-                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'BEBIDAS'); }}>
-                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
-                    </span>
                   </div>
                 </div>
               </Accordion.Header>
@@ -563,7 +563,7 @@ const SupervisorPage: FC = () => {
           {filteredEficienciaData.map((loc: any) => (
             <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-EFICIENCIA-${loc.id}`} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
-                <div className="d-flex justify-content-between align-items-center w-100">
+                <div className="d-flex flex-wrap justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar">{loc.id}</div>
                     <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -571,7 +571,11 @@ const SupervisorPage: FC = () => {
                       <div className="fw-black sub-label-new">EFICIENCIA</div>
                     </div>
                   </div>
-                  <div className="d-flex gap-1 gap-md-2">
+                  <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'EFICIENCIA'); }}>
+                    {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                  </span>
+                  <div className="loc-header-badges d-flex gap-1 gap-md-2">
                     <Badge bg="primary" className="badge-industrial">
                       <span className="b-label">PROG</span><span className="fw-black b-val">{loc.totalProg}</span>
                     </Badge>
@@ -584,10 +588,6 @@ const SupervisorPage: FC = () => {
                     <Badge bg="dark" className="badge-industrial border border-secondary">
                       <span className="b-label text-info">EF (%)</span><span className="fw-black b-val text-info">{((loc.totalEfec / loc.totalProg) * 100).toFixed(0)}%</span>
                     </Badge>
-                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
-                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'EFICIENCIA'); }}>
-                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
-                    </span>
                   </div>
                 </div>
               </Accordion.Header>
@@ -630,7 +630,7 @@ const SupervisorPage: FC = () => {
           {filteredDuplicadosData.map(loc => (
             <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-DUPLICADOS-${loc.id}`} className="loc-accordion-item border-0">
               <Accordion.Header className="loc-header-compact">
-                <div className="d-flex justify-content-between align-items-center w-100">
+                <div className="d-flex flex-wrap justify-content-between align-items-center w-100">
                   <div className="d-flex align-items-center gap-2 gap-md-3">
                     <div className="loc-avatar bg-warning text-dark"><FaExclamationTriangle /></div>
                     <div className="d-flex align-items-center gap-2 gap-md-3">
@@ -638,15 +638,15 @@ const SupervisorPage: FC = () => {
                       <div className="fw-black sub-label-new">DUPLICADOS</div>
                     </div>
                   </div>
-                  <div className="d-flex gap-1 gap-md-2">
+                  <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'DUPLICADOS'); }}>
+                    {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                  </span>
+                  <div className="loc-header-badges d-flex gap-1 gap-md-2">
                     <Badge bg="danger" className="badge-industrial">
                       <span className="b-label">CONFLICTOS</span>
                       <span className="fw-black b-val">{Object.keys(loc.clientes).length}</span>
                     </Badge>
-                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
-                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'DUPLICADOS'); }}>
-                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
-                    </span>
                   </div>
                 </div>
               </Accordion.Header>
@@ -911,8 +911,8 @@ const SupervisorPage: FC = () => {
 
       <style>{`
         .fw-black { font-weight: 900 !important; }
-        .l-height-1 { letter-spacing: 0.2px; font-size: 1rem; color: var(--theme-text-primary); line-height: 1; }
-        .sub-label-new { font-size: 0.85rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; line-height: 1; }
+        .l-height-1 { letter-spacing: 0.2px; font-size: 0.9rem; color: var(--theme-text-primary); line-height: 1; }
+        .sub-label-new { font-size: 0.9rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; line-height: 1; }
         
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; z-index: 2; }
@@ -936,6 +936,8 @@ const SupervisorPage: FC = () => {
         .badge-industrial { padding: 1px 5px; display: flex; flex-direction: column; align-items: center; border-radius: 0; min-width: 42px; height: 26px; justify-content: center; }
         .capture-btn { display: inline-flex; align-items: center; justify-content: center; align-self: center; width: 26px; height: 26px; color: var(--theme-text-secondary, #bbb); cursor: pointer; line-height: 1; flex-shrink: 0; }
         .capture-btn:hover { color: var(--theme-text-primary, #fff); }
+        .capture-btn { margin-left: auto; }
+        .loc-header-badges { flex: 0 0 100%; justify-content: flex-end; }
         .b-label { font-size: 0.45rem; font-weight: 800; line-height: 1; margin-bottom: -2px; opacity: 0.8; }
         .b-val { font-size: 1rem !important; line-height: 1; }
 
@@ -989,8 +991,10 @@ const SupervisorPage: FC = () => {
           .report-container-stable {
             max-width: 1400px;
           }
-          .l-height-1 { font-size: 1.35rem; }
-          .sub-label-new { font-size: 1.15rem; padding-left: 12px; }
+          .l-height-1 { font-size: 1.2rem; }
+          .sub-label-new { font-size: 1.2rem; padding-left: 12px; }
+          .capture-btn { margin-left: 0; order: 3; }
+          .loc-header-badges { flex: 0 0 auto; margin-left: auto; order: 2; }
           .loc-avatar { width: 34px; height: 34px; font-size: 1.2rem; }
           .loc-header-compact .accordion-button { padding: 4px 0px !important; min-height: 36px; }
           .b-val { font-size: 1.2rem !important; }
