@@ -16,6 +16,11 @@ Subir proyecto a hosting
 >_ npm run build
 >_ firebase deploy --only hosting
 
+Gestion cuentas Firebase:
+>_ firebase login:add          # agregar otra cuenta adicional
+>_ firebase login:list         # listas las cuentas activas
+>_ firebase login:use <correo> # cambiar de cuenta
+
 .-------------.
 | GESTION GIT |
 '-------------'
