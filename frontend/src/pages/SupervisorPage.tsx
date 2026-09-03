@@ -911,8 +911,8 @@ const SupervisorPage: FC = () => {
 
       <style>{`
         .fw-black { font-weight: 900 !important; }
-        .l-height-1 { letter-spacing: 0.2px; font-size: 0.9rem; color: var(--theme-text-primary); line-height: 1; }
-        .sub-label-new { font-size: 0.9rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; line-height: 1; }
+        .l-height-1 { letter-spacing: 0.2px; font-size: 1.1rem; color: var(--theme-text-primary); line-height: 1; }
+        .sub-label-new { font-size: 1.1rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; line-height: 1; }
         
         .info-pill-new { display: flex; align-items: center; background-color: var(--theme-background-secondary); border: 1px solid var(--theme-border-default); border-radius: 0; height: 38px; position: relative; }
         .pill-icon-sober { background-color: var(--theme-icon-bg); color: var(--theme-icon-color); height: 100%; display: flex; align-items: center; border-right: 1px solid var(--theme-border-default); min-width: 32px; justify-content: center; z-index: 2; }
@@ -942,13 +942,13 @@ const SupervisorPage: FC = () => {
         .b-val { font-size: 1rem !important; line-height: 1; }
 
         .mesa-title-bar { background: var(--theme-icon-bg); border-left: 4px solid var(--color-red-primary); }
-        .m-label { font-size: 0.95rem; font-weight: 900; color: var(--theme-text-primary); }
-        .m-stats { font-size: 0.8rem; font-weight: 800; color: var(--theme-text-secondary); text-transform: uppercase; }
+        .m-label { font-size: 0.9rem; font-weight: 900; color: var(--theme-text-primary); }
+        .m-stats { font-size: 0.9rem; font-weight: 800; color: var(--theme-text-secondary); text-transform: uppercase; }
 
         .ruta-card-compact { background: var(--theme-background-primary); border: 1px solid var(--theme-border-default); border-radius: 0; width: 100%; }
         .r-label { font-size: 0.8rem; color: var(--theme-text-primary); }
-        .r-val { font-size: 0.85rem; }
-        .r-unit { font-size: 0.65rem; opacity: 0.7; }
+        .r-val { font-size: 0.8rem; }
+        .r-unit { font-size: 0.8rem; opacity: 0.7; }
         .chevron-icon { font-size: 0.6rem; transition: transform 0.2s ease; color: var(--theme-text-secondary); }
         .chevron-icon.active { transform: rotate(90deg); color: var(--color-red-primary); }
 
@@ -991,8 +991,8 @@ const SupervisorPage: FC = () => {
           .report-container-stable {
             max-width: 1400px;
           }
-          .l-height-1 { font-size: 1.2rem; }
-          .sub-label-new { font-size: 1.2rem; padding-left: 12px; }
+          .l-height-1 { font-size: 1.45rem; }
+          .sub-label-new { font-size: 1.45rem; padding-left: 12px; }
           .capture-btn { margin-left: 0; order: 3; }
           .loc-header-badges { flex: 0 0 auto; margin-left: auto; order: 2; }
           .loc-avatar { width: 34px; height: 34px; font-size: 1.2rem; }
@@ -1000,8 +1000,11 @@ const SupervisorPage: FC = () => {
           .b-val { font-size: 1.2rem !important; }
           .badge-industrial { height: 32px; min-width: 52px; }
           
-          .m-label { font-size: 1.1rem; }
-          .m-stats { font-size: 0.95rem; }
+          .m-label { font-size: 1.2rem; }
+          .m-stats { font-size: 1.2rem; }
+          .r-label { font-size: 1rem; }
+          .r-val { font-size: 1rem; }
+          .r-unit { font-size: 1rem; }
 
           .d-label { font-size: 0.8rem !important; }
           .dup-doc-id { font-size: 0.9rem !important; }
