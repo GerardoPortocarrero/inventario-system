@@ -355,6 +355,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
               }, { cf: 0, cu: 0 });
               const hasData = vals.cf > 0 || vals.cu > 0;
               const rutasArr = Object.entries(mesaData.rutas || {}) as [string, any][];
+              const cliConVentaMesa = Object.values(mesaData.rutas || {}).reduce((sum: number, r: any) => sum + (r.cliConVentaPorTipo?.[tipo.tipoId] || 0), 0);
+              const pctMesa = mesaData.totalClientesMesa > 0 ? ((cliConVentaMesa / mesaData.totalClientesMesa) * 100).toFixed(1) : '0';
 
               return (
                 <div key={mesaId} style={{ border: '1px solid var(--theme-border-default)', backgroundColor: isMesaExpanded ? 'rgba(244, 0, 9, 0.05)' : 'var(--theme-background-primary)' }}>
@@ -368,7 +370,10 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                       <FaChevronRight size={12} style={{ transform: isMesaExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', color: 'var(--theme-text-primary)' }} />
                       <span className="fw-black text-uppercase" style={{ fontSize: '1rem', letterSpacing: '1px', color: 'var(--theme-text-primary)' }}>{mesaId}</span>
                     </div>
-                    <span className="text-secondary fw-bold" style={{ fontSize: '0.65rem' }}>{rutasArr.length} RUTAS / {mesaData.totalClientesMesa} CLIENTES</span>
+                    <span className="text-info fw-bold" style={{ fontSize: '0.7rem' }}>
+                      {cliConVentaMesa} <span className="text-secondary opacity-50">/</span> {mesaData.totalClientesMesa}
+                      <span className="text-secondary ms-1" style={{ fontSize: '0.6rem' }}>({pctMesa}%)</span>
+                    </span>
                   </div>
 
                   <div style={{ borderTop: '1px solid var(--theme-table-border-color)', padding: '10px 12px' }}>
@@ -497,8 +502,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                       style={{ cursor: 'pointer' }}
                       className={isMesaExpanded ? 'bg-danger bg-opacity-10' : ''}
                     >
-                      <td className="text-center align-middle py-3 sticky-column" style={{ backgroundColor: isMesaExpanded ? 'rgba(244, 0, 9, 0.12)' : 'var(--theme-background-secondary)', zIndex: 10 }}>
-                        <div className="d-flex align-items-center justify-content-center gap-2">
+                      <td className="align-middle py-3 sticky-column ps-3" style={{ backgroundColor: isMesaExpanded ? 'rgba(244, 0, 9, 0.12)' : 'var(--theme-background-secondary)', zIndex: 10 }}>
+                        <div className="d-flex align-items-center gap-2">
                           <div className={`chevron-icon ${isMesaExpanded ? 'active' : ''}`} style={{ transition: 'transform 0.1s' }}>
                             <FaChevronRight size={12} style={{ transform: isMesaExpanded ? 'rotate(90deg)' : 'none', color: 'var(--theme-text-primary)' }} />
                           </div>
@@ -546,7 +551,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                             onClick={() => setExpandedCoberturaRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] }))}
                             style={{ cursor: 'pointer' }}
                           >
-                            <td className="py-2 sticky-column" style={{ paddingLeft: '32px', backgroundColor: 'var(--theme-background-primary)', zIndex: 10 }}>
+                            <td className="py-2 sticky-column" style={{ paddingLeft: '44px', backgroundColor: 'var(--theme-background-primary)', zIndex: 10 }}>
                               <div className="d-flex align-items-center gap-2">
                                 <FaChevronRight size={10} style={{ transform: isRutaExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.1s', color: 'var(--color-red-primary)' }} />
                                 <span className="fw-black text-danger" style={{ fontSize: '0.75rem', letterSpacing: '0.5px' }}>RUTA {rutaId}</span>

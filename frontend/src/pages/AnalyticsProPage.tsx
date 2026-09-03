@@ -224,6 +224,7 @@ const AnalyticsProPage: FC = () => {
     // 1. Identificar clientes que cumplen los filtros (Día, SubCanal, Sede)
     const validClients = new Set<string>();
     const clientMeta: Record<string, any> = {};
+    const routeToMesa: Record<string, string> = {};
 
     maestroData.forEach(m => {
       const cid = String(m.Codigo || '').trim();
@@ -244,6 +245,7 @@ const AnalyticsProPage: FC = () => {
       validClients.add(cid);
       const rid = String(m['Ruta com'] || m.Ruta || 'S/R').trim();
       const mid = String(m['Mesa Com'] || m['MESA COM'] || 'SIN MESA').trim();
+      routeToMesa[rid] = mid;
       clientMeta[cid] = { rid, mid, nombre: m.Cliente || 'SIN NOMBRE' };
 
       if (!matrix[mid]) matrix[mid] = { total: {}, totalClientesMesa: 0, rutas: {} };
@@ -307,7 +309,7 @@ const AnalyticsProPage: FC = () => {
 
     // Calcular cliConVentaPorTipo por ruta
     Object.keys(routeTypeClients).forEach(rid => {
-      const mid = clientMeta[Object.keys(clientMeta).find(c => clientMeta[c].rid === rid)?.cid || '']?.mid;
+      const mid = routeToMesa[rid];
       if (mid && matrix[mid]?.rutas[rid]) {
         matrix[mid].rutas[rid].cliConVentaPorTipo = {};
         Object.keys(routeTypeClients[rid]).forEach(tipoId => {
