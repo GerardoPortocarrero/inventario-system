@@ -780,11 +780,11 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                   </div>
                 </div>
                 <div 
-                  className="d-flex flex-wrap gap-2 p-3" 
+                  className="d-flex flex-column gap-1 p-3" 
                   style={{ 
                     backgroundColor: 'var(--theme-background-secondary)', 
                     border: '1px solid var(--theme-border-default)', 
-                    maxHeight: '180px',
+                    maxHeight: '240px',
                     overflowY: 'auto'
                   }}
                 >
@@ -792,7 +792,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                     <span className="text-secondary fw-bold small">No hay productos disponibles</span>
                   ) : (
                     filteredProductos
-                      .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
+                      .sort((a, b) => (parseFloat(b.mililitros) || 0) - (parseFloat(a.mililitros) || 0))
                       .map(p => (
                         <Form.Check 
                           key={String(p.sap).trim()}
@@ -805,7 +805,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                             setTempProductos(prev => prev.includes(sap) ? prev.filter(s => s !== sap) : [...prev, sap]);
                           }}
                           className="fw-black"
-                          style={{ fontSize: '0.75rem', minWidth: '160px' }}
+                          style={{ fontSize: '0.75rem' }}
                         />
                       ))
                   )}
