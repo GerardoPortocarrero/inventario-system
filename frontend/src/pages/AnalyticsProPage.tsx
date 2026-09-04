@@ -279,7 +279,6 @@ const AnalyticsProPage: FC = () => {
 
         // Cliente
         if (!matrix[mid].rutas[rid].clientes[cid].marcas[marcaId]) matrix[mid].rutas[rid].clientes[cid].marcas[marcaId] = { cf: 0, cu: 0 };
-        const hadS = matrix[mid].rutas[rid].clientes[cid].marcas[marcaId].cf > 0 || matrix[mid].rutas[rid].clientes[cid].marcas[marcaId].cu > 0;
         matrix[mid].rutas[rid].clientes[cid].marcas[marcaId].cf += m.cf || 0;
         matrix[mid].rutas[rid].clientes[cid].marcas[marcaId].cu += m.cu || 0;
 
