@@ -40,6 +40,8 @@ const AnalyticsProPage: FC = () => {
   const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
   const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string>('ALL');
   const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('');
+  const [selectedProductosCobertura, setSelectedProductosCobertura] = useState<string[]>([]);
+  const [expandedCoberturaMesas, setExpandedCoberturaMesas] = useState<Record<string, boolean>>({});
 
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -212,96 +214,112 @@ const AnalyticsProPage: FC = () => {
   }, [maestroData]);
 
   const matrixCoberturaData = useMemo(() => {
-    if (activeTab !== 'cobertura' || selectedMarcasCobertura.length === 0) return { rutas: [], data: {} };
+    if (activeTab !== 'cobertura' || selectedMarcasCobertura.length === 0) return { mesas: [] as string[], data: {} as Record<string, any> };
     
     const matrix: Record<string, any> = {};
-    const routeSet = new Set<string>();
+    const mesaSet = new Set<string>();
     const prodMap = products.reduce((acc, p) => ({ ...acc, [String(p.sap).trim()]: p }), {} as any);
     const marcasMap = marcas.reduce((acc, m) => ({ ...acc, [m.id]: m }), {} as any);
 
-    // 1. Identificar clientes que cumplen los filtros (Día y SubCanal)
+    // 1. Identificar clientes que cumplen los filtros (Día, SubCanal, Sede)
     const validClients = new Set<string>();
     const clientMeta: Record<string, any> = {};
+    const routeToMesa: Record<string, string> = {};
 
     maestroData.forEach(m => {
       const cid = String(m.Codigo || '').trim();
       if (!cid) return;
 
-      // Filtro SubCanal
       if (selectedSubCanalCobertura !== 'ALL' && String(m.SubCanal).trim() !== selectedSubCanalCobertura) return;
 
-      // Filtro Día (Normalización estricta de 2 letras: LU, MA, MI, etc.)
       if (selectedDiaCobertura !== 'ALL') {
         const diasArray = String(m['SEGDIAS'] || m['SEG DIAS'] || m['SEG.DIAS'] || '')
           .split(/[, -]/)
           .map(d => d.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 2))
           .filter(d => d.length === 2);
-        
         if (!diasArray.includes(selectedDiaCobertura)) return;
       }
 
-      // Filtro Sede
       if (selectedSede !== 'ALL' && String(m.Loc || '').trim() !== selectedSede) return;
 
       validClients.add(cid);
       const rid = String(m['Ruta com'] || m.Ruta || 'S/R').trim();
-      clientMeta[cid] = { rid, nombre: m.Cliente || 'SIN NOMBRE' };
+      const mid = String(m['Mesa Com'] || m['MESA COM'] || 'SIN MESA').trim();
+      routeToMesa[rid] = mid;
+      clientMeta[cid] = { rid, mid, nombre: m.Cliente || 'SIN NOMBRE' };
 
-      if (!matrix[rid]) matrix[rid] = { total: {}, totalClientesRuta: 0, clientes: {} };
-      if (!matrix[rid].clientes[cid]) {
-        matrix[rid].totalClientesRuta++;
-        matrix[rid].clientes[cid] = { nombre: m.Cliente, marcas: {} };
-        routeSet.add(rid);
+      if (!matrix[mid]) matrix[mid] = { total: {}, totalClientesMesa: 0, rutas: {} };
+      if (!matrix[mid].rutas[rid]) matrix[mid].rutas[rid] = { total: {}, totalClientesRuta: 0, clientes: {}, cliConVentaPorTipo: {} };
+      if (!matrix[mid].rutas[rid].clientes[cid]) {
+        matrix[mid].rutas[rid].totalClientesRuta++;
+        matrix[mid].totalClientesMesa++;
+        matrix[mid].rutas[rid].clientes[cid] = { nombre: m.Cliente, marcas: {} };
+        mesaSet.add(mid);
       }
     });
 
-    // Trackear clientes únicos por ruta y tipo de bebida
+    // Trackear clientes únicos por ruta+tipo y mesa+tipo
     const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
+    const mesaTypeClients: Record<string, Record<string, Set<string>>> = {};
 
     // 2. Llenar con ventas (solo para clientes válidos)
     filteredData.forEach(d => {
       const cid = String(d.solicitante || '').trim();
       if (!validClients.has(cid)) return;
 
-      const rid = clientMeta[cid].rid;
-      
+      const { rid, mid } = clientMeta[cid];
+      if (!matrix[mid] || !matrix[mid].rutas[rid]) return;
+
       (d.materiales || []).forEach((m: any) => {
         const p = prodMap[String(m.sku).trim()];
-        if (p && selectedMarcasCobertura.includes(p.marcaId)) {
-          const mid = p.marcaId;
-          if (!matrix[rid].clientes[cid].marcas[mid]) matrix[rid].clientes[cid].marcas[mid] = { cf: 0, cu: 0 };
-          const hadS = matrix[rid].clientes[cid].marcas[mid].cf > 0 || matrix[rid].clientes[cid].marcas[mid].cu > 0;
-          
-          matrix[rid].clientes[cid].marcas[mid].cf += m.cf || 0;
-          matrix[rid].clientes[cid].marcas[mid].cu += m.cu || 0;
-          
-          if (!matrix[rid].total[mid]) matrix[rid].total[mid] = { cf: 0, cu: 0, cliConVenta: 0 };
-          matrix[rid].total[mid].cf += m.cf || 0;
-          matrix[rid].total[mid].cu += m.cu || 0;
-          
-          if (!hadS && (m.cf > 0 || m.cu > 0)) matrix[rid].total[mid].cliConVenta++;
+        if (!p || !selectedMarcasCobertura.includes(p.marcaId)) return;
+        if (selectedProductosCobertura.length > 0 && !selectedProductosCobertura.includes(String(m.sku).trim())) return;
 
-          // Contar clientes únicos por ruta+tipo (para cobertura correcta)
-          const tipoId = marcasMap[mid]?.tipoBebidaId;
-          if (tipoId) {
-            if (!routeTypeClients[rid]) routeTypeClients[rid] = {};
-            if (!routeTypeClients[rid][tipoId]) routeTypeClients[rid][tipoId] = new Set();
-            routeTypeClients[rid][tipoId].add(cid);
-          }
+        const marcaId = p.marcaId;
+
+        // Cliente
+        if (!matrix[mid].rutas[rid].clientes[cid].marcas[marcaId]) matrix[mid].rutas[rid].clientes[cid].marcas[marcaId] = { cf: 0, cu: 0 };
+        const hadS = matrix[mid].rutas[rid].clientes[cid].marcas[marcaId].cf > 0 || matrix[mid].rutas[rid].clientes[cid].marcas[marcaId].cu > 0;
+        matrix[mid].rutas[rid].clientes[cid].marcas[marcaId].cf += m.cf || 0;
+        matrix[mid].rutas[rid].clientes[cid].marcas[marcaId].cu += m.cu || 0;
+
+        // Ruta
+        if (!matrix[mid].rutas[rid].total[marcaId]) matrix[mid].rutas[rid].total[marcaId] = { cf: 0, cu: 0 };
+        matrix[mid].rutas[rid].total[marcaId].cf += m.cf || 0;
+        matrix[mid].rutas[rid].total[marcaId].cu += m.cu || 0;
+
+        // Mesa
+        if (!matrix[mid].total[marcaId]) matrix[mid].total[marcaId] = { cf: 0, cu: 0 };
+        matrix[mid].total[marcaId].cf += m.cf || 0;
+        matrix[mid].total[marcaId].cu += m.cu || 0;
+
+        // Clientes únicos por ruta+tipo
+        const tipoId = marcasMap[marcaId]?.tipoBebidaId;
+        if (tipoId) {
+          if (!routeTypeClients[rid]) routeTypeClients[rid] = {};
+          if (!routeTypeClients[rid][tipoId]) routeTypeClients[rid][tipoId] = new Set();
+          routeTypeClients[rid][tipoId].add(cid);
+
+          if (!mesaTypeClients[mid]) mesaTypeClients[mid] = {};
+          if (!mesaTypeClients[mid][tipoId]) mesaTypeClients[mid][tipoId] = new Set();
+          mesaTypeClients[mid][tipoId].add(cid);
         }
       });
     });
 
-    // Calcular cliConVentaPorTipo (clientes únicos con venta por tipo de bebida)
+    // Calcular cliConVentaPorTipo por ruta
     Object.keys(routeTypeClients).forEach(rid => {
-      matrix[rid].cliConVentaPorTipo = {};
-      Object.keys(routeTypeClients[rid]).forEach(tipoId => {
-        matrix[rid].cliConVentaPorTipo[tipoId] = routeTypeClients[rid][tipoId].size;
-      });
+      const mid = routeToMesa[rid];
+      if (mid && matrix[mid]?.rutas[rid]) {
+        matrix[mid].rutas[rid].cliConVentaPorTipo = {};
+        Object.keys(routeTypeClients[rid]).forEach(tipoId => {
+          matrix[mid].rutas[rid].cliConVentaPorTipo[tipoId] = routeTypeClients[rid][tipoId].size;
+        });
+      }
     });
 
-    return { rutas: Array.from(routeSet).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})), data: matrix };
-  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede, marcas]);
+    return { mesas: Array.from(mesaSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), data: matrix };
+  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedProductosCobertura, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede, marcas]);
 
   // OPTIMIZACIÓN: Separar agregación de filtrado de productos
   const groupedProducts = useMemo(() => {
@@ -459,9 +477,14 @@ const AnalyticsProPage: FC = () => {
                   <CoberturaTab 
                     marcas={marcas} 
                     beverageTypes={beverageTypes}
+                    products={products}
                     selectedMarcasCobertura={selectedMarcasCobertura} 
                     setSelectedMarcasCobertura={setSelectedMarcasCobertura} 
+                    selectedProductosCobertura={selectedProductosCobertura}
+                    setSelectedProductosCobertura={setSelectedProductosCobertura}
                     matrixCoberturaData={matrixCoberturaData} 
+                    expandedCoberturaMesas={expandedCoberturaMesas}
+                    setExpandedCoberturaMesas={setExpandedCoberturaMesas}
                     expandedCoberturaRutas={expandedCoberturaRutas} 
                     setExpandedCoberturaRutas={setExpandedCoberturaRutas} 
                     selectedDia={selectedDiaCobertura}
