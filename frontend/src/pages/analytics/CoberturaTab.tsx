@@ -354,7 +354,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 return acc;
               }, { cf: 0, cu: 0 });
               const hasData = vals.cf > 0 || vals.cu > 0;
-              const rutasArr = Object.entries(mesaData.rutas || {}) as [string, any][];
+              const rutasArr = (Object.entries(mesaData.rutas || {}) as [string, any][]).sort(([a], [b]) => a.localeCompare(b));
               const cliConVentaMesa = Object.values(mesaData.rutas || {}).reduce((sum: number, r: any) => sum + (r.cliConVentaPorTipo?.[tipo.tipoId] || 0), 0);
               const pctMesa = mesaData.totalClientesMesa > 0 ? ((cliConVentaMesa / mesaData.totalClientesMesa) * 100).toFixed(1) : '0';
 
@@ -492,7 +492,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
               {matrixCoberturaData.mesas.map(mesaId => {
                 const mesaData = matrixCoberturaData.data[mesaId];
                 const isMesaExpanded = expandedCoberturaMesas[mesaId];
-                const rutasEntries = Object.entries(mesaData.rutas || {}) as [string, any][];
+                const rutasEntries = (Object.entries(mesaData.rutas || {}) as [string, any][]).sort(([a], [b]) => a.localeCompare(b));
 
                 return (
                   <Fragment key={mesaId}>
