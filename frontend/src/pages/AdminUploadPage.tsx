@@ -330,8 +330,8 @@ const AdminUploadPage: FC = () => {
       const r = hier[loc].tipos[tipoId].rutas[rutaCom];
       r.totalCF += physicalBoxes; r.totalUC += unitCases;
       
-      if (!r.productos[prod.sap]) r.productos[prod.sap] = { nombre: prod.nombre, cantU: 0, cantC: 0 };
-      r.productos[prod.sap].cantU += totalUnits; r.productos[prod.sap].cantC += physicalBoxes;
+      if (!r.productos[prod.sap]) r.productos[prod.sap] = { nombre: prod.nombre, cantU: 0, cantC: 0, uc: 0 };
+      r.productos[prod.sap].cantU += totalUnits; r.productos[prod.sap].cantC += physicalBoxes; r.productos[prod.sap].uc += unitCases;
 
       hier[loc].tipos[tipoId].totalCF += physicalBoxes; hier[loc].tipos[tipoId].totalUC += unitCases;
     });

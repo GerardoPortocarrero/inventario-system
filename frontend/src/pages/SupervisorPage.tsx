@@ -5,7 +5,7 @@ import { rtdb } from '../api/firebase';
 import { ref, onValue } from 'firebase/database';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
-import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy } from 'react-icons/fa';
+import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy, FaBox } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import GlobalSpinner from '../components/GlobalSpinner';
 
@@ -112,6 +112,10 @@ const SupervisorPage: FC = () => {
     const saved = localStorage.getItem('sup_selectedBebidaTypes');
     return saved ? JSON.parse(saved) : [];
   });
+  const [selectedBebidaProducts, setSelectedBebidaProducts] = useState<string[]>(() => {
+    const saved = localStorage.getItem('sup_selectedBebidaProducts');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
 
   // Efectos para persistencia
@@ -120,6 +124,7 @@ const SupervisorPage: FC = () => {
   useEffect(() => { localStorage.setItem('sup_selectedDia', selectedDia); }, [selectedDia]);
   useEffect(() => { localStorage.setItem('sup_selectedSemanas', JSON.stringify(selectedSemanas)); }, [selectedSemanas]);
   useEffect(() => { localStorage.setItem('sup_selectedBebidaTypes', JSON.stringify(selectedBebidaTypes)); }, [selectedBebidaTypes]);
+  useEffect(() => { localStorage.setItem('sup_selectedBebidaProducts', JSON.stringify(selectedBebidaProducts)); }, [selectedBebidaProducts]);
 
   // Estado para controlar qué sede está abierta en el acordeón (Lazy Rendering técnico)
   const [activeLocId, setActiveLocId] = useState<string | null>(null);
@@ -243,15 +248,41 @@ const SupervisorPage: FC = () => {
   const filteredBebidasData = useMemo(() => {
     let data = selectedSedeId === 'GLOBAL' ? bebidasReport : bebidasReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
     if (selectedBebidaTypes.length === 0) return [];
+    const productFiltering = selectedBebidaProducts.length > 0;
     return data.map(loc => {
       const newTipos: Record<string, any> = {};
       let totalCF = 0;
       let totalUC = 0;
       Object.entries(loc.tipos || {}).forEach(([tipoId, tipo]: [string, any]) => {
-        if (selectedBebidaTypes.includes(tipoId)) {
+        if (!selectedBebidaTypes.includes(tipoId)) return;
+        if (!productFiltering) {
           newTipos[tipoId] = tipo;
           totalCF += tipo.totalCF || 0;
           totalUC += tipo.totalUC || 0;
+          return;
+        }
+        const newRutas: Record<string, any> = {};
+        Object.entries(tipo.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
+          const newProductos: Record<string, any> = {};
+          let rCF = 0;
+          let rUC = 0;
+          Object.entries(ruta.productos || {}).forEach(([sap, p]: [string, any]) => {
+            if (selectedBebidaProducts.includes(sap)) {
+              newProductos[sap] = p;
+              rCF += p.cantC || 0;
+              rUC += p.uc || 0;
+            }
+          });
+          if (Object.keys(newProductos).length > 0) {
+            newRutas[rutaName] = { ...ruta, productos: newProductos, totalCF: rCF, totalUC: rUC };
+          }
+        });
+        if (Object.keys(newRutas).length > 0) {
+          const tCF = Object.values(newRutas).reduce((acc, r: any) => acc + r.totalCF, 0);
+          const tUC = Object.values(newRutas).reduce((acc, r: any) => acc + r.totalUC, 0);
+          newTipos[tipoId] = { ...tipo, rutas: newRutas, totalCF: tCF, totalUC: tUC };
+          totalCF += tCF;
+          totalUC += tUC;
         }
       });
       if (Object.keys(newTipos).length === 0) return null;
@@ -264,7 +295,7 @@ const SupervisorPage: FC = () => {
         nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${loc.id}`
       };
     }).filter(Boolean);
-  }, [bebidasReport, selectedSedeId, sedes, selectedBebidaTypes]);
+  }, [bebidasReport, selectedSedeId, sedes, selectedBebidaTypes, selectedBebidaProducts]);
 
   const filteredDuplicadosData = useMemo(() => {
     const raw = selectedSedeId === 'GLOBAL' ? duplicadosReport : duplicadosReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
@@ -285,6 +316,37 @@ const SupervisorPage: FC = () => {
       setSelectedBebidaTypes([]);
     } else {
       setSelectedBebidaTypes(beverageTypes.map(t => t.id));
+    }
+  };
+
+  const availableBebidaProducts = useMemo(() => {
+    const map = new Map<string, string>();
+    bebidasReport.forEach(loc => {
+      Object.entries(loc.tipos || {}).forEach(([tipoId, tipo]: [string, any]) => {
+        if (!selectedBebidaTypes.includes(tipoId)) return;
+        Object.entries(tipo.rutas || {}).forEach(([, ruta]: [string, any]) => {
+          Object.entries(ruta.productos || {}).forEach(([sap, p]: [string, any]) => {
+            if (!map.has(sap)) map.set(sap, p.nombre || sap);
+          });
+        });
+      });
+    });
+    return Array.from(map.entries())
+      .map(([sap, nombre]) => ({ sap, nombre }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [bebidasReport, selectedBebidaTypes]);
+
+  const handleBebidaProductToggle = (sap: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedBebidaProducts(prev => prev.includes(sap) ? prev.filter(p => p !== sap) : [...prev, sap]);
+  };
+
+  const handleSelectAllBebidaProducts = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedBebidaProducts.length === availableBebidaProducts.length) {
+      setSelectedBebidaProducts([]);
+    } else {
+      setSelectedBebidaProducts(availableBebidaProducts.map(p => p.sap));
     }
   };
 
@@ -823,7 +885,8 @@ const SupervisorPage: FC = () => {
           )}
 
           {selectedReportType === 'BEBIDAS' && (
-            <Col xs={12} md={4}>
+            <>
+            <Col xs={6} md={3}>
               <div className="info-pill-new w-100">
                 <span className="pill-icon-sober text-info p-1"><FaGlassMartiniAlt className="pill-main-icon"/></span>
                 <div className="pill-content flex-grow-1 ps-2">
@@ -834,7 +897,7 @@ const SupervisorPage: FC = () => {
                       className="pill-select-v2 w-100 text-start d-flex justify-content-between align-items-center p-0" 
                       style={{ background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
                     >
-                      <span className="text-truncate" style={{ maxWidth: '180px' }}>
+                      <span className="text-truncate" style={{ maxWidth: '110px' }}>
                         {selectedBebidaTypes.length === beverageTypes.length && beverageTypes.length > 0 
                           ? 'TODAS' 
                           : (beverageTypes.filter(t => selectedBebidaTypes.includes(t.id)).map(t => t.nombre.toUpperCase()).join(', ') || '...')}
@@ -875,14 +938,78 @@ const SupervisorPage: FC = () => {
                           <span className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>{type.nombre.toUpperCase()}</span>
                         </div>
                       ))}
+</Dropdown.Menu>
+                  </Dropdown>
+                </div>
+              </div>
+            </Col>
+            <Col xs={6} md={3}>
+              <div className="info-pill-new w-100">
+                <span className="pill-icon-sober text-warning p-1"><FaBox className="pill-main-icon"/></span>
+                <div className="pill-content flex-grow-1 ps-2">
+                  <span className="pill-label">PRODUCTOS ({selectedBebidaProducts.length})</span>
+                  <Dropdown autoClose="outside" className="w-100 border-0 shadow-none">
+                    <Dropdown.Toggle 
+                      as="div"
+                      className="pill-select-v2 w-100 text-start d-flex justify-content-between align-items-center p-0" 
+                      style={{ background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
+                    >
+                      <span className="text-truncate" style={{ maxWidth: '110px' }}>
+                        {selectedBebidaProducts.length === 0
+                          ? 'TODOS'
+                          : (selectedBebidaProducts.length === availableBebidaProducts.length && availableBebidaProducts.length > 0
+                            ? 'TODOS'
+                            : (availableBebidaProducts.filter(p => selectedBebidaProducts.includes(p.sap)).map(p => p.nombre.toUpperCase()).join(', ') || '...'))}
+                      </span>
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu 
+                      renderOnMount
+                      flip={false}
+                      popperConfig={{ 
+                        strategy: 'fixed',
+                        modifiers: [
+                          { name: 'computeStyles', options: { gpuAcceleration: false } },
+                          { name: 'preventOverflow', options: { boundary: 'viewport' } }
+                        ]
+                      }}
+                      className="custom-scrollbar border-0 shadow-lg mt-2" 
+                      style={{ 
+                        maxHeight: '400px', 
+                        overflowY: 'auto',
+                        background: 'var(--theme-background-secondary)', 
+                        minWidth: '260px', 
+                        width: 'auto',
+                        borderRadius: '0', 
+                        zIndex: 99999 
+                      }}
+                    >
+                      <div className="px-3 py-2 d-flex align-items-center gap-2 border-bottom border-secondary border-opacity-10" onClick={(e) => { e.stopPropagation(); handleSelectAllBebidaProducts(e); }} style={{ cursor: 'pointer' }}>
+                        <Form.Check type="checkbox" checked={selectedBebidaProducts.length === availableBebidaProducts.length && availableBebidaProducts.length > 0} readOnly />
+                        <span className="fw-black text-danger" style={{ fontSize: '0.7rem' }}>TODOS LOS PRODUCTOS</span>
+                      </div>
+                      {availableBebidaProducts.length === 0 ? (
+                        <div className="px-3 py-3 text-center text-muted fw-bold" style={{ fontSize: '0.65rem' }}>
+                          SIN PRODUCTOS DISPONIBLES
+                        </div>
+                      ) : availableBebidaProducts.map(p => (
+                        <div key={p.sap} className="px-3 py-1 d-flex align-items-center gap-2 dropdown-item-custom" onClick={(e) => handleBebidaProductToggle(p.sap, e)} style={{ cursor: 'pointer' }}>
+                          <Form.Check type="checkbox" checked={selectedBebidaProducts.includes(p.sap)} readOnly />
+                          <span className="fw-bold" style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}>{p.nombre.toUpperCase()}</span>
+                          <small className="text-secondary ms-auto" style={{ fontSize: '0.55rem' }}>SAP {p.sap}</small>
+                        </div>
+                      ))}
+                      <div className="px-3 py-2 d-flex align-items-center gap-2 border-top border-secondary border-opacity-10" onClick={(e) => { e.stopPropagation(); setSelectedBebidaProducts([]); }} style={{ cursor: 'pointer' }}>
+                        <span className="fw-black text-danger" style={{ fontSize: '0.7rem' }}>LIMPIAR PRODUCTOS</span>
+                      </div>
                     </Dropdown.Menu>
                   </Dropdown>
                 </div>
               </div>
             </Col>
+            </>
           )}
 
-          <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'DUPLICADOS' ? 8 : 4}>
+          <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'DUPLICADOS' ? 8 : selectedReportType === 'BEBIDAS' ? 2 : 4}>
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober text-success p-1"><FaSyncAlt className="pill-main-icon"/></span>
               <div className="pill-content flex-grow-1">
