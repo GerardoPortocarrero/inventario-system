@@ -54,13 +54,12 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
     if (showFilterModal) {
       setTempDia(selectedDia);
       setTempSubCanal(selectedSubCanal);
-      const tipoValido = beverageTypes.some(t => t.id === selectedTipoCobertura)
+      setTempTipoBebida(selectedTipoCobertura === 'ALL' ? 'ALL' : (beverageTypes.some(t => t.id === selectedTipoCobertura)
         ? selectedTipoCobertura
-        : (beverageTypes[0]?.id || '');
-      setTempTipoBebida(tipoValido);
+        : (beverageTypes[0]?.id || '')));
       setTempMarcas(selectedTipoCobertura
         ? selectedMarcasCobertura
-        : marcas.filter(m => m.tipoBebidaId === tipoValido).map(m => m.id)
+        : marcas.filter(m => m.tipoBebidaId === (beverageTypes[0]?.id || '')).map(m => m.id)
       );
       setTempProductos(selectedProductosCobertura);
     }
@@ -68,8 +67,9 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
 
   const handleTipoBebidaChange = (tipoId: string) => {
     setTempTipoBebida(tipoId);
-    setTempMarcas(
-      marcas.filter(m => m.tipoBebidaId === tipoId).map(m => m.id)
+    setTempMarcas(tipoId === 'ALL'
+      ? marcas.map(m => m.id)
+      : marcas.filter(m => m.tipoBebidaId === tipoId).map(m => m.id)
     );
     setTempProductos([]);
   };
@@ -159,6 +159,9 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   };
 
   const brandGroups = useMemo(() => {
+    if (selectedTipoCobertura === 'ALL') {
+      return new Map<string, string[]>([['__ALL__', [...selectedMarcasCobertura]]]);
+    }
     const groups = new Map<string, string[]>();
     selectedMarcasCobertura.forEach(mId => {
       const marca = marcas.find(m => m.id === mId);
@@ -168,11 +171,11 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
       groups.get(tipoId)!.push(mId);
     });
     return groups;
-  }, [selectedMarcasCobertura, marcas]);
+  }, [selectedMarcasCobertura, marcas, selectedTipoCobertura]);
 
   const typeColumnHeaders = useMemo(() => {
     return Array.from(brandGroups.entries()).map(([tipoId, brandIds]) => {
-      const typeName = beverageTypes.find(t => t.id === tipoId)?.nombre || tipoId;
+      const typeName = tipoId === '__ALL__' ? 'TODOS' : (beverageTypes.find(t => t.id === tipoId)?.nombre || tipoId);
       return { tipoId, typeName, brandIds };
     });
   }, [brandGroups, beverageTypes]);
@@ -180,18 +183,20 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   const activeFilterCount = [
     selectedDia !== 'ALL' && 1,
     selectedSubCanal !== 'ALL' && 1,
-    selectedTipoCobertura && 1,
+    selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && 1,
     selectedProductosCobertura.length > 0 && 1
   ].filter(Boolean).length;
 
-  const filteredMarcas = marcas.filter(m => m.tipoBebidaId === tempTipoBebida);
+  const filteredMarcas = tempTipoBebida === 'ALL'
+    ? marcas
+    : marcas.filter(m => m.tipoBebidaId === tempTipoBebida);
 
   const filteredProductos = useMemo(() => {
     if (tempMarcas.length === 0) return [];
     return products.filter(p => tempMarcas.includes(p.marcaId));
   }, [products, tempMarcas]);
 
-  const selectedTipoNombre = beverageTypes.find(t => t.id === selectedTipoCobertura)?.nombre?.toUpperCase() || 'TIPO';
+  const selectedTipoNombre = selectedTipoCobertura === 'ALL' ? 'TODOS' : (beverageTypes.find(t => t.id === selectedTipoCobertura)?.nombre?.toUpperCase() || 'TIPO');
 
   return (
     <div className="d-flex flex-column h-100">
@@ -263,7 +268,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                     {selectedSubCanal}
                   </Badge>
                 )}
-                {selectedTipoCobertura && (
+                {selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && (
                   <Badge bg="danger" className="fw-black text-uppercase px-2 py-1" style={{ fontSize: '0.65rem' }}>
                     {selectedTipoNombre}
                   </Badge>
@@ -322,7 +327,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 CANAL: {selectedSubCanal}
               </Badge>
             )}
-            {selectedTipoCobertura && (
+            {selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && (
               <Badge bg="danger" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>
                 {selectedTipoNombre}
               </Badge>
@@ -354,7 +359,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 return acc;
               }, { cf: 0, cu: 0 });
               const hasData = vals.cf > 0 || vals.cu > 0;
-              const rutasArr = Object.entries(mesaData.rutas || {}) as [string, any][];
+              const rutasArr = (Object.entries(mesaData.rutas || {}) as [string, any][]).sort(([a], [b]) => a.localeCompare(b));
               const cliConVentaMesa = Object.values(mesaData.rutas || {}).reduce((sum: number, r: any) => sum + (r.cliConVentaPorTipo?.[tipo.tipoId] || 0), 0);
               const pctMesa = mesaData.totalClientesMesa > 0 ? ((cliConVentaMesa / mesaData.totalClientesMesa) * 100).toFixed(1) : '0';
 
@@ -492,7 +497,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
               {matrixCoberturaData.mesas.map(mesaId => {
                 const mesaData = matrixCoberturaData.data[mesaId];
                 const isMesaExpanded = expandedCoberturaMesas[mesaId];
-                const rutasEntries = Object.entries(mesaData.rutas || {}) as [string, any][];
+                const rutasEntries = (Object.entries(mesaData.rutas || {}) as [string, any][]).sort(([a], [b]) => a.localeCompare(b));
 
                 return (
                   <Fragment key={mesaId}>
@@ -697,6 +702,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 className="fw-black text-uppercase"
                 style={{ fontSize: '0.8rem' }}
               >
+                <option value="ALL">TODOS</option>
                 {beverageTypes.map(t => (
                   <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>
                 ))}

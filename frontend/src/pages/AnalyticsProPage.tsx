@@ -261,6 +261,7 @@ const AnalyticsProPage: FC = () => {
     // Trackear clientes únicos por ruta+tipo y mesa+tipo
     const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
     const mesaTypeClients: Record<string, Record<string, Set<string>>> = {};
+    const routeAllClients: Record<string, Set<string>> = {};
 
     // 2. Llenar con ventas (solo para clientes válidos)
     filteredData.forEach(d => {
@@ -295,6 +296,8 @@ const AnalyticsProPage: FC = () => {
         // Clientes únicos por ruta+tipo
         const tipoId = marcasMap[marcaId]?.tipoBebidaId;
         if (tipoId) {
+          if (!routeAllClients[rid]) routeAllClients[rid] = new Set();
+          routeAllClients[rid].add(cid);
           if (!routeTypeClients[rid]) routeTypeClients[rid] = {};
           if (!routeTypeClients[rid][tipoId]) routeTypeClients[rid][tipoId] = new Set();
           routeTypeClients[rid][tipoId].add(cid);
@@ -314,11 +317,14 @@ const AnalyticsProPage: FC = () => {
         Object.keys(routeTypeClients[rid]).forEach(tipoId => {
           matrix[mid].rutas[rid].cliConVentaPorTipo[tipoId] = routeTypeClients[rid][tipoId].size;
         });
+        if (selectedTipoCobertura === 'ALL') {
+          matrix[mid].rutas[rid].cliConVentaPorTipo['__ALL__'] = routeAllClients[rid]?.size || 0;
+        }
       }
     });
 
     return { mesas: Array.from(mesaSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), data: matrix };
-  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedProductosCobertura, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede, marcas]);
+  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedProductosCobertura, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede, marcas, selectedTipoCobertura]);
 
   // OPTIMIZACIÓN: Separar agregación de filtrado de productos
   const groupedProducts = useMemo(() => {
