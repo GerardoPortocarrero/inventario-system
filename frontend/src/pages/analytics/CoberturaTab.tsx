@@ -358,7 +358,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
                 return acc;
               }, { cf: 0, cu: 0 });
-              const hasData = vals.cf > 0 || vals.cu > 0;
+              const hasData = tipo.brandIds.some(bId => mesaData.total[bId] !== undefined);
               const rutasArr = (Object.entries(mesaData.rutas || {}) as [string, any][]).sort(([a], [b]) => a.localeCompare(b));
               const cliConVentaMesa = Object.values(mesaData.rutas || {}).reduce((sum: number, r: any) => sum + (r.cliConVentaPorTipo?.[tipo.tipoId] || 0), 0);
               const pctMesa = mesaData.totalClientesMesa > 0 ? ((cliConVentaMesa / mesaData.totalClientesMesa) * 100).toFixed(1) : '0';
@@ -399,7 +399,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                       if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
                       return acc;
                     }, { cf: 0, cu: 0 });
-                    const rHasData = rVals.cf > 0 || rVals.cu > 0;
+                    const rHasData = tipo.brandIds.some(bId => rutaData.total[bId] !== undefined);
                     const cliConVenta = rutaData.cliConVentaPorTipo?.[tipo.tipoId] || 0;
                     const total = rutaData.totalClientesRuta;
                     const pct = total > 0 ? ((cliConVenta / total) * 100).toFixed(1) : '0';
@@ -437,7 +437,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                   if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
                                   return acc;
                                 }, { cf: 0, cu: 0 });
-                                const cHasData = cVals.cf > 0 || cVals.cu > 0;
+                                const cHasData = tipo.brandIds.some(bId => client.marcas[bId] !== undefined);
                                 return (
                                   <div key={`${mesaId}-${rutaId}-${clientId}`} style={{ borderTop: '1px solid var(--theme-table-border-color)', padding: '10px 12px', backgroundColor: 'var(--theme-background-primary)' }}>
                                     <div className="d-flex justify-content-between align-items-center mb-1">
@@ -524,7 +524,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                           return acc;
                         }, { cf: 0, cu: 0 });
                         const cliConVentaMesa = Object.values(mesaData.rutas || {}).reduce((sum: number, r: any) => sum + (r.cliConVentaPorTipo?.[tipoId] || 0), 0);
-                        const hasData = vals.cf > 0 || vals.cu > 0;
+                        const hasData = brandIds.some(bId => mesaData.total[bId] !== undefined);
                         return (
                           <Fragment key={`${mesaId}-${tipoId}`}>
                             <td className="text-center align-middle fw-black" style={{ fontSize: '1rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
@@ -571,7 +571,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                               }, { cf: 0, cu: 0 });
                               const cliConVenta = rutaData.cliConVentaPorTipo?.[tipoId] || 0;
                               const total = rutaData.totalClientesRuta;
-                              const hasData = vals.cf > 0 || vals.cu > 0;
+                              const hasData = brandIds.some(bId => rutaData.total[bId] !== undefined);
                               return (
                                 <Fragment key={`${rutaKey}-${tipoId}`}>
                                   <td className="text-center align-middle fw-black" style={{ fontSize: '0.9rem', backgroundColor: 'var(--theme-background-primary)' }}>
@@ -612,7 +612,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                       if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
                                       return acc;
                                     }, { cf: 0, cu: 0 });
-                                    const hasData = vals.cf > 0 || vals.cu > 0;
+                                    const hasData = brandIds.some(bId => client.marcas[bId] !== undefined);
                                     return (
                                       <Fragment key={`${rutaKey}-${clientId}-${tipoId}`}>
                                         <td className="text-center align-middle fw-black" style={{ fontSize: '0.95rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent', transition: 'background-color 0.2s' }}>
