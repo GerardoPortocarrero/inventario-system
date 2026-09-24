@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useState, useEffect, Fragment } from 'react';
 import { Row, Col, Button, Form, ProgressBar, Alert, Container, Spinner } from 'react-bootstrap';
-import { FaCloudUploadAlt, FaFileExcel, FaHistory, FaExclamationTriangle, FaUser, FaDownload, FaCheckCircle, FaSpinner, FaShoppingCart, FaChartLine, FaGlassMartiniAlt, FaBox, FaInfoCircle, FaDatabase, FaTrash } from 'react-icons/fa';
+import { FaCloudUploadAlt, FaFileExcel, FaHistory, FaExclamationTriangle, FaUser, FaDownload, FaCheckCircle, FaSpinner, FaShoppingCart, FaChartLine, FaGlassMartiniAlt, FaBox, FaInfoCircle, FaDatabase, FaTrash, FaUsers } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { db, rtdb } from '../api/firebase';
 import { ref, set, onValue } from 'firebase/database';
@@ -24,7 +24,7 @@ const AdminUploadPage: FC = () => {
   const [metadataLoadingStatus, setMetadataLoadingStatus] = useState<Record<string, boolean>>({ maestro: true, demanda: true });
 
   const [processingReports, setProcessingReports] = useState(false);
-  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0 });
+  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0, cobertura: 0 });
 
   // Estado para la nueva carga histórica de Analítica Pro
   const [isUploadingHistorica, setIsUploadingHistorica] = useState(false);
@@ -401,6 +401,68 @@ const AdminUploadPage: FC = () => {
     setReportProgress(prev => ({ ...prev, duplicados: 100 }));
   };
 
+  const generateReportCobertura = async (demanda: any[], maestro: any[]) => {
+    setReportProgress(prev => ({ ...prev, cobertura: 10 }));
+    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [cleanId(m.Codigo)]: m }), {} as Record<string, any>);
+    const hier: Record<string, any> = {};
+
+    const parseSapNum = (val: any) => {
+      if (typeof val === 'number') return val;
+      const cleaned = String(val || '0').replace(/\./g, '').replace(',', '.');
+      return parseFloat(cleaned) || 0;
+    };
+
+    const normDias = (val: string) => String(val || '')
+      .toUpperCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .split(/[, -]/)
+      .map(d => d.trim().substring(0, 2))
+      .filter(d => d.length === 2);
+
+    demanda.forEach(d => {
+      const solId = cleanId(d.Solicitante);
+      const client = maestroMap[solId];
+      if (!client) return;
+
+      const loc = client.Loc || 'OTRO';
+      const mesa = client['Mesa Com'] || client['MESA COM'] || 'SIN MESA';
+      const ruta = client['Ruta com'] || client['RUTA COM'] || 'SIN RUTA';
+      const matId = cleanId(d.Material);
+      const cantidad = parseSapNum(d.Cantidad);
+      if (!matId || cantidad <= 0) return;
+
+      if (!hier[loc]) hier[loc] = { id: loc, nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, mesas: {} };
+      if (!hier[loc].mesas[mesa]) hier[loc].mesas[mesa] = { rutas: {} };
+      if (!hier[loc].mesas[mesa].rutas[ruta]) hier[loc].mesas[mesa].rutas[ruta] = { clientes: {} };
+
+      const r = hier[loc].mesas[mesa].rutas[ruta];
+      if (!r.clientes[solId]) {
+        r.clientes[solId] = {
+          nombre: client.Cliente || 'SIN NOMBRE',
+          subCanal: String(client.SubCanal || 'S/C').trim(),
+          dias: normDias(client['SEGDIAS'] || client['SEG DIAS'] || client['SEG.DIAS'] || ''),
+          materiales: {}
+        };
+      }
+
+      const medida = String(d.Medida || '').toUpperCase();
+      const valor = parseSapNum(d.Valor);
+      const key = `${matId}_${medida}`;
+      if (!r.clientes[solId].materiales[key]) {
+        r.clientes[solId].materiales[key] = { sku: matId, medida, descripcion: (d['Nombre material'] || String(d.Material)).trim() || 'SIN NOMBRE', cantidad: 0, valor: 0 };
+      }
+      r.clientes[solId].materiales[key].cantidad += cantidad;
+      r.clientes[solId].materiales[key].valor += valor;
+    });
+
+    setReportProgress(prev => ({ ...prev, cobertura: 90 }));
+    await set(ref(rtdb, 'reportes/cobertura'), {
+      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
+      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
+    });
+    setReportProgress(prev => ({ ...prev, cobertura: 100 }));
+  };
+
   const processFile = (file: File, type: 'maestro' | 'demanda') => {
     setIsUploading(true); setUploadProgress(10);
     const reader = new FileReader();
@@ -430,11 +492,12 @@ const AdminUploadPage: FC = () => {
             generateReportVolumen(sanitizedData, maestroMap),
             generateReportEficiencia(sanitizedData, maestroMap),
             generateReportBebidas(sanitizedData, maestroMap),
-            generateReportDuplicados(sanitizedData, maestroMap)
+            generateReportDuplicados(sanitizedData, maestroMap),
+            generateReportCobertura(sanitizedData, maestroMap)
           ]);
           setTimeout(() => {
             setProcessingReports(false);
-            setReportProgress({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0 });
+            setReportProgress({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0, cobertura: 0 });
           }, 3000);
         }
       } catch (err: any) { toast.error(err.message); }
@@ -600,7 +663,8 @@ const AdminUploadPage: FC = () => {
                     { id: 'volumen', label: 'Reporte de Volumen', variant: 'success', icon: <FaShoppingCart /> },
                     { id: 'eficiencia', label: 'Reporte de Eficiencia', variant: 'primary', icon: <FaChartLine /> },
                     { id: 'bebidas', label: 'Reporte de Bebidas', variant: 'info', icon: <FaGlassMartiniAlt /> },
-                    { id: 'duplicados', label: 'Reporte DUPLICADOS', variant: 'warning', icon: <FaBox /> }
+                    { id: 'duplicados', label: 'Reporte DUPLICADOS', variant: 'warning', icon: <FaBox /> },
+                    { id: 'cobertura', label: 'Reporte COBERTURA', variant: 'danger', icon: <FaUsers /> }
                   ].map(rep => (
                     <Col key={rep.id} xs={12} md={6} lg={3}>
                       <div className="p-3 h-100 admin-border-industrial" style={{ background: 'var(--theme-background-primary)' }}>

@@ -1,15 +1,17 @@
 import type { FC } from 'react';
-import { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { Row, Col, Form, Badge, Accordion, ListGroup, Dropdown, Spinner } from 'react-bootstrap';
-import { rtdb } from '../api/firebase';
+import { useState, useEffect, useMemo, useCallback, memo, Fragment } from 'react';
+import { Row, Col, Form, Badge, Accordion, ListGroup, Dropdown, Spinner, Button, Modal, Table } from 'react-bootstrap';
+import { rtdb, db } from '../api/firebase';
 import { ref, onValue } from 'firebase/database';
+import { collection, getDocs } from 'firebase/firestore';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
-import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy, FaBox } from 'react-icons/fa';
+import useMediaQuery from '../hooks/useMediaQuery';
+import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaChevronUp, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy, FaBox, FaTimes, FaSlidersH } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import GlobalSpinner from '../components/GlobalSpinner';
 
-type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'BEBIDAS' | 'DUPLICADOS';
+type ReportType = 'VOLUMEN' | 'EFICIENCIA' | 'BEBIDAS' | 'DUPLICADOS' | 'COBERTURA';
 
 // --- COMPONENTES MEMOIZADOS PARA MANTENER EL DISEÑO Y GANAR FLUIDEZ ---
 
@@ -85,7 +87,9 @@ const EficienciaRutaItem = memo(({
 });
 
 const SupervisorPage: FC = () => {
-  const { sedes, loadingMasterData, beverageTypes } = useData();
+  const { sedes, loadingMasterData, beverageTypes, marcas } = useData();
+  const isMobile = useMediaQuery('(max-width: 991px)');
+  const cleanId = useCallback((id: any) => String(id || '').trim().replace(/^0+/, ''), []);
 
   // Estados para datos
   const [volumenReport, setVolumenReport] = useState<any[]>([]);
@@ -96,8 +100,24 @@ const SupervisorPage: FC = () => {
   const [bebidasMetadata, setBebidasMetadata] = useState<any>(null);
   const [duplicadosReport, setDuplicadosReport] = useState<any[]>([]);
   const [duplicadosMetadata, setDuplicadosMetadata] = useState<any>(null);
+  const [coberturaReport, setCoberturaReport] = useState<any[]>([]);
+  const [coberturaMetadata, setCoberturaMetadata] = useState<any>(null);
+  const [supProducts, setSupProducts] = useState<any[]>([]);
   const [maestroData, setMaestroData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Filtros COBERTURA (espejo de Analítica Pro)
+  const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
+  const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string>('ALL');
+  const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('');
+  const [selectedMarcasCobertura, setSelectedMarcasCobertura] = useState<string[]>([]);
+  const [selectedProductosCobertura, setSelectedProductosCobertura] = useState<string[]>([]);
+  const [showCoberturaModal, setShowCoberturaModal] = useState(false);
+  const [tempDiaCobertura, setTempDiaCobertura] = useState<string>('ALL');
+  const [tempSubCanalCobertura, setTempSubCanalCobertura] = useState<string>('ALL');
+  const [tempTipoBebidaCobertura, setTempTipoBebidaCobertura] = useState<string>('');
+  const [tempMarcasCobertura, setTempMarcasCobertura] = useState<string[]>([]);
+  const [tempProductosCobertura, setTempProductosCobertura] = useState<string[]>([]);
   
   const [selectedSedeId, setSelectedSedeId] = useState<string>(() => localStorage.getItem('sup_selectedSedeId') || 'GLOBAL');
   const [selectedReportType, setSelectedReportType] = useState<ReportType>(() => (localStorage.getItem('sup_selectedReportType') as ReportType) || 'VOLUMEN');
@@ -139,7 +159,7 @@ const SupervisorPage: FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    let reportsToLoad = 4;
+    let reportsToLoad = 5;
     let loadedCount = 0;
     const checkLoaded = () => {
       loadedCount++;
@@ -186,6 +206,16 @@ const SupervisorPage: FC = () => {
       checkLoaded();
     });
 
+    const coberturaRef = ref(rtdb, 'reportes/cobertura');
+    const unsubCobertura = onValue(coberturaRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setCoberturaReport(data.data || []);
+        setCoberturaMetadata(data.metadata || null);
+      }
+      checkLoaded();
+    });
+
     const maestroRef = ref(rtdb, 'maestro/data');
     const unsubMaestro = onValue(maestroRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -193,8 +223,19 @@ const SupervisorPage: FC = () => {
       }
     });
 
-    return () => { unsubVolumen(); unsubEficiencia(); unsubBebidas(); unsubDuplicados(); unsubMaestro(); };
+    return () => { unsubVolumen(); unsubEficiencia(); unsubBebidas(); unsubDuplicados(); unsubCobertura(); unsubMaestro(); };
   }, []);
+
+  // Carga perezosa de productos para el reporte COBERTURA
+  useEffect(() => {
+    if (selectedReportType !== 'COBERTURA') return;
+    let active = true;
+    setSupProducts([]);
+    getDocs(collection(db, 'productos'))
+      .then(snap => { if (active) setSupProducts(snap.docs.map(d => ({ id: d.id, ...d.data() } as any))); })
+      .catch(console.error);
+    return () => { active = false; };
+  }, [selectedReportType]);
 
   const maestroMap = useMemo(() => {
     const map: Record<string, any> = {};
@@ -421,6 +462,212 @@ const SupervisorPage: FC = () => {
     
     return [];
   }, [eficienciaReport, selectedSedeId, sedes, selectedDia, selectedSemanas]);
+
+  const availableSubCanalesCob = useMemo(() => {
+    const s = new Set<string>();
+    maestroData.forEach(m => { if (m.SubCanal) s.add(String(m.SubCanal).trim()); });
+    return Array.from(s).sort();
+  }, [maestroData]);
+
+  const brandGroupsCob = useMemo(() => {
+    if (selectedTipoCobertura === 'ALL') {
+      return new Map<string, string[]>([['__ALL__', [...selectedMarcasCobertura]]]);
+    }
+    const groups = new Map<string, string[]>();
+    selectedMarcasCobertura.forEach(mId => {
+      const marca = marcas.find(m => m.id === mId);
+      if (!marca) return;
+      const tipoId = marca.tipoBebidaId || '__none__';
+      if (!groups.has(tipoId)) groups.set(tipoId, []);
+      groups.get(tipoId)!.push(mId);
+    });
+    return groups;
+  }, [selectedMarcasCobertura, marcas, selectedTipoCobertura]);
+
+  const typeColumnHeadersCob = useMemo(() => {
+    return Array.from(brandGroupsCob.entries()).map(([tipoId, brandIds]) => {
+      const typeName = tipoId === '__ALL__' ? 'TODOS' : (beverageTypes.find(t => t.id === tipoId)?.nombre || tipoId);
+      return { tipoId, typeName, brandIds };
+    });
+  }, [brandGroupsCob, beverageTypes]);
+
+  const selectedTipoNombreCob = selectedTipoCobertura === 'ALL' ? 'TODOS' : (beverageTypes.find(t => t.id === selectedTipoCobertura)?.nombre?.toUpperCase() || 'TIPO');
+
+  const activeFilterCobCount = [
+    selectedDiaCobertura !== 'ALL' && 1,
+    selectedSubCanalCobertura !== 'ALL' && 1,
+    selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && 1,
+    selectedProductosCobertura.length > 0 && 1
+  ].filter(Boolean).length;
+
+  const filteredMarcasCob = tempTipoBebidaCobertura === 'ALL' ? marcas : marcas.filter(m => m.tipoBebidaId === tempTipoBebidaCobertura);
+  const filteredProductosCob = tempMarcasCobertura.length === 0 ? [] : supProducts.filter(p => tempMarcasCobertura.includes(p.marcaId));
+
+  const handleOpenCoberturaModal = () => {
+    setTempDiaCobertura(selectedDiaCobertura);
+    setTempSubCanalCobertura(selectedSubCanalCobertura);
+    setTempTipoBebidaCobertura(selectedTipoCobertura === 'ALL' ? 'ALL' : (beverageTypes.some(t => t.id === selectedTipoCobertura) ? selectedTipoCobertura : (beverageTypes[0]?.id || '')));
+    setTempMarcasCobertura(selectedTipoCobertura ? selectedMarcasCobertura : marcas.filter(m => m.tipoBebidaId === (beverageTypes[0]?.id || '')).map(m => m.id));
+    setTempProductosCobertura(selectedProductosCobertura);
+    setShowCoberturaModal(true);
+  };
+
+  const handleTipoBebidaCobChange = (tipoId: string) => {
+    setTempTipoBebidaCobertura(tipoId);
+    setTempMarcasCobertura(tipoId === 'ALL' ? marcas.map(m => m.id) : marcas.filter(m => m.tipoBebidaId === tipoId).map(m => m.id));
+    setTempProductosCobertura([]);
+  };
+
+  const handleToggleMarcaCob = (marcaId: string) => {
+    setTempMarcasCobertura(prev => prev.includes(marcaId) ? prev.filter(id => id !== marcaId) : [...prev, marcaId]);
+    setTempProductosCobertura([]);
+  };
+
+  const handleApplyCobertura = () => {
+    setSelectedDiaCobertura(tempDiaCobertura);
+    setSelectedSubCanalCobertura(tempSubCanalCobertura);
+    setSelectedTipoCobertura(tempTipoBebidaCobertura === 'ALL' ? 'ALL' : tempTipoBebidaCobertura);
+    setSelectedMarcasCobertura(tempMarcasCobertura);
+    setSelectedProductosCobertura(tempProductosCobertura);
+    setShowCoberturaModal(false);
+  };
+
+  const handleCancelCobertura = () => setShowCoberturaModal(false);
+
+  const clearCoberturaFilters = () => {
+    setSelectedDiaCobertura('ALL');
+    setSelectedSubCanalCobertura('ALL');
+    setSelectedTipoCobertura('');
+    setSelectedMarcasCobertura([]);
+    setSelectedProductosCobertura([]);
+  };
+
+  const groupSumCob = (total: Record<string, { cf: number; cu: number }>, brandIds: string[]) =>
+    brandIds.reduce((acc, bId) => {
+      const v = total[bId];
+      return { cf: acc.cf + (v?.cf || 0), cu: acc.cu + (v?.cu || 0) };
+    }, { cf: 0, cu: 0 });
+
+  const groupHasCob = (total: Record<string, any>, brandIds: string[]) => brandIds.some(bId => total[bId] !== undefined);
+
+  const filteredCoberturaData = useMemo(() => {
+    if (selectedReportType !== 'COBERTURA' || typeColumnHeadersCob.length === 0) return [];
+    const raw = selectedSedeId === 'GLOBAL'
+      ? coberturaReport
+      : coberturaReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
+
+    const prodMap = supProducts.reduce((acc, p) => ({ ...acc, [cleanId(p.sap)]: p }), {} as Record<string, any>);
+    const UNIT_CASE_ML = 5677.92;
+    const resultado: any[] = [];
+
+    const calcMat = (mat: any): { marcaId: string; cf: number; cu: number } | null => {
+      const prod = prodMap[cleanId(mat.sku)];
+      if (!prod) return null;
+      if (!selectedMarcasCobertura.includes(prod.marcaId)) return null;
+      if (selectedProductosCobertura.length > 0 && !selectedProductosCobertura.includes(cleanId(mat.sku))) return null;
+      const unitsPerCase = parseFloat(prod.unidades) || 1;
+      const mlPerUnit = parseFloat(prod.mililitros) || 0;
+      const medida = String(mat.medida || '').toUpperCase();
+      const isCase = (medida === 'CAJ' || medida === 'CJ' || medida === 'CS' || medida === 'CASE' || medida.includes('CJ'));
+      const totalUnits = isCase ? (mat.cantidad * unitsPerCase) : mat.cantidad;
+      let cf = 0;
+      if (mlPerUnit > 0) cf = isCase ? mat.cantidad : (mat.cantidad / unitsPerCase);
+      const cu = (totalUnits * mlPerUnit) / UNIT_CASE_ML;
+      return { marcaId: prod.marcaId, cf, cu };
+    };
+
+    raw.forEach(loc => {
+      const locTotal: Record<string, { cf: number; cu: number }> = {};
+      const locClients = new Set<string>();
+      const locTipoClients: Record<string, Set<string>> = {};
+      const mesasOut: Record<string, any> = {};
+
+      Object.entries(loc.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
+        const mesaTotal: Record<string, { cf: number; cu: number }> = {};
+        const mesaClients = new Set<string>();
+        const mesaTipoClients: Record<string, Set<string>> = {};
+        const rutasOut: Record<string, any> = {};
+
+        Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
+          const rTotal: Record<string, { cf: number; cu: number }> = {};
+          const rClients = new Set<string>();
+          const rTipoClients: Record<string, Set<string>> = {};
+
+          Object.entries(ruta.clientes || {}).forEach(([cid, cliente]: [string, any]) => {
+            if (selectedSubCanalCobertura !== 'ALL' && String(cliente.subCanal).trim() !== selectedSubCanalCobertura) return;
+            if (selectedDiaCobertura !== 'ALL' && !((cliente.dias || []) as string[]).includes(selectedDiaCobertura)) return;
+
+            const marcaIds: string[] = [];
+            Object.values(cliente.materiales || {}).forEach((mat: any) => {
+              const c = calcMat(mat);
+              if (!c) return;
+              if (!rTotal[c.marcaId]) rTotal[c.marcaId] = { cf: 0, cu: 0 };
+              rTotal[c.marcaId].cf += c.cf;
+              rTotal[c.marcaId].cu += c.cu;
+              if (!mesaTotal[c.marcaId]) mesaTotal[c.marcaId] = { cf: 0, cu: 0 };
+              mesaTotal[c.marcaId].cf += c.cf;
+              mesaTotal[c.marcaId].cu += c.cu;
+              if (!locTotal[c.marcaId]) locTotal[c.marcaId] = { cf: 0, cu: 0 };
+              locTotal[c.marcaId].cf += c.cf;
+              locTotal[c.marcaId].cu += c.cu;
+              if (!marcaIds.includes(c.marcaId)) marcaIds.push(c.marcaId);
+            });
+
+            if (marcaIds.length > 0) {
+              rClients.add(cid);
+              mesaClients.add(cid);
+              locClients.add(cid);
+            }
+
+            marcaIds.forEach(mId => {
+              const tipoId = marcas.find(m => m.id === mId)?.tipoBebidaId;
+              if (!tipoId) return;
+              if (!rTipoClients[tipoId]) rTipoClients[tipoId] = new Set();
+              rTipoClients[tipoId].add(cid);
+              if (!mesaTipoClients[tipoId]) mesaTipoClients[tipoId] = new Set();
+              mesaTipoClients[tipoId].add(cid);
+              if (!locTipoClients[tipoId]) locTipoClients[tipoId] = new Set();
+              locTipoClients[tipoId].add(cid);
+            });
+          });
+
+          if (rClients.size > 0 || Object.keys(rTotal).length > 0) {
+            if (selectedTipoCobertura === 'ALL') rTipoClients['__ALL__'] = rClients;
+            rutasOut[rutaName] = {
+              total: rTotal,
+              totalClientesRuta: rClients.size,
+              cliConVentaPorTipo: Object.fromEntries(Object.entries(rTipoClients).map(([t, s]) => [t, (s as Set<string>).size]))
+            };
+          }
+        });
+
+        if (mesaClients.size > 0 || Object.keys(mesaTotal).length > 0) {
+          if (selectedTipoCobertura === 'ALL') mesaTipoClients['__ALL__'] = mesaClients;
+          mesasOut[mesaName] = {
+            total: mesaTotal,
+            totalClientesMesa: mesaClients.size,
+            cliConVentaPorTipo: Object.fromEntries(Object.entries(mesaTipoClients).map(([t, s]) => [t, (s as Set<string>).size])),
+            rutas: rutasOut
+          };
+        }
+      });
+
+      if (locClients.size > 0 || Object.keys(locTotal).length > 0) {
+        if (selectedTipoCobertura === 'ALL') locTipoClients['__ALL__'] = locClients;
+        const sede = sedes.find(s => String(s.codigo).trim() === String(loc.id).trim());
+        resultado.push({
+          id: loc.id,
+          nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${loc.id}`,
+          total: locTotal,
+          totalClientesLoc: locClients.size,
+          cliConVentaPorTipo: Object.fromEntries(Object.entries(locTipoClients).map(([t, s]) => [t, (s as Set<string>).size])),
+          mesas: mesasOut
+        });
+      }
+    });
+
+    return resultado;
+  }, [coberturaReport, selectedSedeId, sedes, supProducts, marcas, selectedSubCanalCobertura, selectedDiaCobertura, selectedMarcasCobertura, selectedProductosCobertura, typeColumnHeadersCob, selectedReportType, selectedTipoCobertura, cleanId]);
 
   const toggleRuta = useCallback((rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] })), []);
 
@@ -784,6 +1031,187 @@ const SupervisorPage: FC = () => {
     </div>
   );
 
+  const renderCoberturaReport = () => (
+    <div className="report-container-stable">
+      {typeColumnHeadersCob.length === 0 ? (
+        <div className="text-center p-5 text-muted small fw-black">SELECCIONE FILTROS DE COBERTURA.</div>
+      ) : filteredCoberturaData.length === 0 ? (
+        <div className="text-center p-5 text-muted small fw-black">NO HAY DATOS DE COBERTURA.</div>
+      ) : (
+        <Accordion
+          activeKey={activeLocId}
+          onSelect={(k) => setActiveLocId(k as string)}
+        >
+          {filteredCoberturaData.map(loc => {
+            const firstTipo = typeColumnHeadersCob[0];
+            const firstSum = groupSumCob(loc.total, firstTipo.brandIds);
+            const firstHasData = groupHasCob(loc.total, firstTipo.brandIds);
+            const firstCli = loc.cliConVentaPorTipo?.[firstTipo.tipoId] || 0;
+            const firstPct = loc.totalClientesLoc > 0 ? Math.round((firstCli * 100) / loc.totalClientesLoc) : 0;
+            return (
+              <Accordion.Item eventKey={loc.id} key={loc.id} id={`sup-capture-COBERTURA-${loc.id}`} className="loc-accordion-item border-0">
+                <Accordion.Header className="loc-header-compact">
+                  <div className="d-flex flex-wrap justify-content-between align-items-center w-100">
+                    <div className="d-flex align-items-center gap-2 gap-md-3">
+                      <div className="loc-avatar">{loc.id}</div>
+                      <div className="d-flex align-items-center gap-2 gap-md-3">
+                        <div className="fw-black text-uppercase l-height-1">{loc.nombre}</div>
+                        <div className="fw-black sub-label-new">COBERTURA</div>
+                      </div>
+                    </div>
+                    <span className="capture-btn" role="button" title="Copiar captura al portapapeles"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleCaptureSede(loc.id, 'COBERTURA'); }}>
+                      {capturingLocId === loc.id ? <Spinner size="sm" animation="border" /> : <FaCopy />}
+                    </span>
+                    <div className="loc-header-badges d-flex gap-1 gap-md-2">
+                      <Badge bg="primary" className="badge-industrial" style={{ opacity: firstHasData ? 1 : 0.25 }}>
+                        <span className="b-label">CF</span><span className="fw-black b-val">{firstSum.cf.toFixed(1)}</span>
+                      </Badge>
+                      <Badge bg="success" className="badge-industrial" style={{ opacity: firstHasData ? 1 : 0.25 }}>
+                        <span className="b-label">CU</span><span className="fw-black b-val">{firstSum.cu.toFixed(2)}</span>
+                      </Badge>
+                      <Badge bg="info" className="badge-industrial" style={{ opacity: firstHasData ? 1 : 0.25 }}>
+                        <span className="fw-black b-val">{firstCli}/{loc.totalClientesLoc} ({firstPct}%)</span>
+                      </Badge>
+                    </div>
+                  </div>
+                </Accordion.Header>
+                <Accordion.Body className="bg-transparent p-0 pt-1">
+                  {activeLocId === loc.id && (isMobile ? (
+                    Object.entries(loc.mesas || {}).map(([mesaName, mesa]: [string, any]) => {
+                      const mSum = groupSumCob(mesa.total, firstTipo.brandIds);
+                      const mHas = groupHasCob(mesa.total, firstTipo.brandIds);
+                      const mCli = mesa.cliConVentaPorTipo?.[firstTipo.tipoId] || 0;
+                      const mPct = mesa.totalClientesMesa > 0 ? Math.round((mCli * 100) / mesa.totalClientesMesa) : 0;
+                      return (
+                        <div key={mesaName} className="mesa-section mb-2">
+                          <div className="mesa-title-bar d-flex justify-content-between align-items-center px-3 py-1 mb-1">
+                            <span className="fw-black m-label">MESA: {mesaName.toUpperCase()}</span>
+                            <div className="fw-black m-stats">
+                              <span className={mHas ? 'text-success' : 'text-secondary opacity-25'}>{mSum.cf.toFixed(1)} CF</span>
+                              <span className="text-secondary opacity-50 mx-1">/</span>
+                              <span className={mHas ? 'text-success' : 'text-secondary opacity-25'}>{mSum.cu.toFixed(2)} CU</span>
+                              <span className="text-info ms-1">| {mCli}/{mesa.totalClientesMesa} ({mPct}%)</span>
+                            </div>
+                          </div>
+                          <div className="px-2 px-md-3">
+                            {Object.entries(mesa.rutas || {}).map(([rutaName, ruta]: [string, any]) => {
+                              const rSum = groupSumCob(ruta.total, firstTipo.brandIds);
+                              const rHas = groupHasCob(ruta.total, firstTipo.brandIds);
+                              const rCli = ruta.cliConVentaPorTipo?.[firstTipo.tipoId] || 0;
+                              const rPct = ruta.totalClientesRuta > 0 ? Math.round((rCli * 100) / ruta.totalClientesRuta) : 0;
+                              return (
+                                <div key={rutaName} className="ruta-card-compact mb-1">
+                                  <div className="ruta-main-row d-flex justify-content-between align-items-center px-2 py-1">
+                                    <span className="r-label"><FaChevronRight size={10} /> RUTA {rutaName}</span>
+                                    <div className="d-flex gap-2 align-items-center">
+                                      <span className={rHas ? 'text-success fw-bold' : 'text-secondary opacity-25'} style={{ fontSize: '0.7rem' }}>{rSum.cf.toFixed(1)}/{rSum.cu.toFixed(2)}</span>
+                                      <span className={rHas ? 'text-info fw-bold' : 'text-secondary opacity-25'} style={{ fontSize: '0.7rem' }}>{rCli}/{ruta.totalClientesRuta} ({rPct}%)</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="table-responsive" style={{ maxWidth: '100%' }}>
+                      <Table hover className="mb-0 industrial-table-v2 matrix-table">
+                        <thead>
+                          <tr>
+                            <th rowSpan={2} className="align-middle text-center ps-4 sticky-column" style={{ width: '180px', minWidth: '180px', fontSize: '0.65rem', zIndex: 11 }}>ID MESA</th>
+                            {typeColumnHeadersCob.map((tipo) => (
+                              <th key={tipo.tipoId} colSpan={2} className="text-center text-uppercase fw-black text-white py-2 brand-header-cell brand-separator" style={{ fontSize: '0.7rem', letterSpacing: '1px', backgroundColor: 'var(--color-red-primary)' }}>
+                                {tipo.typeName} <span className="text-white-50" style={{ fontSize: '0.55rem', opacity: 0.7 }}>({tipo.brandIds.length})</span>
+                              </th>
+                            ))}
+                          </tr>
+                          <tr>
+                            {typeColumnHeadersCob.map((tipo) => (
+                              <Fragment key={`sub-${tipo.tipoId}`}>
+                                <th className="text-center small fw-black py-1" style={{ fontSize: '0.55rem' }}>CF / CU</th>
+                                <th className="text-center small fw-black py-1 brand-separator" style={{ fontSize: '0.55rem' }}>CLI</th>
+                              </Fragment>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(loc.mesas || {}).map(([mesaName, mesa]: [string, any]) => {
+                            const rutas = Object.entries(mesa.rutas || {});
+                            return (
+                              <Fragment key={mesaName}>
+                                <tr>
+                                  <td className="align-middle py-3 sticky-column ps-3" style={{ backgroundColor: 'var(--theme-background-secondary)', zIndex: 10 }}>
+                                    <span className="fw-black fs-5 text-uppercase" style={{ letterSpacing: '1px' }}>{mesaName}</span>
+                                  </td>
+                                  {typeColumnHeadersCob.map((tipo) => {
+                                    const s = groupSumCob(mesa.total, tipo.brandIds);
+                                    const has = groupHasCob(mesa.total, tipo.brandIds);
+                                    const cli = mesa.cliConVentaPorTipo?.[tipo.tipoId] || 0;
+                                    const pct = mesa.totalClientesMesa > 0 ? Math.round((cli * 100) / mesa.totalClientesMesa) : 0;
+                                    return (
+                                      <Fragment key={`${mesaName}-${tipo.tipoId}`}>
+                                        <td className="text-center align-middle fw-black" style={{ fontSize: '1rem', backgroundColor: has ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
+                                          <span className={has ? 'text-success' : 'text-secondary opacity-25'}>{s.cf.toFixed(1)}</span>
+                                          <span className="mx-2 text-secondary opacity-50">/</span>
+                                          <span className={has ? 'text-warning' : 'text-secondary opacity-25'}>{s.cu.toFixed(2)}</span>
+                                        </td>
+                                        <td className="text-center align-middle fw-black brand-separator" style={{ fontSize: '1rem', backgroundColor: has ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
+                                          <span className={has ? 'text-info' : 'text-secondary opacity-25'}>
+                                            {cli} <span className="text-secondary opacity-50 mx-1">/</span> {mesa.totalClientesMesa}
+                                            <span className="text-secondary ms-1" style={{ fontSize: '0.7rem' }}>({pct}%)</span>
+                                          </span>
+                                        </td>
+                                      </Fragment>
+                                    );
+                                  })}
+                                </tr>
+                                {rutas.map(([rutaName, ruta]: [string, any]) => (
+                                  <tr key={rutaName}>
+                                    <td className="sticky-column text-start ps-5 py-2" style={{ backgroundColor: 'var(--theme-background-secondary)', zIndex: 10 }}>
+                                      <span className="fw-bold text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>{rutaName}</span>
+                                    </td>
+                                    {typeColumnHeadersCob.map((tipo) => {
+                                      const s = groupSumCob(ruta.total, tipo.brandIds);
+                                      const has = groupHasCob(ruta.total, tipo.brandIds);
+                                      const cli = ruta.cliConVentaPorTipo?.[tipo.tipoId] || 0;
+                                      const pct = ruta.totalClientesRuta > 0 ? Math.round((cli * 100) / ruta.totalClientesRuta) : 0;
+                                      return (
+                                        <Fragment key={`${rutaName}-${tipo.tipoId}`}>
+                                          <td className="text-center py-2 fw-bold" style={{ fontSize: '0.85rem', backgroundColor: has ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
+                                            <span className={has ? 'text-success' : 'text-secondary opacity-25'}>{s.cf.toFixed(1)}</span>
+                                            <span className="mx-2 text-secondary opacity-50">/</span>
+                                            <span className={has ? 'text-warning' : 'text-secondary opacity-25'}>{s.cu.toFixed(2)}</span>
+                                          </td>
+                                          <td className="text-center py-2 fw-bold brand-separator" style={{ fontSize: '0.85rem', backgroundColor: has ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
+                                            <span className={has ? 'text-info' : 'text-secondary opacity-25'}>
+                                              {cli} <span className="text-secondary opacity-50 mx-1">/</span> {ruta.totalClientesRuta}
+                                              <span className="text-secondary ms-1" style={{ fontSize: '0.65rem' }}>({pct}%)</span>
+                                            </span>
+                                          </td>
+                                        </Fragment>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </Table>
+                    </div>
+                  ))}
+                </Accordion.Body>
+              </Accordion.Item>
+            );
+          })}
+        </Accordion>
+      )}
+    </div>
+  );
+
   return (
     <div className="admin-layout-container flex-column overflow-hidden gap-2 gap-md-3">
       <div className="admin-section-table flex-shrink-0" style={{ flex: 'none', height: 'auto', padding: '0.5rem' }}>
@@ -813,10 +1241,26 @@ const SupervisorPage: FC = () => {
                   <option value="EFICIENCIA">EFICIENCIA</option>
                   <option value="BEBIDAS">BEBIDAS</option>
                   <option value="DUPLICADOS">DUPLICADOS</option>
+                  <option value="COBERTURA">COBERTURA</option>
                 </Form.Select>
               </div>
             </div>
           </Col>
+
+          {selectedReportType === 'COBERTURA' && (
+            <Col xs={12} md={2}>
+              <div className="info-pill-new w-100" role="button" onClick={handleOpenCoberturaModal} style={{ cursor: 'pointer' }}>
+                <span className="pill-icon-sober text-warning p-1"><FaSlidersH className="pill-main-icon"/></span>
+                <div className="pill-content flex-grow-1">
+                  <span className="pill-label">FILTROS</span>
+                  <div className="sincro-val fw-black text-uppercase d-flex align-items-center gap-1" style={{ color: 'var(--theme-text-primary)' }}>
+                    COBERTURA
+                    {activeFilterCobCount > 0 && <Badge bg="danger" className="ms-1" style={{ fontSize: '0.6rem' }}>{activeFilterCobCount}</Badge>}
+                  </div>
+                </div>
+              </div>
+            </Col>
+          )}
 
           {selectedReportType === 'EFICIENCIA' && (
             <>
@@ -1009,13 +1453,13 @@ const SupervisorPage: FC = () => {
             </>
           )}
 
-          <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'DUPLICADOS' ? 8 : selectedReportType === 'BEBIDAS' ? 2 : 4}>
+          <Col xs={12} md={selectedReportType === 'VOLUMEN' || selectedReportType === 'DUPLICADOS' ? 8 : selectedReportType === 'BEBIDAS' ? 2 : selectedReportType === 'COBERTURA' ? 6 : 4}>
             <div className="info-pill-new w-100">
               <span className="pill-icon-sober text-success p-1"><FaSyncAlt className="pill-main-icon"/></span>
               <div className="pill-content flex-grow-1">
                 <span className="pill-label">DEMANDA</span>
                 <div className="sincro-val">
-                  {selectedReportType === 'EFICIENCIA' ? eficienciaMetadata?.lastUpdated : selectedReportType === 'BEBIDAS' ? bebidasMetadata?.lastUpdated : selectedReportType === 'DUPLICADOS' ? duplicadosMetadata?.lastUpdated : volumenMetadata?.lastUpdated || 'SIN DATOS'}
+                  {selectedReportType === 'EFICIENCIA' ? eficienciaMetadata?.lastUpdated : selectedReportType === 'BEBIDAS' ? bebidasMetadata?.lastUpdated : selectedReportType === 'DUPLICADOS' ? duplicadosMetadata?.lastUpdated : selectedReportType === 'COBERTURA' ? coberturaMetadata?.lastUpdated : volumenMetadata?.lastUpdated || 'SIN DATOS'}
                 </div>
               </div>
             </div>
@@ -1027,16 +1471,156 @@ const SupervisorPage: FC = () => {
         <div className="h-100 overflow-auto custom-scrollbar p-2 p-md-3">
           {loadingMasterData || loading ? <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /> : (
             <div className="report-main-wrapper">
+              {selectedReportType === 'COBERTURA' && activeFilterCobCount > 0 && (
+                <div className="admin-border-industrial p-2 p-md-3 mb-1 w-100" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid var(--color-red-primary)' }}>
+                  <div className="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      {selectedDiaCobertura !== 'ALL' && <Badge bg="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>DÍA: {selectedDiaCobertura}</Badge>}
+                      {selectedSubCanalCobertura !== 'ALL' && <Badge bg="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>CANAL: {selectedSubCanalCobertura}</Badge>}
+                      {selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && <Badge bg="danger" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>{selectedTipoNombreCob}</Badge>}
+                      {selectedProductosCobertura.length > 0 && <Badge bg="warning" text="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>{selectedProductosCobertura.length} PRODUCTO{selectedProductosCobertura.length > 1 ? 'S' : ''}</Badge>}
+                      <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={clearCoberturaFilters} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {selectedReportType === 'VOLUMEN' && renderVolumenReport()}
               {selectedReportType === 'EFICIENCIA' && renderEficienciaReport()}
               {selectedReportType === 'BEBIDAS' && renderBebidasReport()}
               {selectedReportType === 'DUPLICADOS' && renderDuplicadosReport()}
+              {selectedReportType === 'COBERTURA' && renderCoberturaReport()}
             </div>
           )}
         </div>
       </div>
 
+      <Modal show={showCoberturaModal} onHide={handleCancelCobertura} backdrop="static" centered size="lg" className="bg-transparent">
+        <div className="analitica-lite-modal" style={{ background: 'var(--theme-background-primary)', border: '1px solid var(--theme-border-default)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+          <div className="modal-header d-flex justify-content-between align-items-center px-3 py-2" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+            <span className="fw-black text-uppercase" style={{ fontSize: '0.8rem', letterSpacing: '1px', color: 'var(--theme-text-primary)' }}>
+              <FaFilter className="me-2 text-danger" size={14} />
+              Filtros de Cobertura
+            </span>
+          </div>
+          <div className="modal-body p-4 d-flex flex-column gap-4">
+            <div>
+              <label className="text-danger fw-black text-uppercase mb-2" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>DÍA</label>
+              <Form.Select value={tempDiaCobertura} onChange={(e) => setTempDiaCobertura(e.target.value)} className="fw-black text-uppercase" style={{ fontSize: '0.8rem' }}>
+                <option value="ALL">TODOS</option>
+                {['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'].map(d => <option key={d} value={d}>{d}</option>)}
+              </Form.Select>
+            </div>
+
+            <div>
+              <label className="text-danger fw-black text-uppercase mb-2" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>CANAL</label>
+              <Form.Select value={tempSubCanalCobertura} onChange={(e) => setTempSubCanalCobertura(e.target.value)} className="fw-black text-uppercase" style={{ fontSize: '0.8rem' }}>
+                <option value="ALL">TODOS</option>
+                {availableSubCanalesCob.map(sc => <option key={sc} value={sc}>{sc}</option>)}
+              </Form.Select>
+            </div>
+
+            <div>
+              <label className="text-danger fw-black text-uppercase mb-2" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>TIPO DE BEBIDA</label>
+              <Form.Select value={tempTipoBebidaCobertura} onChange={(e) => handleTipoBebidaCobChange(e.target.value)} className="fw-black text-uppercase" style={{ fontSize: '0.8rem' }}>
+                <option value="ALL">TODOS</option>
+                {beverageTypes.map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>
+                ))}
+              </Form.Select>
+            </div>
+
+            <div>
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <label className="text-danger fw-black text-uppercase mb-0" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
+                  MARCAS <span className="text-secondary">({tempMarcasCobertura.length} seleccionadas)</span>
+                </label>
+                <div className="d-flex gap-2">
+                  <Button variant="link" className="text-success fw-black p-0 text-decoration-none" style={{ fontSize: '0.65rem' }}
+                    onClick={() => { setTempMarcasCobertura(filteredMarcasCob.map(m => m.id)); setTempProductosCobertura([]); }}>
+                    TODO
+                  </Button>
+                  <Button variant="link" className="text-danger fw-black p-0 text-decoration-none" style={{ fontSize: '0.65rem' }}
+                    onClick={() => { setTempMarcasCobertura([]); setTempProductosCobertura([]); }}>
+                    LIMPIAR
+                  </Button>
+                </div>
+              </div>
+              <div className="d-flex flex-wrap gap-2 p-3" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', maxHeight: '180px', overflowY: 'auto' }}>
+                {filteredMarcasCob.length === 0 ? (
+                  <span className="text-secondary fw-bold small">No hay marcas disponibles</span>
+                ) : (
+                  filteredMarcasCob.sort((a, b) => a.nombre.localeCompare(b.nombre)).map(m => (
+                    <Form.Check
+                      key={m.id}
+                      type="checkbox"
+                      id={`marca-${m.id}`}
+                      label={m.nombre.toUpperCase()}
+                      checked={tempMarcasCobertura.includes(m.id)}
+                      onChange={() => handleToggleMarcaCob(m.id)}
+                      className="fw-black text-uppercase"
+                      style={{ fontSize: '0.75rem', minWidth: '140px' }}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {tempMarcasCobertura.length > 0 && (
+              <div>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <label className="text-danger fw-black text-uppercase mb-0" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
+                    PRODUCTOS <span className="text-secondary">({tempProductosCobertura.length > 0 ? `${tempProductosCobertura.length} seleccionados` : 'todos'})</span>
+                  </label>
+                  <div className="d-flex gap-2">
+                    <Button variant="link" className="text-success fw-black p-0 text-decoration-none" style={{ fontSize: '0.65rem' }}
+                      onClick={() => setTempProductosCobertura(filteredProductosCob.map(p => cleanId(p.sap)))}>
+                      TODO
+                    </Button>
+                    <Button variant="link" className="text-danger fw-black p-0 text-decoration-none" style={{ fontSize: '0.65rem' }}
+                      onClick={() => setTempProductosCobertura([])}>
+                      LIMPIAR
+                    </Button>
+                  </div>
+                </div>
+                <div className="d-flex flex-column gap-1 p-3" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', maxHeight: '240px', overflowY: 'auto' }}>
+                  {filteredProductosCob.length === 0 ? (
+                    <span className="text-secondary fw-bold small">No hay productos disponibles</span>
+                  ) : (
+                    filteredProductosCob.sort((a, b) => (parseFloat(b.mililitros) || 0) - (parseFloat(a.mililitros) || 0)).map(p => (
+                      <Form.Check
+                        key={String(p.sap).trim()}
+                        type="checkbox"
+                        id={`prod-${p.sap}`}
+                        label={p.nombre?.toUpperCase() || String(p.sap)}
+                        checked={tempProductosCobertura.includes(cleanId(p.sap))}
+                        onChange={() => {
+                          const pid = cleanId(p.sap);
+                          setTempProductosCobertura(prev => prev.includes(pid) ? prev.filter(s => s !== pid) : [...prev, pid]);
+                        }}
+                        className="fw-black"
+                        style={{ fontSize: '0.75rem' }}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="modal-footer d-flex justify-content-end gap-2 px-4 py-3" style={{ backgroundColor: 'var(--theme-background-secondary)', borderTop: '1px solid var(--theme-border-default)' }}>
+            <Button variant="secondary" onClick={handleCancelCobertura} className="fw-black px-4" style={{ fontSize: '0.75rem', borderRadius: '2px' }}>CANCELAR</Button>
+            <Button variant="danger" onClick={handleApplyCobertura} disabled={!tempTipoBebidaCobertura} className="fw-black px-4" style={{ fontSize: '0.75rem', borderRadius: '2px' }}>APLICAR</Button>
+          </div>
+        </div>
+      </Modal>
+
       <style>{`
+        .admin-border-industrial { 
+          border: 1px solid var(--theme-border-default) !important;
+          transition: border-color 0.2s ease-in-out;
+        }
+        .admin-border-industrial:hover {
+          border-color: var(--color-red-primary) !important;
+        }
         .fw-black { font-weight: 900 !important; }
         .l-height-1 { letter-spacing: 0.2px; font-size: 1.1rem; color: var(--theme-text-primary); line-height: 1; }
         .sub-label-new { font-size: 1.1rem; color: var(--theme-text-secondary); opacity: 0.8; letter-spacing: 0.5px; border-left: 2px solid var(--color-red-primary); padding-left: 8px; line-height: 1; }
