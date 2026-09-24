@@ -7,7 +7,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import useMediaQuery from '../hooks/useMediaQuery';
-import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaChevronUp, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy, FaBox, FaTimes, FaSlidersH } from 'react-icons/fa';
+import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy, FaBox, FaSlidersH } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import GlobalSpinner from '../components/GlobalSpinner';
 
