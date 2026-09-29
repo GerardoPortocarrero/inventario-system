@@ -552,13 +552,16 @@ const SupervisorPage: FC = () => {
 
   const filteredCoberturaData = useMemo(() => {
     if (selectedReportType !== 'COBERTURA' || typeColumnHeadersCob.length === 0) return [];
-    const raw = selectedSedeId === 'GLOBAL'
-      ? coberturaReport
-      : coberturaReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
 
     const prodMap = supProducts.reduce((acc, p) => ({ ...acc, [cleanId(p.sap)]: p }), {} as Record<string, any>);
     const UNIT_CASE_ML = 5677.92;
-    const resultado: any[] = [];
+
+    const normDias = (val: string) => String(val || '')
+      .toUpperCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .split(/[, -]/)
+      .map(d => d.trim().substring(0, 2))
+      .filter(d => d.length === 2);
 
     const calcMat = (mat: any): { marcaId: string; cf: number; cu: number } | null => {
       const prod = prodMap[cleanId(mat.sku)];
@@ -576,98 +579,144 @@ const SupervisorPage: FC = () => {
       return { marcaId: prod.marcaId, cf, cu };
     };
 
+    const addTotal = (tot: Record<string, { cf: number; cu: number }>, marcaId: string, cf: number, cu: number) => {
+      if (!tot[marcaId]) tot[marcaId] = { cf: 0, cu: 0 };
+      tot[marcaId].cf += cf;
+      tot[marcaId].cu += cu;
+    };
+    const toCliConVenta = (sets: Record<string, Set<string>>) =>
+      Object.fromEntries(Object.entries(sets).map(([t, s]) => [t, (s as Set<string>).size]));
+
+    // ---------- PASO 1: TOTALES desde MAESTRO (clientes que cumplen SubCanal + Día + Sede) ----------
+    const locSet = new Set(coberturaReport.map(l => String(l.id).trim()));
+    const validClients = new Set<string>();
+    const totalCounts: Record<string, { count: number; mesas: Record<string, { count: number; rutas: Record<string, number> }> }> = {};
+
+    maestroData.forEach(m => {
+      const cid = cleanId(m.Codigo);
+      if (!cid) return;
+
+      const loc = String(m.Loc || 'OTRO').trim();
+      if (!locSet.has(loc)) return; // solo sedes con datos en el reporte
+      if (selectedSedeId !== 'GLOBAL') {
+        const cod = String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim();
+        if (loc !== cod) return;
+      }
+      if (selectedSubCanalCobertura !== 'ALL' && String(m.SubCanal).trim() !== selectedSubCanalCobertura) return;
+      if (selectedDiaCobertura !== 'ALL') {
+        const dias = normDias(m['SEGDIAS'] || m['SEG DIAS'] || m['SEG.DIAS'] || '');
+        if (!dias.includes(selectedDiaCobertura)) return;
+      }
+
+      const mesa = String(m['Mesa Com'] || m['MESA COM'] || 'SIN MESA').trim();
+      const ruta = String(m['Ruta com'] || m['RUTA COM'] || 'SIN RUTA').trim();
+
+      validClients.add(cid);
+      if (!totalCounts[loc]) totalCounts[loc] = { count: 0, mesas: {} };
+      totalCounts[loc].count++;
+      if (!totalCounts[loc].mesas[mesa]) totalCounts[loc].mesas[mesa] = { count: 0, rutas: {} };
+      totalCounts[loc].mesas[mesa].count++;
+      totalCounts[loc].mesas[mesa].rutas[ruta] = (totalCounts[loc].mesas[mesa].rutas[ruta] || 0) + 1;
+    });
+
+    // ---------- PASO 2: COBERTURA desde el REPORTE (solo clientes válidos + materiales seleccionados) ----------
+    const raw = selectedSedeId === 'GLOBAL'
+      ? coberturaReport
+      : coberturaReport.filter(loc => String(loc.id).trim() === String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim());
+
+    const resultado: any[] = [];
+
     raw.forEach(loc => {
+      const locId = String(loc.id).trim();
       const locTotal: Record<string, { cf: number; cu: number }> = {};
-      const locClients = new Set<string>();
-      const locTipoClients: Record<string, Set<string>> = {};
+      const locAll = new Set<string>();
+      const locTipos: Record<string, Set<string>> = {};
       const mesasOut: Record<string, any> = {};
 
       Object.entries(loc.mesas || {}).forEach(([mesaName, mesa]: [string, any]) => {
+        const mesaId = String(mesaName).trim();
         const mesaTotal: Record<string, { cf: number; cu: number }> = {};
-        const mesaClients = new Set<string>();
-        const mesaTipoClients: Record<string, Set<string>> = {};
+        const mesaAll = new Set<string>();
+        const mesaTipos: Record<string, Set<string>> = {};
         const rutasOut: Record<string, any> = {};
 
         Object.entries(mesa.rutas || {}).forEach(([rutaName, ruta]: [string, any]) => {
+          const rutaId = String(rutaName).trim();
           const rTotal: Record<string, { cf: number; cu: number }> = {};
-          const rClients = new Set<string>();
-          const rTipoClients: Record<string, Set<string>> = {};
+          const rAll = new Set<string>();
+          const rTipos: Record<string, Set<string>> = {};
 
           Object.entries(ruta.clientes || {}).forEach(([cid, cliente]: [string, any]) => {
-            if (selectedSubCanalCobertura !== 'ALL' && String(cliente.subCanal).trim() !== selectedSubCanalCobertura) return;
-            if (selectedDiaCobertura !== 'ALL' && !((cliente.dias || []) as string[]).includes(selectedDiaCobertura)) return;
+            if (!validClients.has(cid)) return;
 
-            const marcaIds: string[] = [];
+            let hasCoverage = false;
+            const tiposSeen: string[] = [];
             Object.values(cliente.materiales || {}).forEach((mat: any) => {
               const c = calcMat(mat);
               if (!c) return;
-              if (!rTotal[c.marcaId]) rTotal[c.marcaId] = { cf: 0, cu: 0 };
-              rTotal[c.marcaId].cf += c.cf;
-              rTotal[c.marcaId].cu += c.cu;
-              if (!mesaTotal[c.marcaId]) mesaTotal[c.marcaId] = { cf: 0, cu: 0 };
-              mesaTotal[c.marcaId].cf += c.cf;
-              mesaTotal[c.marcaId].cu += c.cu;
-              if (!locTotal[c.marcaId]) locTotal[c.marcaId] = { cf: 0, cu: 0 };
-              locTotal[c.marcaId].cf += c.cf;
-              locTotal[c.marcaId].cu += c.cu;
-              if (!marcaIds.includes(c.marcaId)) marcaIds.push(c.marcaId);
+              hasCoverage = true;
+              addTotal(rTotal, c.marcaId, c.cf, c.cu);
+              addTotal(mesaTotal, c.marcaId, c.cf, c.cu);
+              addTotal(locTotal, c.marcaId, c.cf, c.cu);
+              const tipoId = marcas.find(m => m.id === c.marcaId)?.tipoBebidaId;
+              if (tipoId && !tiposSeen.includes(tipoId)) tiposSeen.push(tipoId);
             });
 
-            if (marcaIds.length > 0) {
-              rClients.add(cid);
-              mesaClients.add(cid);
-              locClients.add(cid);
+            if (hasCoverage) {
+              rAll.add(cid);
+              mesaAll.add(cid);
+              locAll.add(cid);
+              tiposSeen.forEach(tipoId => {
+                if (!rTipos[tipoId]) rTipos[tipoId] = new Set();
+                rTipos[tipoId].add(cid);
+                if (!mesaTipos[tipoId]) mesaTipos[tipoId] = new Set();
+                mesaTipos[tipoId].add(cid);
+                if (!locTipos[tipoId]) locTipos[tipoId] = new Set();
+                locTipos[tipoId].add(cid);
+              });
             }
-
-            marcaIds.forEach(mId => {
-              const tipoId = marcas.find(m => m.id === mId)?.tipoBebidaId;
-              if (!tipoId) return;
-              if (!rTipoClients[tipoId]) rTipoClients[tipoId] = new Set();
-              rTipoClients[tipoId].add(cid);
-              if (!mesaTipoClients[tipoId]) mesaTipoClients[tipoId] = new Set();
-              mesaTipoClients[tipoId].add(cid);
-              if (!locTipoClients[tipoId]) locTipoClients[tipoId] = new Set();
-              locTipoClients[tipoId].add(cid);
-            });
           });
 
-          if (rClients.size > 0 || Object.keys(rTotal).length > 0) {
-            if (selectedTipoCobertura === 'ALL') rTipoClients['__ALL__'] = rClients;
-            rutasOut[rutaName] = {
+          const totRuta = totalCounts[locId]?.mesas[mesaId]?.rutas[rutaId] || 0;
+          if (totRuta > 0 || Object.keys(rTotal).length > 0) {
+            if (selectedTipoCobertura === 'ALL') rTipos['__ALL__'] = rAll;
+            rutasOut[rutaId] = {
               total: rTotal,
-              totalClientesRuta: rClients.size,
-              cliConVentaPorTipo: Object.fromEntries(Object.entries(rTipoClients).map(([t, s]) => [t, (s as Set<string>).size]))
+              totalClientesRuta: totRuta,
+              cliConVentaPorTipo: toCliConVenta(rTipos)
             };
           }
         });
 
-        if (mesaClients.size > 0 || Object.keys(mesaTotal).length > 0) {
-          if (selectedTipoCobertura === 'ALL') mesaTipoClients['__ALL__'] = mesaClients;
-          mesasOut[mesaName] = {
+        const totMesa = totalCounts[locId]?.mesas[mesaId]?.count || 0;
+        if (totMesa > 0 || Object.keys(mesaTotal).length > 0) {
+          if (selectedTipoCobertura === 'ALL') mesaTipos['__ALL__'] = mesaAll;
+          mesasOut[mesaId] = {
             total: mesaTotal,
-            totalClientesMesa: mesaClients.size,
-            cliConVentaPorTipo: Object.fromEntries(Object.entries(mesaTipoClients).map(([t, s]) => [t, (s as Set<string>).size])),
+            totalClientesMesa: totMesa,
+            cliConVentaPorTipo: toCliConVenta(mesaTipos),
             rutas: rutasOut
           };
         }
       });
 
-      if (locClients.size > 0 || Object.keys(locTotal).length > 0) {
-        if (selectedTipoCobertura === 'ALL') locTipoClients['__ALL__'] = locClients;
-        const sede = sedes.find(s => String(s.codigo).trim() === String(loc.id).trim());
+      const totLoc = totalCounts[locId]?.count || 0;
+      if (totLoc > 0 || Object.keys(locTotal).length > 0) {
+        if (selectedTipoCobertura === 'ALL') locTipos['__ALL__'] = locAll;
+        const sede = sedes.find(s => String(s.codigo).trim() === locId);
         resultado.push({
-          id: loc.id,
-          nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${loc.id}`,
+          id: locId,
+          nombre: sede ? sede.nombre.toUpperCase() : `SEDE ${locId}`,
           total: locTotal,
-          totalClientesLoc: locClients.size,
-          cliConVentaPorTipo: Object.fromEntries(Object.entries(locTipoClients).map(([t, s]) => [t, (s as Set<string>).size])),
+          totalClientesLoc: totLoc,
+          cliConVentaPorTipo: toCliConVenta(locTipos),
           mesas: mesasOut
         });
       }
     });
 
     return resultado;
-  }, [coberturaReport, selectedSedeId, sedes, supProducts, marcas, selectedSubCanalCobertura, selectedDiaCobertura, selectedMarcasCobertura, selectedProductosCobertura, typeColumnHeadersCob, selectedReportType, selectedTipoCobertura, cleanId]);
+  }, [coberturaReport, maestroData, selectedSedeId, sedes, supProducts, marcas, selectedSubCanalCobertura, selectedDiaCobertura, selectedMarcasCobertura, selectedProductosCobertura, typeColumnHeadersCob, selectedReportType, selectedTipoCobertura, cleanId]);
 
   const toggleRuta = useCallback((rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] })), []);
 
