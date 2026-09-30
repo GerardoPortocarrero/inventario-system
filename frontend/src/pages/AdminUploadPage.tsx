@@ -15,18 +15,31 @@ import toast from 'react-hot-toast';
 const MAESTRO_COLUMNS = ['Loc', 'Codigo', 'Cliente', 'Dirección', 'Loc. Com.', 'Mesa Com', 'Ruta com', 'Ruta', 'Segmento', 'SEG.DIAS', 'SEM. PREV', 'SubCanal'];
 const DEMANDA_COLUMNS = ['Entrega', 'Hora', 'Referencia de cliente', 'Fecha documento', 'Clase', 'Documento', 'Posición', 'Solicitante', 'Material', 'Nombre material', 'Cantidad', 'Medida', 'Valor', 'Moneda', 'Status', 'Motivo de rechazo', 'Bloqueo de factura'];
 
+const REPORT_CARDS = [
+  { id: 'volumen', label: 'Volumen', variant: 'success', icon: <FaShoppingCart /> },
+  { id: 'eficiencia', label: 'Eficiencia', variant: 'primary', icon: <FaChartLine /> },
+  { id: 'bebidas', label: 'Bebidas', variant: 'info', icon: <FaGlassMartiniAlt /> },
+  { id: 'duplicados', label: 'Duplicados', variant: 'warning', icon: <FaBox /> },
+  { id: 'cobertura', label: 'Cobertura', variant: 'danger', icon: <FaUsers /> }
+] as const;
+
+const emptyProgress = () => ({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0, cobertura: 0 });
+
 const AdminUploadPage: FC = () => {
   const { userName, userEmail } = useAuth();
   const { sedes, beverageTypes } = useData();
+
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingType, setUploadingType] = useState<'maestro' | 'demanda' | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [lastUploads, setLastUploads] = useState<Record<string, any>>({});
   const [metadataLoadingStatus, setMetadataLoadingStatus] = useState<Record<string, boolean>>({ maestro: true, demanda: true });
 
   const [processingReports, setProcessingReports] = useState(false);
-  const [reportProgress, setReportProgress] = useState<Record<string, number>>({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0, cobertura: 0 });
+  const [reportProgress, setReportProgress] = useState<Record<string, number>>(emptyProgress());
+  const [reportErrors, setReportErrors] = useState<Record<string, string>>({});
+  const [reportesLast, setReportesLast] = useState<Record<string, { lastUpdated: string; processedBy: string } | null>>({});
 
-  // Estado para la nueva carga histórica de Analítica Pro
   const [isUploadingHistorica, setIsUploadingHistorica] = useState(false);
   const [historicaProgress, setHistoricaProgress] = useState(0);
   const [historicaMsg, setHistoricaMsg] = useState<string | null>(null);
@@ -41,6 +54,16 @@ const AdminUploadPage: FC = () => {
       return onValue(r, (snapshot) => {
         setLastUploads(prev => ({ ...prev, [type]: snapshot.exists() ? snapshot.val() : null }));
         setMetadataLoadingStatus(prev => ({ ...prev, [type]: false }));
+      });
+    });
+    return () => unsubs.forEach(unsub => unsub());
+  }, []);
+
+  useEffect(() => {
+    const unsubs = REPORT_CARDS.map(rep => {
+      const r = ref(rtdb, `reportes/${rep.id}/metadata`);
+      return onValue(r, (snapshot) => {
+        setReportesLast(prev => ({ ...prev, [rep.id]: snapshot.exists() ? snapshot.val() : null }));
       });
     });
     return () => unsubs.forEach(unsub => unsub());
@@ -86,8 +109,6 @@ const AdminUploadPage: FC = () => {
       setIsDeletingDay(false);
     }
   };
-
-  const cleanId = (id: any) => String(id || '').trim().replace(/^0+/, '');
 
   const processHistorica = async (file: File) => {
     if (!file) return;
@@ -180,291 +201,13 @@ const AdminUploadPage: FC = () => {
 
   const sanitizeKey = (key: string) => key.replace(/[\.\$#\[\]\/]/g, '').trim();
 
-  const generateReportVolumen = async (demanda: any[], maestro: any[]) => {
-    setReportProgress(prev => ({ ...prev, volumen: 10 }));
-    const prodSnap = await getDocs(collection(db, 'productos'));
-    const products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-    setReportProgress(prev => ({ ...prev, volumen: 30 }));
-    
-    const productMap = products.reduce((acc, p) => ({ ...acc, [cleanId(p.sap)]: p }), {} as Record<string, any>);
-    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [cleanId(m.Codigo)]: m }), {} as Record<string, any>);
-    
-    const UNIT_CASE_ML = 5677.92;
-    const hier: Record<string, any> = {};
-
-    const parseSapNum = (val: any) => {
-      if (typeof val === 'number') return val;
-      const cleaned = String(val || '0').replace(/\./g, '').replace(',', '.');
-      return parseFloat(cleaned) || 0;
-    };
-
-    setReportProgress(prev => ({ ...prev, volumen: 50 }));
-    demanda.forEach(d => {
-      const prod = productMap[cleanId(d.Material)];
-      const client = maestroMap[cleanId(d.Solicitante)];
-      if (!prod || !client) return;
-
-      const loc = client.Loc || 'OTRO';
-      const mesa = client['Mesa Com'] || client['MESA COM'] || 'SIN MESA';
-      const ruta = client['Ruta com'] || client['RUTA COM'] || 'SIN RUTA';
-      
-      const cantidad = parseSapNum(d.Cantidad);
-      const medida = String(d.Medida || '').toUpperCase();
-      
-      const unitsPerCase = parseFloat(prod.unidades) || 1;
-      const mlPerUnit = parseFloat(prod.mililitros) || 0;
-      const isCase = (medida === 'CAJ' || medida === 'CJ' || medida === 'CS' || medida === 'CASE' || medida.includes('CJ'));
-
-      const totalUnits = isCase ? (cantidad * unitsPerCase) : cantidad;
-
-      let physicalBoxes = 0;
-      if (mlPerUnit > 0) {
-        physicalBoxes = isCase ? cantidad : (cantidad / unitsPerCase);
-      }
-      const unitCases = (totalUnits * mlPerUnit) / UNIT_CASE_ML;
-
-      if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, totalCF: 0, totalUC: 0, mesas: {} };
-      if (!hier[loc].mesas[mesa]) hier[loc].mesas[mesa] = { totalCF: 0, totalUC: 0, rutas: {} };
-      if (!hier[loc].mesas[mesa].rutas[ruta]) hier[loc].mesas[mesa].rutas[ruta] = { totalCF: 0, totalUC: 0, productos: {} };
-
-      const r = hier[loc].mesas[mesa].rutas[ruta];
-      r.totalCF += physicalBoxes; r.totalUC += unitCases;
-      if (!r.productos[prod.sap]) r.productos[prod.sap] = { nombre: prod.nombre, cantU: 0, cantC: 0 };
-      r.productos[prod.sap].cantU += totalUnits; r.productos[prod.sap].cantC += physicalBoxes;
-      hier[loc].totalCF += physicalBoxes; hier[loc].totalUC += unitCases;
-      hier[loc].mesas[mesa].totalCF += physicalBoxes; hier[loc].mesas[mesa].totalUC += unitCases;
-    });
-
-    setReportProgress(prev => ({ ...prev, volumen: 80 }));
-    await set(ref(rtdb, 'reportes/volumen'), {
-      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
-      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
-    });
-    setReportProgress(prev => ({ ...prev, volumen: 100 }));
+  const resetUpload = () => {
+    setIsUploading(false);
+    setUploadingType(null);
+    setUploadProgress(0);
   };
 
-  const generateReportEficiencia = async (demanda: any[], maestro: any[]) => {
-    setReportProgress(prev => ({ ...prev, eficiencia: 10 }));
-    const demandaSet = new Set(demanda.map(d => cleanId(d.Solicitante)));
-    const hier: Record<string, any> = {};
-
-    maestro.forEach(m => {
-      const loc = m.Loc || 'OTRO';
-      const mesa = m['Mesa Com'] || m['MESA COM'] || 'SIN MESA';
-      const ruta = m['Ruta com'] || m['RUTA COM'] || 'SIN RUTA';
-      const dias = String(m['SEGDIAS'] || m['SEG DIAS'] || m['SEG.DIAS'] || '').split(/[, -]/)
-        .map(d => d.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 2))
-        .filter(d => d.length === 2);
-      const sem = String(m['SEMPREV'] || m['SEM PREV'] || m['SEM. PREV'] || '1');
-
-      if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, id: loc, mesas: {} };
-      if (!hier[loc].mesas[mesa]) hier[loc].mesas[mesa] = { rutas: {} };
-      if (!hier[loc].mesas[mesa].rutas[ruta]) hier[loc].mesas[mesa].rutas[ruta] = { schedules: {} };
-
-      const r = hier[loc].mesas[mesa].rutas[ruta];
-      const isEfec = demandaSet.has(cleanId(m.Codigo));
-
-      dias.forEach(dia => {
-        const key = `${dia}_${sem}`;
-        if (!r.schedules[key]) r.schedules[key] = { prog: 0, efec: 0 };
-        r.schedules[key].prog += 1;
-        if (isEfec) r.schedules[key].efec += 1;
-      });
-    });
-
-    setReportProgress(prev => ({ ...prev, eficiencia: 80 }));
-    await set(ref(rtdb, 'reportes/eficiencia'), {
-      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
-      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
-    });
-    setReportProgress(prev => ({ ...prev, eficiencia: 100 }));
-  };
-
-  const generateReportBebidas = async (demanda: any[], maestro: any[]) => {
-    setReportProgress(prev => ({ ...prev, bebidas: 10 }));
-    const prodSnap = await getDocs(collection(db, 'productos'));
-    const products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-    
-    const productMap = products.reduce((acc, p) => ({ ...acc, [cleanId(p.sap)]: p }), {} as Record<string, any>);
-    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [cleanId(m.Codigo)]: m }), {} as Record<string, any>);
-    
-    const UNIT_CASE_ML = 5677.92;
-    const hier: Record<string, any> = {};
-
-    const parseSapNum = (val: any) => {
-      if (typeof val === 'number') return val;
-      const cleaned = String(val || '0').replace(/\./g, '').replace(',', '.');
-      return parseFloat(cleaned) || 0;
-    };
-
-    setReportProgress(prev => ({ ...prev, bebidas: 40 }));
-    demanda.forEach(d => {
-      const prod = productMap[cleanId(d.Material)];
-      const client = maestroMap[cleanId(d.Solicitante)];
-      if (!prod || !client) return;
-
-      const loc = client.Loc || 'OTRO';
-      const tipoId = prod.tipoBebidaId || 'SIN_TIPO';
-      const tipoNombre = beverageTypes.find(t => t.id === tipoId)?.nombre || 'OTROS';
-      const rutaCom = client['Ruta com'] || client['RUTA COM'] || 'SIN RUTA';
-
-      const cantidad = parseSapNum(d.Cantidad);
-      const medida = String(d.Medida || '').toUpperCase();
-
-      const unitsPerCase = parseFloat(prod.unidades) || 1;
-      const mlPerUnit = parseFloat(prod.mililitros) || 0;
-      const isCase = (medida === 'CAJ' || medida === 'CJ' || medida === 'CS' || medida === 'CASE' || medida.includes('CJ'));
-
-      const totalUnits = isCase ? (cantidad * unitsPerCase) : cantidad;
-
-      let physicalBoxes = 0;
-      if (mlPerUnit > 0) {
-        physicalBoxes = isCase ? cantidad : (cantidad / unitsPerCase);
-      }
-      const unitCases = (totalUnits * mlPerUnit) / UNIT_CASE_ML;
-
-      if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, tipos: {} };
-      if (!hier[loc].tipos[tipoId]) hier[loc].tipos[tipoId] = { nombre: tipoNombre.toUpperCase(), totalCF: 0, totalUC: 0, rutas: {} };
-      if (!hier[loc].tipos[tipoId].rutas[rutaCom]) hier[loc].tipos[tipoId].rutas[rutaCom] = { totalCF: 0, totalUC: 0, productos: {} };
-
-      const r = hier[loc].tipos[tipoId].rutas[rutaCom];
-      r.totalCF += physicalBoxes; r.totalUC += unitCases;
-      
-      if (!r.productos[prod.sap]) r.productos[prod.sap] = { nombre: prod.nombre, cantU: 0, cantC: 0, uc: 0 };
-      r.productos[prod.sap].cantU += totalUnits; r.productos[prod.sap].cantC += physicalBoxes; r.productos[prod.sap].uc += unitCases;
-
-      hier[loc].tipos[tipoId].totalCF += physicalBoxes; hier[loc].tipos[tipoId].totalUC += unitCases;
-    });
-
-    setReportProgress(prev => ({ ...prev, bebidas: 70 }));
-    await set(ref(rtdb, 'reportes/bebidas'), {
-      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
-      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
-    });
-    setReportProgress(prev => ({ ...prev, bebidas: 100 }));
-  };
-
-  const generateReportDuplicados = async (demanda: any[], maestro: any[]) => {
-    setReportProgress(prev => ({ ...prev, duplicados: 10 }));
-    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [cleanId(m.Codigo)]: m }), {} as Record<string, any>);
-    const hier: Record<string, any> = {};
-    const orderGroups: Record<string, Record<string, any[]>> = {}; 
-    
-    demanda.forEach(d => {
-      const solId = cleanId(d.Solicitante);
-      const docId = String(d.Documento);
-      if (!orderGroups[solId]) orderGroups[solId] = {};
-      if (!orderGroups[solId][docId]) orderGroups[solId][docId] = [];
-      orderGroups[solId][docId].push(d);
-    });
-
-    setReportProgress(prev => ({ ...prev, duplicados: 50 }));
-
-    Object.entries(orderGroups).forEach(([solId, docs]) => {
-      const docIds = Object.keys(docs);
-      if (docIds.length < 2) return;
-      const duplicatePairs: any[] = [];
-
-      for (let i = 0; i < docIds.length; i++) {
-        for (let j = i + 1; j < docIds.length; j++) {
-          const docA = docs[docIds[i]];
-          const docB = docs[docIds[j]];
-          if (docA.length !== docB.length) continue;
-
-          const getSignature = (items: any[]) => items
-            .map(it => `${cleanId(it.Material)}_${parseFloat(it.Cantidad)}_${String(it.Medida).toUpperCase()}`)
-            .sort().join('|');
-
-          if (getSignature(docA) === getSignature(docB)) {
-            duplicatePairs.push({
-              doc1: { id: docIds[i], hora: docA[0].Hora || '--:--', items: docA.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) },
-              doc2: { id: docIds[j], hora: docB[0].Hora || '--:--', items: docB.map(it => ({ nombre: it['Nombre material'], sap: it.Material, cant: it.Cantidad, med: it.Medida })) }
-            });
-          }
-        }
-      }
-
-      if (duplicatePairs.length > 0) {
-        const client = maestroMap[solId];
-        const loc = client?.Loc || 'OTRO';
-        if (!hier[loc]) hier[loc] = { nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, id: loc, clientes: {} };
-        if (!hier[loc].clientes[solId]) hier[loc].clientes[solId] = { nombre: client?.Cliente || 'CLIENTE DESCONOCIDO', codigo: solId, duplas: [] };
-        hier[loc].clientes[solId].duplas.push(...duplicatePairs);
-      }
-    });
-
-    setReportProgress(prev => ({ ...prev, duplicados: 80 }));
-    await set(ref(rtdb, 'reportes/duplicados'), {
-      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
-      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
-    });
-    setReportProgress(prev => ({ ...prev, duplicados: 100 }));
-  };
-
-  const generateReportCobertura = async (demanda: any[], maestro: any[]) => {
-    setReportProgress(prev => ({ ...prev, cobertura: 10 }));
-    const maestroMap = maestro.reduce((acc, m) => ({ ...acc, [cleanId(m.Codigo)]: m }), {} as Record<string, any>);
-    const hier: Record<string, any> = {};
-
-    const parseSapNum = (val: any) => {
-      if (typeof val === 'number') return val;
-      const cleaned = String(val || '0').replace(/\./g, '').replace(',', '.');
-      return parseFloat(cleaned) || 0;
-    };
-
-    const normDias = (val: string) => String(val || '')
-      .toUpperCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .split(/[, -]/)
-      .map(d => d.trim().substring(0, 2))
-      .filter(d => d.length === 2);
-
-    demanda.forEach(d => {
-      const solId = cleanId(d.Solicitante);
-      const client = maestroMap[solId];
-      if (!client) return;
-
-      const loc = client.Loc || 'OTRO';
-      const mesa = client['Mesa Com'] || client['MESA COM'] || 'SIN MESA';
-      const ruta = client['Ruta com'] || client['RUTA COM'] || 'SIN RUTA';
-      const matId = cleanId(d.Material);
-      const cantidad = parseSapNum(d.Cantidad);
-      if (!matId || cantidad <= 0) return;
-
-      if (!hier[loc]) hier[loc] = { id: loc, nombre: sedes.find(s => s.codigo === loc)?.nombre || loc, mesas: {} };
-      if (!hier[loc].mesas[mesa]) hier[loc].mesas[mesa] = { rutas: {} };
-      if (!hier[loc].mesas[mesa].rutas[ruta]) hier[loc].mesas[mesa].rutas[ruta] = { clientes: {} };
-
-      const r = hier[loc].mesas[mesa].rutas[ruta];
-      if (!r.clientes[solId]) {
-        r.clientes[solId] = {
-          nombre: client.Cliente || 'SIN NOMBRE',
-          subCanal: String(client.SubCanal || 'S/C').trim(),
-          dias: normDias(client['SEGDIAS'] || client['SEG DIAS'] || client['SEG.DIAS'] || ''),
-          materiales: {}
-        };
-      }
-
-      const medida = String(d.Medida || '').toUpperCase();
-      const valor = parseSapNum(d.Valor);
-      const key = `${matId}_${medida}`;
-      if (!r.clientes[solId].materiales[key]) {
-        r.clientes[solId].materiales[key] = { sku: matId, medida, descripcion: (d['Nombre material'] || String(d.Material)).trim() || 'SIN NOMBRE', cantidad: 0, valor: 0 };
-      }
-      r.clientes[solId].materiales[key].cantidad += cantidad;
-      r.clientes[solId].materiales[key].valor += valor;
-    });
-
-    setReportProgress(prev => ({ ...prev, cobertura: 90 }));
-    await set(ref(rtdb, 'reportes/cobertura'), {
-      data: Object.entries(hier).map(([id, data]) => ({ id, ...data })),
-      metadata: { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail }
-    });
-    setReportProgress(prev => ({ ...prev, cobertura: 100 }));
-  };
-
-  const processFile = (file: File, type: 'maestro' | 'demanda') => {
-    setIsUploading(true); setUploadProgress(10);
+  const processMaestroFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
@@ -478,32 +221,240 @@ const AdminUploadPage: FC = () => {
           return newRow;
         });
         setUploadProgress(60);
-        await set(ref(rtdb, type), { 
+        await set(ref(rtdb, 'maestro'), { 
           metadata: { updatedAt: new Date().toLocaleString(), rowCount: sanitizedData.length, userName: userName || userEmail }, 
           data: sanitizedData 
         });
         setUploadProgress(100);
-        toast.success(`${type.toUpperCase()} sincronizado`);
-
-        if (type === 'demanda') {
-          setProcessingReports(true);
-          const maestroMap = await new Promise<any[]>((res) => onValue(ref(rtdb, 'maestro/data'), (s) => res(s.exists() ? s.val() : []), { onlyOnce: true }));
-          await Promise.all([
-            generateReportVolumen(sanitizedData, maestroMap),
-            generateReportEficiencia(sanitizedData, maestroMap),
-            generateReportBebidas(sanitizedData, maestroMap),
-            generateReportDuplicados(sanitizedData, maestroMap),
-            generateReportCobertura(sanitizedData, maestroMap)
-          ]);
-          setTimeout(() => {
-            setProcessingReports(false);
-            setReportProgress({ volumen: 0, eficiencia: 0, bebidas: 0, duplicados: 0, cobertura: 0 });
-          }, 3000);
-        }
-      } catch (err: any) { toast.error(err.message); }
-      finally { setTimeout(() => { setIsUploading(false); setUploadProgress(0); }, 1000); }
+        toast.success('MAESTRO sincronizado');
+      } catch (err: any) {
+        toast.error(err.message);
+      } finally {
+        setTimeout(resetUpload, 1200);
+      }
     };
     reader.readAsBinaryString(file);
+  };
+
+  const processDemandaFile = async (file: File) => {
+    try {
+      setProcessingReports(true);
+      setReportErrors({});
+      setReportProgress(emptyProgress());
+
+      setUploadProgress(20);
+      const [maestroData, prodSnap] = await Promise.all([
+        new Promise<any[]>((res) => onValue(ref(rtdb, 'maestro/data'), (s) => res(s.exists() ? s.val() : []), { onlyOnce: true })),
+        getDocs(collection(db, 'productos'))
+      ]);
+      const productsData = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setUploadProgress(40);
+
+      const fileArrayBuffer = await file.arrayBuffer();
+      const worker = new Worker(new URL('../utils/demandaProcessor.worker.ts', import.meta.url), { type: 'module' });
+
+      const finish = () => {
+        worker.terminate();
+        resetUpload();
+        setTimeout(() => {
+          setProcessingReports(false);
+          setReportProgress(emptyProgress());
+        }, 2500);
+      };
+
+      worker.onmessage = async (e) => {
+        const msg = e.data;
+
+        if (msg.type === 'progress') {
+          setReportProgress(prev => ({ ...prev, [msg.report]: msg.pct }));
+          return;
+        }
+
+        if (!msg.success) {
+          toast.error(`Error en procesamiento: ${msg.error}`);
+          setProcessingReports(false);
+          finish();
+          return;
+        }
+
+        if (msg.sanitizedData.length === 0) {
+          toast.error('Archivo vacío');
+          setProcessingReports(false);
+          finish();
+          return;
+        }
+
+        try {
+          setUploadProgress(60);
+          await set(ref(rtdb, 'demanda'), {
+            metadata: { updatedAt: new Date().toLocaleString(), rowCount: msg.sanitizedData.length, userName: userName || userEmail },
+            data: msg.sanitizedData
+          });
+          setUploadProgress(100);
+          toast.success('DEMANDA sincronizada');
+
+          const metadata = { lastUpdated: new Date().toLocaleString(), processedBy: userName || userEmail };
+          const failed: string[] = [];
+
+          for (const rep of REPORT_CARDS) {
+            setReportProgress(prev => ({ ...prev, [rep.id]: 98 }));
+            try {
+              await set(ref(rtdb, `reportes/${rep.id}`), { data: msg.reports[rep.id] || [], metadata });
+              setReportProgress(prev => ({ ...prev, [rep.id]: 100 }));
+            } catch (err: any) {
+              failed.push(rep.label);
+              setReportErrors(prev => ({ ...prev, [rep.id]: err?.message || 'Error al guardar' }));
+            }
+          }
+
+          if (failed.length > 0) toast.error(`No se pudieron guardar: ${failed.join(', ')}`);
+        } catch (err: any) {
+          toast.error(err.message);
+        } finally {
+          finish();
+        }
+      };
+
+      worker.onerror = (err) => {
+        toast.error(`Fallo del procesador: ${err.message}`);
+        setProcessingReports(false);
+        worker.terminate();
+        resetUpload();
+      };
+
+      worker.postMessage({ file: fileArrayBuffer, maestroData, productsData, sedes, beverageTypes });
+    } catch (err: any) {
+      toast.error(err.message);
+      setProcessingReports(false);
+      resetUpload();
+    }
+  };
+
+  const processFile = (file: File, type: 'maestro' | 'demanda') => {
+    if (!file) return;
+    setIsUploading(true);
+    setUploadingType(type);
+    setUploadProgress(10);
+
+    if (type === 'demanda') {
+      processDemandaFile(file);
+    } else {
+      processMaestroFile(file);
+    }
+  };
+
+  const renderUploadCard = (type: 'maestro' | 'demanda') => {
+    const isMaestro = type === 'maestro';
+    return (
+      <Col key={type} xs={12} xl={isMaestro ? 5 : 7} className="px-0 m-0">
+        <div className="p-3 p-md-4 h-100 admin-border-industrial d-flex flex-column" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
+          <div className="d-flex align-items-center mb-3">
+            <div className="p-3 me-3 d-flex align-items-center justify-content-center" style={{ backgroundColor: 'var(--theme-icon-bg)', border: '1px solid var(--theme-border-default)' }}>
+              <FaFileExcel className={`text-${isMaestro ? 'danger' : 'primary'} fs-3`} />
+            </div>
+            <div className="flex-grow-1 min-width-0">
+              <h6 className="mb-0 fw-black text-uppercase text-truncate" style={{ letterSpacing: '1px' }}>{type}</h6>
+              <small className="text-secondary fw-bold text-truncate d-block" style={{ fontSize: '0.6rem' }}>SISTEMA DE REEMPLAZO TOTAL</small>
+            </div>
+            <Button
+              variant="link"
+              className="p-0 text-secondary flex-shrink-0"
+              title={`Descargar plantilla de ${type}`}
+              aria-label={`Descargar plantilla de ${type}`}
+              onClick={() => downloadTemplate(type)}
+            >
+              <FaDownload size={16} />
+            </Button>
+          </div>
+
+          <p className="mb-4 text-secondary" style={{ fontSize: '0.8rem' }}>
+            {isMaestro ? 'Cargue el catálogo maestro de clientes y rutas.' : 'Actualice la demanda diaria para sincronizar cuotas.'}
+          </p>
+
+          <div className="p-3 mb-3" style={{ backgroundColor: 'var(--theme-background-tertiary)', border: '1px solid var(--theme-border-default)' }}>
+            <div className="d-flex align-items-center mb-2 small fw-black text-secondary" style={{ fontSize: '0.7rem' }}>
+              <FaHistory className="me-2" /> ÚLTIMA CARGA
+            </div>
+            {metadataLoadingStatus[type] ? <div className="py-2"><GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /></div> : lastUploads[type] ? (
+              <Row className="g-2">
+                <Col xs={12} sm={6}>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Sincronización</div>
+                  <div className="fw-black text-truncate" style={{ fontSize: '0.7rem', color: 'var(--theme-text-primary)' }}>{lastUploads[type].updatedAt}</div>
+                </Col>
+                <Col xs={12} sm={6}>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Responsable</div>
+                  <div className="fw-black d-flex align-items-center text-truncate" style={{ fontSize: '0.7rem', color: 'var(--theme-text-primary)' }}>
+                    <FaUser className="me-1 flex-shrink-0" size={10} /> <span className="text-truncate">{lastUploads[type].userName}</span>
+                  </div>
+                </Col>
+                <Col xs={12}>
+                  <div className="mt-1 fw-black text-success d-flex align-items-center" style={{ fontSize: '0.65rem' }}>
+                    <FaCheckCircle className="me-2 flex-shrink-0" /> {lastUploads[type].rowCount.toLocaleString()} REGISTROS ACTIVOS
+                  </div>
+                </Col>
+              </Row>
+            ) : (
+              <div className="d-flex align-items-center justify-content-center h-100 text-secondary py-2" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                <FaInfoCircle className="me-2" /> Sin registros
+              </div>
+            )}
+          </div>
+
+          <Form.Group>
+            <Form.Label htmlFor={`upload-${type}`} className={`btn btn-outline-${isMaestro ? 'danger' : 'primary'} w-100 py-2 fw-black text-uppercase`} style={{ fontSize: '0.75rem' }}>
+              <FaCloudUploadAlt className="me-2 fs-5" /> Sincronizar {type}
+            </Form.Label>
+            <Form.Control id={`upload-${type}`} type="file" accept=".xlsx, .xls, .csv" hidden onChange={(e: any) => processFile(e.target.files?.[0], type)} disabled={isUploading} />
+          </Form.Group>
+
+          {isUploading && uploadingType === type && (
+            <div className="mt-3 p-3" style={{ backgroundColor: 'var(--theme-background-tertiary)', border: '1px solid var(--theme-border-default)' }}>
+              <div className="d-flex justify-content-between mb-2 small fw-black text-uppercase">
+                <span className="text-secondary">Sincronización Cruda</span>
+                <span className={isMaestro ? 'text-danger' : 'text-primary'}>{uploadProgress}%</span>
+              </div>
+              <ProgressBar now={uploadProgress} variant={isMaestro ? 'danger' : 'primary'} style={{ height: '4px' }} />
+            </div>
+          )}
+
+          {!isMaestro && (
+            <div className="mt-4">
+              <div className="d-flex align-items-center gap-2 mb-3">
+                <FaSpinner className={`${processingReports ? 'spinner-animation' : ''} text-danger`} size={16} />
+                <h6 className="mb-0 fw-black text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>Reportes de Demanda</h6>
+              </div>
+              <Row className="g-2 g-md-3">
+                {REPORT_CARDS.map(rep => {
+                  const pct = reportProgress[rep.id] || 0;
+                  const err = reportErrors[rep.id];
+                  const last = reportesLast[rep.id];
+                  return (
+                    <Col key={rep.id} xs={12} md={6}>
+                      <div className="p-2 h-100" style={{ backgroundColor: 'var(--theme-background-tertiary)', border: '1px solid var(--theme-border-default)' }}>
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                          <span className={`text-${rep.variant} flex-shrink-0`}>{rep.icon}</span>
+                          <span className="flex-grow-1 text-uppercase fw-black text-truncate" style={{ fontSize: '0.55rem', letterSpacing: '0.5px' }}>{rep.label}</span>
+                          {err ? (
+                            <span className="fw-black text-danger flex-shrink-0" style={{ fontSize: '0.55rem' }} title={err}>ERROR</span>
+                          ) : processingReports ? (
+                            <span className={`fw-black text-${rep.variant} flex-shrink-0`} style={{ fontSize: '0.55rem' }}>{pct === 100 ? 'LISTO' : `${pct}%`}</span>
+                          ) : last?.lastUpdated ? (
+                            <span className="fw-black text-secondary flex-shrink-0 text-truncate" style={{ fontSize: '0.5rem' }} title={`Procesado por: ${last.processedBy || 'N/A'}`}>ÚLT. {last.lastUpdated}</span>
+                          ) : (
+                            <span className="fw-black text-secondary flex-shrink-0" style={{ fontSize: '0.5rem' }}>EN ESPERA</span>
+                          )}
+                        </div>
+                        <ProgressBar now={pct} variant={rep.variant} style={{ height: '3px', opacity: processingReports ? 1 : 0.4 }} />
+                      </div>
+                    </Col>
+                  );
+                })}
+              </Row>
+            </div>
+          )}
+        </div>
+      </Col>
+    );
   };
 
   return (
@@ -512,7 +463,7 @@ const AdminUploadPage: FC = () => {
         <div className="admin-layout-container">
           <div className="admin-section-table">
             <div className="flex-grow-1 overflow-auto custom-scrollbar p-2 p-md-3">
-              <Alert variant="warning" className="d-flex align-items-center mb-4 border-0 mx-0" style={{ backgroundColor: 'rgba(244, 0, 9, 0.1)', color: 'var(--theme-text-primary)', borderLeft: '4px solid var(--color-red-primary) !important' }}>
+              <Alert variant="warning" className="d-flex align-items-center mb-4 border-0 mx-0 accent-border-left-danger" style={{ backgroundColor: 'rgba(244, 0, 9, 0.1)', color: 'var(--theme-text-primary)' }}>
                 <FaExclamationTriangle className="me-3 fs-4 flex-shrink-0 text-danger" />
                 <div style={{ fontSize: '0.85rem' }}>
                   <strong>Atención:</strong> Al subir un nuevo archivo, el sistema <strong>reemplazará completamente</strong> la información existente y regenerará los reportes.
@@ -520,68 +471,11 @@ const AdminUploadPage: FC = () => {
               </Alert>
 
               <Row className="g-3 g-md-4 m-0 w-100 mb-4">
-                {['maestro', 'demanda'].map((type) => (
-                  <Col key={type} xs={12} xl={6} className="px-0 m-0">
-                    <div className="p-3 p-md-4 h-100 admin-border-industrial" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
-                      <div className="d-flex align-items-center mb-3">
-                        <div className="p-3 me-3 d-flex align-items-center justify-content-center" style={{ backgroundColor: 'var(--theme-icon-bg)', border: '1px solid var(--theme-border-default)' }}>
-                          <FaFileExcel className={`text-${type === 'maestro' ? 'danger' : 'primary'} fs-3`} />
-                        </div>
-                        <div className="flex-grow-1 min-width-0">
-                          <h6 className="mb-0 fw-black text-uppercase text-truncate" style={{ letterSpacing: '1px' }}>{type}</h6>
-                          <small className="text-secondary fw-bold text-truncate d-block" style={{ fontSize: '0.6rem' }}>SISTEMA DE REEMPLAZO TOTAL</small>
-                        </div>
-                        <Button variant="link" className="p-0 text-secondary" onClick={() => downloadTemplate(type as any)}>
-                          <FaDownload size={16} />
-                        </Button>
-                      </div>
-                      
-                      <p className="mb-4 text-secondary" style={{ fontSize: '0.8rem' }}>
-                        {type === 'maestro' ? 'Cargue el catálogo maestro de clientes y rutas.' : 'Actualice la demanda diaria para sincronizar cuotas.'}
-                      </p>
-
-                      <div className="p-3 mb-3" style={{ backgroundColor: 'var(--theme-background-tertiary)', border: '1px solid var(--theme-border-default)' }}>
-                        <div className="d-flex align-items-center mb-2 small fw-black text-secondary" style={{ fontSize: '0.7rem' }}>
-                          <FaHistory className="me-2" /> ÚLTIMA CARGA
-                        </div>
-                        {metadataLoadingStatus[type] ? <div className="py-2"><GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} /></div> : lastUploads[type] ? (
-                          <Row className="g-2">
-                            <Col xs={12} sm={6}>
-                              <div style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Sincronización</div>
-                              <div className="fw-black text-truncate" style={{ fontSize: '0.7rem', color: 'var(--theme-text-primary)' }}>{lastUploads[type].updatedAt}</div>
-                            </Col>
-                            <Col xs={12} sm={6}>
-                              <div style={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Responsable</div>
-                              <div className="fw-black d-flex align-items-center text-truncate" style={{ fontSize: '0.7rem', color: 'var(--theme-text-primary)' }}>
-                                <FaUser className="me-1 flex-shrink-0" size={10} /> <span className="text-truncate">{lastUploads[type].userName}</span>
-                              </div>
-                            </Col>
-                            <Col xs={12}>
-                              <div className="mt-1 fw-black text-success d-flex align-items-center" style={{ fontSize: '0.65rem' }}>
-                                <FaCheckCircle className="me-2 flex-shrink-0" /> {lastUploads[type].rowCount.toLocaleString()} REGISTROS ACTIVOS
-                              </div>
-                            </Col>
-                          </Row>
-                        ) : (
-                          <div className="d-flex align-items-center justify-content-center h-100 text-secondary py-2" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
-                            <FaInfoCircle className="me-2" /> Sin registros
-                          </div>
-                        )}
-                      </div>
-
-                      <Form.Group>
-                        <Form.Label htmlFor={`upload-${type}`} className={`btn btn-outline-${type === 'maestro' ? 'danger' : 'primary'} w-100 py-2 fw-black text-uppercase`} style={{ fontSize: '0.75rem' }}>
-                          <FaCloudUploadAlt className="me-2 fs-5" /> Sincronizar {type}
-                        </Form.Label>
-                        <Form.Control id={`upload-${type}`} type="file" accept=".xlsx, .xls, .csv" hidden onChange={(e: any) => processFile(e.target.files?.[0], type as any)} disabled={isUploading} />
-                      </Form.Group>
-                    </div>
-                  </Col>
-                ))}
+                {renderUploadCard('maestro')}
+                {renderUploadCard('demanda')}
               </Row>
 
-              {/* SECCIÓN ANALÍTICA PRO: CARGA HISTÓRICA AGREGADA */}
-              <div className="admin-border-industrial p-4 mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)', borderLeft: '4px solid #ffc107 !important' }}>
+              <div className="admin-border-industrial accent-border-left-warning p-4 mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
                 <div className="d-flex align-items-center mb-3">
                   <div className="p-3 me-3 d-flex align-items-center justify-content-center" style={{ backgroundColor: 'rgba(255, 193, 7, 0.1)', border: '1px solid #ffc107' }}>
                     <FaDatabase className="text-warning fs-3" />
@@ -591,9 +485,9 @@ const AdminUploadPage: FC = () => {
                     <small className="text-warning fw-bold" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Sistema Acumulativo e Inteligente (Firestore)</small>
                   </div>
                 </div>
-                
+
                 <p className="mb-4 text-secondary" style={{ fontSize: '0.8rem' }}>
-                  A diferencia de la carga diaria, este proceso **agrega** la información al historial existente. 
+                  A diferencia de la carga diaria, este proceso <strong>agrega</strong> la información al historial existente. 
                   Calcula automáticamente CF/CU y agrupa por cliente/día para análisis de tendencias de largo plazo.
                 </p>
 
@@ -620,20 +514,23 @@ const AdminUploadPage: FC = () => {
                     <div className="p-3 border h-100" style={{ backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)' }}>
                       <label className="small fw-black text-uppercase text-secondary mb-2" style={{ fontSize: '0.6rem' }}>Mantenimiento de Datos</label>
                       <div className="d-flex gap-2">
-                        <Form.Control 
-                          type="date" 
-                          value={deleteDate} 
+                        <Form.Control
+                          type="date"
+                          value={deleteDate}
                           onChange={(e) => setDeleteDate(e.target.value)}
                           className="bg-transparent border-secondary border-opacity-25"
                           style={{ fontSize: '0.75rem', color: 'var(--theme-text-primary)' }}
+                          aria-label="Fecha de registros a eliminar"
                           disabled={isDeletingDay}
                         />
-                        <Button 
-                          variant="danger" 
-                          size="sm" 
+                        <Button
+                          variant="danger"
+                          size="sm"
                           className="fw-black text-uppercase px-3"
                           style={{ fontSize: '0.7rem' }}
                           onClick={deleteDayHistorica}
+                          title="Eliminar todos los registros del día seleccionado"
+                          aria-label="Eliminar todos los registros del día seleccionado"
                           disabled={isDeletingDay || !deleteDate}
                         >
                           {isDeletingDay ? <Spinner size="sm" animation="border" /> : <FaTrash />}
@@ -641,56 +538,6 @@ const AdminUploadPage: FC = () => {
                       </div>
                     </div>
                   </Col>
-                </Row>
-              </div>
-
-              <div className="admin-border-industrial p-4 mb-4" style={{ backgroundColor: 'var(--theme-background-secondary)' }}>
-                <div className="d-flex align-items-center mb-4 gap-2">
-                  <FaSpinner className={`${processingReports || isUploading ? 'spinner-animation' : ''} text-danger`} size={20} />
-                  <label className="small fw-black text-uppercase m-0" style={{ color: 'var(--theme-text-primary)', letterSpacing: '1px' }}>Inteligencia Logística y Reportes</label>
-                </div>
-                {isUploading && (
-                  <div className="mb-4 p-3 border" style={{ backgroundColor: 'var(--theme-background-tertiary)', borderColor: 'var(--theme-border-default)' }}>
-                    <div className="d-flex justify-content-between mb-2 small fw-black text-uppercase">
-                      <span className="text-secondary">Sincronización Cruda</span>
-                      <span className="text-danger">{uploadProgress}%</span>
-                    </div>
-                    <ProgressBar now={uploadProgress} variant="danger" style={{ height: '4px' }} />
-                  </div>
-                )}
-                <Row className="g-3">
-                  {[
-                    { id: 'volumen', label: 'Reporte de Volumen', variant: 'success', icon: <FaShoppingCart /> },
-                    { id: 'eficiencia', label: 'Reporte de Eficiencia', variant: 'primary', icon: <FaChartLine /> },
-                    { id: 'bebidas', label: 'Reporte de Bebidas', variant: 'info', icon: <FaGlassMartiniAlt /> },
-                    { id: 'duplicados', label: 'Reporte DUPLICADOS', variant: 'warning', icon: <FaBox /> },
-                    { id: 'cobertura', label: 'Reporte COBERTURA', variant: 'danger', icon: <FaUsers /> }
-                  ].map(rep => (
-                    <Col key={rep.id} xs={12} md={6} lg={3}>
-                      <div className="p-3 h-100 admin-border-industrial" style={{ background: 'var(--theme-background-primary)' }}>
-                        <div className="mb-2 d-flex justify-content-between align-items-center">
-                          <div className="d-flex align-items-center gap-2">
-                            <span className={`text-${rep.variant}`}>{rep.icon}</span>
-                            <span style={{ fontSize: '0.65rem', fontWeight: 900 }} className="text-uppercase">{rep.label}</span>
-                          </div>
-                          <span style={{ fontSize: '0.7rem', fontWeight: 900 }} className={`text-${rep.variant}`}>{reportProgress[rep.id]}%</span>
-                        </div>
-                        {processingReports ? (
-                          <>
-                            <ProgressBar now={reportProgress[rep.id]} variant={rep.variant} style={{ height: '3px' }} />
-                            <div className="mt-2 text-end">
-                              <span className={`fw-black text-${rep.variant}`} style={{ fontSize: '0.55rem' }}>{reportProgress[rep.id] === 100 ? 'COMPLETADO' : 'PROCESANDO...'}</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="d-flex flex-column align-items-center justify-content-center py-2">
-                            <GlobalSpinner variant={SPINNER_VARIANTS.IN_PAGE} />
-                            <small className="text-secondary fw-bold mt-1" style={{ fontSize: '0.5rem' }}>ESPERANDO DEMANDA</small>
-                          </div>
-                        )}
-                      </div>
-                    </Col>
-                  ))}
                 </Row>
               </div>
             </div>
@@ -709,6 +556,8 @@ const AdminUploadPage: FC = () => {
           border-color: var(--color-red-primary) !important;
         }
         .progress { background-color: var(--theme-background-tertiary) !important; border-radius: 0 !important; }
+        .accent-border-left-danger { border-left: 4px solid var(--color-red-primary) !important; }
+        .accent-border-left-warning { border-left: 4px solid #ffc107 !important; }
       `}</style>
     </Fragment>
   );
