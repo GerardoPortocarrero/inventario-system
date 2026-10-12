@@ -38,7 +38,7 @@ const AnalyticsProPage: FC = () => {
   
   // --- FILTROS EXCLUSIVOS COBERTURA ---
   const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
-  const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string>('ALL');
+  const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string[]>([]);
   const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('');
   const [selectedProductosCobertura, setSelectedProductosCobertura] = useState<string[]>([]);
   const [expandedCoberturaMesas, setExpandedCoberturaMesas] = useState<Record<string, boolean>>({});
@@ -230,7 +230,7 @@ const AnalyticsProPage: FC = () => {
       const cid = String(m.Codigo || '').trim();
       if (!cid) return;
 
-      if (selectedSubCanalCobertura !== 'ALL' && String(m.SubCanal).trim() !== selectedSubCanalCobertura) return;
+      if (selectedSubCanalCobertura.length > 0 && !selectedSubCanalCobertura.includes(String(m.SubCanal).trim())) return;
 
       if (selectedDiaCobertura !== 'ALL') {
         const diasArray = String(m['SEGDIAS'] || m['SEG DIAS'] || m['SEG.DIAS'] || '')
@@ -258,9 +258,8 @@ const AnalyticsProPage: FC = () => {
       }
     });
 
-    // Trackear clientes únicos por ruta+tipo y mesa+tipo
+    // Trackear clientes únicos por ruta+tipo
     const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
-    const mesaTypeClients: Record<string, Record<string, Set<string>>> = {};
     const routeAllClients: Record<string, Set<string>> = {};
 
     // 2. Llenar con ventas (solo para clientes válidos)
@@ -301,10 +300,6 @@ const AnalyticsProPage: FC = () => {
           if (!routeTypeClients[rid]) routeTypeClients[rid] = {};
           if (!routeTypeClients[rid][tipoId]) routeTypeClients[rid][tipoId] = new Set();
           routeTypeClients[rid][tipoId].add(cid);
-
-          if (!mesaTypeClients[mid]) mesaTypeClients[mid] = {};
-          if (!mesaTypeClients[mid][tipoId]) mesaTypeClients[mid][tipoId] = new Set();
-          mesaTypeClients[mid][tipoId].add(cid);
         }
       });
     });

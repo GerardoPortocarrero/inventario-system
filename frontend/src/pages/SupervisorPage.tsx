@@ -108,13 +108,13 @@ const SupervisorPage: FC = () => {
 
   // Filtros COBERTURA (espejo de Analítica Pro)
   const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
-  const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string>('ALL');
+  const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string[]>([]);
   const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('');
   const [selectedMarcasCobertura, setSelectedMarcasCobertura] = useState<string[]>([]);
   const [selectedProductosCobertura, setSelectedProductosCobertura] = useState<string[]>([]);
   const [showCoberturaModal, setShowCoberturaModal] = useState(false);
   const [tempDiaCobertura, setTempDiaCobertura] = useState<string>('ALL');
-  const [tempSubCanalCobertura, setTempSubCanalCobertura] = useState<string>('ALL');
+  const [tempSubCanalCobertura, setTempSubCanalCobertura] = useState<string[]>([]);
   const [tempTipoBebidaCobertura, setTempTipoBebidaCobertura] = useState<string>('');
   const [tempMarcasCobertura, setTempMarcasCobertura] = useState<string[]>([]);
   const [tempProductosCobertura, setTempProductosCobertura] = useState<string[]>([]);
@@ -495,7 +495,7 @@ const SupervisorPage: FC = () => {
 
   const activeFilterCobCount = [
     selectedDiaCobertura !== 'ALL' && 1,
-    selectedSubCanalCobertura !== 'ALL' && 1,
+    selectedSubCanalCobertura.length > 0 && 1,
     selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && 1,
     selectedProductosCobertura.length > 0 && 1
   ].filter(Boolean).length;
@@ -523,6 +523,10 @@ const SupervisorPage: FC = () => {
     setTempProductosCobertura([]);
   };
 
+  const handleToggleCanalCob = (sc: string) => {
+    setTempSubCanalCobertura(prev => prev.includes(sc) ? prev.filter(c => c !== sc) : [...prev, sc]);
+  };
+
   const handleApplyCobertura = () => {
     setSelectedDiaCobertura(tempDiaCobertura);
     setSelectedSubCanalCobertura(tempSubCanalCobertura);
@@ -536,7 +540,7 @@ const SupervisorPage: FC = () => {
 
   const clearCoberturaFilters = () => {
     setSelectedDiaCobertura('ALL');
-    setSelectedSubCanalCobertura('ALL');
+    setSelectedSubCanalCobertura([]);
     setSelectedTipoCobertura('');
     setSelectedMarcasCobertura([]);
     setSelectedProductosCobertura([]);
@@ -602,7 +606,7 @@ const SupervisorPage: FC = () => {
         const cod = String(sedes.find(s => s.id === selectedSedeId)?.codigo).trim();
         if (loc !== cod) return;
       }
-      if (selectedSubCanalCobertura !== 'ALL' && String(m.SubCanal).trim() !== selectedSubCanalCobertura) return;
+      if (selectedSubCanalCobertura.length > 0 && !selectedSubCanalCobertura.includes(String(m.SubCanal).trim())) return;
       if (selectedDiaCobertura !== 'ALL') {
         const dias = normDias(m['SEGDIAS'] || m['SEG DIAS'] || m['SEG.DIAS'] || '');
         if (!dias.includes(selectedDiaCobertura)) return;
@@ -1525,7 +1529,7 @@ const SupervisorPage: FC = () => {
                   <div className="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
                     <div className="d-flex align-items-center gap-2 flex-wrap">
                       {selectedDiaCobertura !== 'ALL' && <Badge bg="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>DÍA: {selectedDiaCobertura}</Badge>}
-                      {selectedSubCanalCobertura !== 'ALL' && <Badge bg="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>CANAL: {selectedSubCanalCobertura}</Badge>}
+                      {selectedSubCanalCobertura.length > 0 && <Badge bg="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>{selectedSubCanalCobertura.length} CANAL{selectedSubCanalCobertura.length > 1 ? 'ES' : ''}</Badge>}
                       {selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && <Badge bg="danger" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>{selectedTipoNombreCob}</Badge>}
                       {selectedProductosCobertura.length > 0 && <Badge bg="warning" text="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>{selectedProductosCobertura.length} PRODUCTO{selectedProductosCobertura.length > 1 ? 'S' : ''}</Badge>}
                       <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={clearCoberturaFilters} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
@@ -1561,11 +1565,39 @@ const SupervisorPage: FC = () => {
             </div>
 
             <div>
-              <label className="text-danger fw-black text-uppercase mb-2" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>CANAL</label>
-              <Form.Select value={tempSubCanalCobertura} onChange={(e) => setTempSubCanalCobertura(e.target.value)} className="fw-black text-uppercase" style={{ fontSize: '0.8rem' }}>
-                <option value="ALL">TODOS</option>
-                {availableSubCanalesCob.map(sc => <option key={sc} value={sc}>{sc}</option>)}
-              </Form.Select>
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <label className="text-danger fw-black text-uppercase mb-0" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
+                  CANAL <span className="text-secondary">({tempSubCanalCobertura.length} seleccionados)</span>
+                </label>
+                <div className="d-flex gap-2">
+                  <Button variant="link" className="text-success fw-black p-0 text-decoration-none" style={{ fontSize: '0.65rem' }}
+                    onClick={() => setTempSubCanalCobertura([...availableSubCanalesCob])}>
+                    TODO
+                  </Button>
+                  <Button variant="link" className="text-danger fw-black p-0 text-decoration-none" style={{ fontSize: '0.65rem' }}
+                    onClick={() => setTempSubCanalCobertura([])}>
+                    LIMPIAR
+                  </Button>
+                </div>
+              </div>
+              <div className="d-flex flex-wrap gap-2 p-3" style={{ backgroundColor: 'var(--theme-background-secondary)', border: '1px solid var(--theme-border-default)', maxHeight: '180px', overflowY: 'auto' }}>
+                {availableSubCanalesCob.length === 0 ? (
+                  <span className="text-secondary fw-bold small">No hay canales disponibles</span>
+                ) : (
+                  availableSubCanalesCob.slice().sort((a, b) => a.localeCompare(b)).map(sc => (
+                    <Form.Check
+                      key={sc}
+                      type="checkbox"
+                      id={`canal-${sc}`}
+                      label={sc.toUpperCase()}
+                      checked={tempSubCanalCobertura.includes(sc)}
+                      onChange={() => handleToggleCanalCob(sc)}
+                      className="fw-black text-uppercase"
+                      style={{ fontSize: '0.75rem', minWidth: '140px' }}
+                    />
+                  ))
+                )}
+              </div>
             </div>
 
             <div>
