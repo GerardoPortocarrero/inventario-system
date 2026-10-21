@@ -12,7 +12,7 @@ import GlobalSpinner from '../components/GlobalSpinner';
 import { SPINNER_VARIANTS } from '../constants';
 import toast from 'react-hot-toast';
 
-const MAESTRO_COLUMNS = ['Loc', 'Codigo', 'Cliente', 'Dirección', 'Loc. Com.', 'Mesa Com', 'Ruta com', 'Ruta', 'Segmento', 'SEG.DIAS', 'SEM. PREV', 'SubCanal'];
+const MAESTRO_COLUMNS = ['Loc', 'Codigo', 'Cliente', 'Dirección', 'Loc. Com.', 'Mesa Com', 'Ruta com', 'Ruta', 'Segmento', 'SEG.DIAS', 'SEM. PREV', 'SubCanal', 'CensoNevera'];
 const DEMANDA_COLUMNS = ['Entrega', 'Hora', 'Referencia de cliente', 'Fecha documento', 'Clase', 'Documento', 'Posición', 'Solicitante', 'Material', 'Nombre material', 'Cantidad', 'Medida', 'Valor', 'Moneda', 'Status', 'Motivo de rechazo', 'Bloqueo de factura'];
 
 const REPORT_CARDS = [

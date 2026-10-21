@@ -2,6 +2,7 @@ import type { FC } from 'react';
 import { memo, Fragment, useState, useEffect, useMemo, useRef } from 'react';
 import { Badge, Table, Button, Form, Modal, Spinner } from 'react-bootstrap';
 import { FaMapMarkerAlt, FaChevronRight, FaCheck, FaTimes, FaFilter, FaChevronUp, FaCamera } from 'react-icons/fa';
+import { BiFridge } from 'react-icons/bi';
 import useMediaQuery from '../../hooks/useMediaQuery';
 import html2canvas from 'html2canvas';
 
@@ -25,6 +26,8 @@ interface CoberturaTabProps {
   selectedTipoCobertura: string;
   setSelectedTipoCobertura: (tipo: string) => void;
   availableSubCanales: string[];
+  filterNeveras: boolean;
+  setFilterNeveras: (v: boolean) => void;
 }
 
 const CoberturaTab: FC<CoberturaTabProps> = memo(({ 
@@ -33,7 +36,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   matrixCoberturaData, expandedCoberturaMesas, setExpandedCoberturaMesas,
   expandedCoberturaRutas, setExpandedCoberturaRutas,
   selectedDia, setSelectedDia, selectedSubCanal, setSelectedSubCanal,
-  selectedTipoCobertura, setSelectedTipoCobertura, availableSubCanales
+  selectedTipoCobertura, setSelectedTipoCobertura, availableSubCanales,
+  filterNeveras, setFilterNeveras
 }) => {
   const isMobile = useMediaQuery('(max-width: 991px)');
   const [filtersExpanded, setFiltersExpanded] = useState(!isMobile);
@@ -42,6 +46,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [tempDia, setTempDia] = useState(selectedDia);
   const [tempSubCanal, setTempSubCanal] = useState<string[]>(selectedSubCanal);
+  const [tempFilterNeveras, setTempFilterNeveras] = useState<boolean>(filterNeveras);
   const [tempTipoBebida, setTempTipoBebida] = useState(selectedTipoCobertura);
   const [tempMarcas, setTempMarcas] = useState<string[]>(selectedMarcasCobertura);
   const [tempProductos, setTempProductos] = useState<string[]>(selectedProductosCobertura);
@@ -54,6 +59,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
     if (showFilterModal) {
       setTempDia(selectedDia);
       setTempSubCanal(selectedSubCanal);
+      setTempFilterNeveras(filterNeveras);
       setTempTipoBebida(selectedTipoCobertura === 'ALL' ? 'ALL' : (beverageTypes.some(t => t.id === selectedTipoCobertura)
         ? selectedTipoCobertura
         : (beverageTypes[0]?.id || '')));
@@ -63,7 +69,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
       );
       setTempProductos(selectedProductosCobertura);
     }
-  }, [showFilterModal, selectedDia, selectedSubCanal, selectedTipoCobertura, selectedMarcasCobertura, selectedProductosCobertura, beverageTypes, marcas]);
+  }, [showFilterModal, selectedDia, selectedSubCanal, selectedTipoCobertura, selectedMarcasCobertura, selectedProductosCobertura, beverageTypes, marcas, filterNeveras]);
 
   const handleTipoBebidaChange = (tipoId: string) => {
     setTempTipoBebida(tipoId);
@@ -93,6 +99,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
   const handleApply = () => {
     setSelectedDia(tempDia);
     setSelectedSubCanal(tempSubCanal);
+    setFilterNeveras(tempFilterNeveras);
     setSelectedTipoCobertura(tempTipoBebida);
     setSelectedMarcasCobertura(tempMarcas);
     setSelectedProductosCobertura(tempProductos);
@@ -190,7 +197,8 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
     selectedDia !== 'ALL' && 1,
     selectedSubCanal.length > 0 && 1,
     selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && 1,
-    selectedProductosCobertura.length > 0 && 1
+    selectedProductosCobertura.length > 0 && 1,
+    filterNeveras && 1
   ].filter(Boolean).length;
 
   const filteredMarcas = tempTipoBebida === 'ALL'
@@ -284,7 +292,12 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                     {selectedProductosCobertura.length} PRODUCTO{selectedProductosCobertura.length > 1 ? 'S' : ''}
                   </Badge>
                 )}
-                <Button variant="link" className="text-danger p-0 ms-1 text-decoration-none d-flex align-items-center" onClick={() => { setSelectedDia('ALL'); setSelectedSubCanal([]); setSelectedTipoCobertura(''); setSelectedMarcasCobertura([]); setSelectedProductosCobertura([]); }}>
+                {filterNeveras && (
+                  <Badge bg="info" className="fw-black text-uppercase px-2 py-1 d-flex align-items-center gap-1" style={{ fontSize: '0.65rem' }}>
+                    <BiFridge size={11} /> CON NEVERA
+                  </Badge>
+                )}
+                <Button variant="link" className="text-danger p-0 ms-1 text-decoration-none d-flex align-items-center" onClick={() => { setSelectedDia('ALL'); setSelectedSubCanal([]); setSelectedTipoCobertura(''); setSelectedMarcasCobertura([]); setSelectedProductosCobertura([]); setFilterNeveras(false); }}>
                   <FaTimes size={10} />
                 </Button>
               </div>
@@ -343,8 +356,13 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                 {selectedProductosCobertura.length} PRODUCTO{selectedProductosCobertura.length > 1 ? 'S' : ''}
               </Badge>
             )}
+            {filterNeveras && (
+              <Badge bg="info" className="fw-black text-uppercase px-3 py-2 d-flex align-items-center gap-1" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>
+                <BiFridge size={12} /> CON NEVERA
+              </Badge>
+            )}
             {activeFilterCount > 0 && (
-              <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedDia('ALL'); setSelectedSubCanal([]); setSelectedTipoCobertura(''); setSelectedMarcasCobertura([]); setSelectedProductosCobertura([]); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
+              <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={() => { setSelectedDia('ALL'); setSelectedSubCanal([]); setSelectedTipoCobertura(''); setSelectedMarcasCobertura([]); setSelectedProductosCobertura([]); setFilterNeveras(false); }} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
             )}
           </div>
         </div>
@@ -448,7 +466,17 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                   <div key={`${mesaId}-${rutaId}-${clientId}`} style={{ borderTop: '1px solid var(--theme-table-border-color)', padding: '10px 12px', backgroundColor: 'var(--theme-background-primary)' }}>
                                     <div className="d-flex justify-content-between align-items-center mb-1">
                                       <span className="fw-black text-uppercase" style={{ fontSize: '0.8rem', color: 'var(--theme-text-primary)' }}>{client.nombre}</span>
-                                      <span className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
+                                      <div className="d-flex align-items-center gap-2">
+                                        <span className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
+                                        <span
+                                          className="d-flex align-items-center gap-1 fw-black"
+                                          style={{ fontSize: '0.7rem', color: client.neveras > 0 ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)', opacity: client.neveras > 0 ? 1 : 0.4 }}
+                                          title={`Neveras: ${client.neveras}`}
+                                        >
+                                          <BiFridge size={13} />
+                                          {client.neveras}
+                                        </span>
+                                      </div>
                                     </div>
                                     <div className="d-flex align-items-center justify-content-between">
                                       <div className="d-flex align-items-center gap-1">
@@ -605,7 +633,17 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                     <div className="d-flex flex-column">
                                       <div className="d-flex justify-content-between align-items-center mb-1">
                                         <span className="fw-black text-danger" style={{ fontSize: '0.65rem', opacity: 0.9 }}>RUTA: {rutaId}</span>
-                                        <span className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
+                                        <div className="d-flex align-items-center gap-2">
+                                          <span className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
+                                          <span
+                                            className="d-flex align-items-center gap-1 fw-black"
+                                            style={{ fontSize: '0.7rem', color: client.neveras > 0 ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)', opacity: client.neveras > 0 ? 1 : 0.4 }}
+                                            title={`Neveras: ${client.neveras}`}
+                                          >
+                                            <BiFridge size={13} />
+                                            {client.neveras}
+                                          </span>
+                                        </div>
                                       </div>
                                       <span className="fw-black text-uppercase" style={{ fontSize: '0.9rem', color: 'var(--theme-text-primary)', letterSpacing: '0.5px', lineHeight: '1.1' }}>
                                         {client.nombre}
@@ -755,6 +793,19 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                   <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>
                 ))}
               </Form.Select>
+            </div>
+
+            {/* SOLO CON NEVERA */}
+            <div className="d-flex align-items-center justify-content-between">
+              <label className="text-danger fw-black text-uppercase mb-0 d-flex align-items-center gap-2" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
+                <BiFridge size={14} /> SOLO CLIENTES CON NEVERA
+              </label>
+              <Form.Check
+                type="switch"
+                id="switch-nevera"
+                checked={tempFilterNeveras}
+                onChange={(e) => setTempFilterNeveras(e.target.checked)}
+              />
             </div>
 
             {/* MARCAS */}
