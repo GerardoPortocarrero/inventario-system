@@ -8,6 +8,7 @@ import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import useMediaQuery from '../hooks/useMediaQuery';
 import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy, FaBox, FaSlidersH } from 'react-icons/fa';
+import { BiFridge } from 'react-icons/bi';
 import html2canvas from 'html2canvas';
 import GlobalSpinner from '../components/GlobalSpinner';
 
@@ -112,12 +113,14 @@ const SupervisorPage: FC = () => {
   const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('');
   const [selectedMarcasCobertura, setSelectedMarcasCobertura] = useState<string[]>([]);
   const [selectedProductosCobertura, setSelectedProductosCobertura] = useState<string[]>([]);
+  const [filterNeverasCob, setFilterNeverasCob] = useState<boolean>(false);
   const [showCoberturaModal, setShowCoberturaModal] = useState(false);
   const [tempDiaCobertura, setTempDiaCobertura] = useState<string>('ALL');
   const [tempSubCanalCobertura, setTempSubCanalCobertura] = useState<string[]>([]);
   const [tempTipoBebidaCobertura, setTempTipoBebidaCobertura] = useState<string>('');
   const [tempMarcasCobertura, setTempMarcasCobertura] = useState<string[]>([]);
   const [tempProductosCobertura, setTempProductosCobertura] = useState<string[]>([]);
+  const [tempFilterNeverasCob, setTempFilterNeverasCob] = useState<boolean>(false);
   
   const [selectedSedeId, setSelectedSedeId] = useState<string>(() => localStorage.getItem('sup_selectedSedeId') || 'GLOBAL');
   const [selectedReportType, setSelectedReportType] = useState<ReportType>(() => (localStorage.getItem('sup_selectedReportType') as ReportType) || 'VOLUMEN');
@@ -497,7 +500,8 @@ const SupervisorPage: FC = () => {
     selectedDiaCobertura !== 'ALL' && 1,
     selectedSubCanalCobertura.length > 0 && 1,
     selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && 1,
-    selectedProductosCobertura.length > 0 && 1
+    selectedProductosCobertura.length > 0 && 1,
+    filterNeverasCob && 1
   ].filter(Boolean).length;
 
   const filteredMarcasCob = tempTipoBebidaCobertura === 'ALL' ? marcas : marcas.filter(m => m.tipoBebidaId === tempTipoBebidaCobertura);
@@ -509,6 +513,7 @@ const SupervisorPage: FC = () => {
     setTempTipoBebidaCobertura(selectedTipoCobertura === 'ALL' ? 'ALL' : (beverageTypes.some(t => t.id === selectedTipoCobertura) ? selectedTipoCobertura : (beverageTypes[0]?.id || '')));
     setTempMarcasCobertura(selectedTipoCobertura ? selectedMarcasCobertura : marcas.filter(m => m.tipoBebidaId === (beverageTypes[0]?.id || '')).map(m => m.id));
     setTempProductosCobertura(selectedProductosCobertura);
+    setTempFilterNeverasCob(filterNeverasCob);
     setShowCoberturaModal(true);
   };
 
@@ -533,6 +538,7 @@ const SupervisorPage: FC = () => {
     setSelectedTipoCobertura(tempTipoBebidaCobertura === 'ALL' ? 'ALL' : tempTipoBebidaCobertura);
     setSelectedMarcasCobertura(tempMarcasCobertura);
     setSelectedProductosCobertura(tempProductosCobertura);
+    setFilterNeverasCob(tempFilterNeverasCob);
     setShowCoberturaModal(false);
   };
 
@@ -544,6 +550,7 @@ const SupervisorPage: FC = () => {
     setSelectedTipoCobertura('');
     setSelectedMarcasCobertura([]);
     setSelectedProductosCobertura([]);
+    setFilterNeverasCob(false);
   };
 
   const groupSumCob = (total: Record<string, { cf: number; cu: number }>, brandIds: string[]) =>
@@ -558,6 +565,7 @@ const SupervisorPage: FC = () => {
     if (selectedReportType !== 'COBERTURA' || typeColumnHeadersCob.length === 0) return [];
 
     const prodMap = supProducts.reduce((acc, p) => ({ ...acc, [cleanId(p.sap)]: p }), {} as Record<string, any>);
+    const getCensoNevera = (m: any): number => Number(m.CensoNevera ?? m.Censo_Nevera) || 0;
     const UNIT_CASE_ML = 5677.92;
 
     const normDias = (val: string) => String(val || '')
@@ -611,6 +619,7 @@ const SupervisorPage: FC = () => {
         const dias = normDias(m['SEGDIAS'] || m['SEG DIAS'] || m['SEG.DIAS'] || '');
         if (!dias.includes(selectedDiaCobertura)) return;
       }
+      if (filterNeverasCob && !(getCensoNevera(m) > 0)) return;
 
       const mesa = String(m['Mesa Com'] || m['MESA COM'] || 'SIN MESA').trim();
       const ruta = String(m['Ruta com'] || m['RUTA COM'] || 'SIN RUTA').trim();
@@ -720,7 +729,7 @@ const SupervisorPage: FC = () => {
     });
 
     return resultado;
-  }, [coberturaReport, maestroData, selectedSedeId, sedes, supProducts, marcas, selectedSubCanalCobertura, selectedDiaCobertura, selectedMarcasCobertura, selectedProductosCobertura, typeColumnHeadersCob, selectedReportType, selectedTipoCobertura, cleanId]);
+  }, [coberturaReport, maestroData, selectedSedeId, sedes, supProducts, marcas, selectedSubCanalCobertura, selectedDiaCobertura, selectedMarcasCobertura, selectedProductosCobertura, typeColumnHeadersCob, selectedReportType, selectedTipoCobertura, cleanId, filterNeverasCob]);
 
   const toggleRuta = useCallback((rutaKey: string) => setExpandedRutas(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] })), []);
 
@@ -1532,6 +1541,7 @@ const SupervisorPage: FC = () => {
                       {selectedSubCanalCobertura.length > 0 && <Badge bg="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>{selectedSubCanalCobertura.length} CANAL{selectedSubCanalCobertura.length > 1 ? 'ES' : ''}</Badge>}
                       {selectedTipoCobertura && selectedTipoCobertura !== 'ALL' && <Badge bg="danger" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>{selectedTipoNombreCob}</Badge>}
                       {selectedProductosCobertura.length > 0 && <Badge bg="warning" text="dark" className="fw-black text-uppercase px-3 py-2" style={{ fontSize: '0.65rem', borderRadius: '2px' }}>{selectedProductosCobertura.length} PRODUCTO{selectedProductosCobertura.length > 1 ? 'S' : ''}</Badge>}
+                      {filterNeverasCob && <Badge bg="info" className="fw-black text-uppercase px-3 py-2 d-inline-flex align-items-center gap-1" style={{ fontSize: '0.65rem', borderRadius: '2px' }}><BiFridge size={12} /> CON NEVERA</Badge>}
                       <Button variant="link" className="text-secondary small fw-black p-0 ms-2 text-decoration-none" onClick={clearCoberturaFilters} style={{ fontSize: '0.65rem' }}>LIMPIAR</Button>
                     </div>
                   </div>
@@ -1608,6 +1618,18 @@ const SupervisorPage: FC = () => {
                   <option key={t.id} value={t.id}>{t.nombre.toUpperCase()}</option>
                 ))}
               </Form.Select>
+            </div>
+
+            <div className="d-flex align-items-center justify-content-between">
+              <label className="text-danger fw-black text-uppercase mb-0 d-flex align-items-center gap-2" style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
+                <BiFridge size={14} /> SOLO CLIENTES CON NEVERA
+              </label>
+              <Form.Check
+                type="switch"
+                id="switch-nevera-cob"
+                checked={tempFilterNeverasCob}
+                onChange={(e) => setTempFilterNeverasCob(e.target.checked)}
+              />
             </div>
 
             <div>

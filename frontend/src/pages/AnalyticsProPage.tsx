@@ -39,6 +39,7 @@ const AnalyticsProPage: FC = () => {
   // --- FILTROS EXCLUSIVOS COBERTURA ---
   const [selectedDiaCobertura, setSelectedDiaCobertura] = useState<string>('ALL');
   const [selectedSubCanalCobertura, setSelectedSubCanalCobertura] = useState<string[]>([]);
+  const [filterNeveras, setFilterNeveras] = useState<boolean>(false);
   const [selectedTipoCobertura, setSelectedTipoCobertura] = useState<string>('');
   const [selectedProductosCobertura, setSelectedProductosCobertura] = useState<string[]>([]);
   const [expandedCoberturaMesas, setExpandedCoberturaMesas] = useState<Record<string, boolean>>({});
@@ -221,6 +222,8 @@ const AnalyticsProPage: FC = () => {
     const prodMap = products.reduce((acc, p) => ({ ...acc, [String(p.sap).trim()]: p }), {} as any);
     const marcasMap = marcas.reduce((acc, m) => ({ ...acc, [m.id]: m }), {} as any);
 
+    const getCensoNevera = (m: any): number => Number(m.CensoNevera ?? m.Censo_Nevera) || 0;
+
     // 1. Identificar clientes que cumplen los filtros (Día, SubCanal, Sede)
     const validClients = new Set<string>();
     const clientMeta: Record<string, any> = {};
@@ -242,6 +245,8 @@ const AnalyticsProPage: FC = () => {
 
       if (selectedSede !== 'ALL' && String(m.Loc || '').trim() !== selectedSede) return;
 
+      if (filterNeveras && !(getCensoNevera(m) > 0)) return;
+
       validClients.add(cid);
       const rid = String(m['Ruta com'] || m.Ruta || 'S/R').trim();
       const mid = String(m['Mesa Com'] || m['MESA COM'] || 'SIN MESA').trim();
@@ -253,7 +258,7 @@ const AnalyticsProPage: FC = () => {
       if (!matrix[mid].rutas[rid].clientes[cid]) {
         matrix[mid].rutas[rid].totalClientesRuta++;
         matrix[mid].totalClientesMesa++;
-        matrix[mid].rutas[rid].clientes[cid] = { nombre: m.Cliente, marcas: {} };
+        matrix[mid].rutas[rid].clientes[cid] = { nombre: m.Cliente, marcas: {}, neveras: getCensoNevera(m) };
         mesaSet.add(mid);
       }
     });
@@ -319,7 +324,7 @@ const AnalyticsProPage: FC = () => {
     });
 
     return { mesas: Array.from(mesaSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), data: matrix };
-  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedProductosCobertura, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede, marcas, selectedTipoCobertura]);
+  }, [filteredData, maestroData, activeTab, selectedMarcasCobertura, products, selectedProductosCobertura, selectedDiaCobertura, selectedSubCanalCobertura, selectedSede, marcas, selectedTipoCobertura, filterNeveras]);
 
   // OPTIMIZACIÓN: Separar agregación de filtrado de productos
   const groupedProducts = useMemo(() => {
@@ -494,6 +499,8 @@ const AnalyticsProPage: FC = () => {
                     selectedTipoCobertura={selectedTipoCobertura}
                     setSelectedTipoCobertura={setSelectedTipoCobertura}
                     availableSubCanales={availableSubCanales}
+                    filterNeveras={filterNeveras}
+                    setFilterNeveras={setFilterNeveras}
                   />
                 )}
               </Tab.Pane>
