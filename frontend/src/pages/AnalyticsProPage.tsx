@@ -21,6 +21,9 @@ import ProductsTab from './analytics/ProductsTab';
 
 registerLocale('es', es);
 
+const cleanId = (id: any) => String(id || '').trim().replace(/^0+/, '');
+const getCensoNevera = (m: any): number => Number(m.CensoNevera ?? m.Censo_Nevera) || 0;
+
 const AnalyticsProPage: FC = () => {
   const { sedes, marcas, beverageTypes } = useData();
   const isMobile = useMediaQuery('(max-width: 991px)');
@@ -171,17 +174,25 @@ const AnalyticsProPage: FC = () => {
   // OPTIMIZACIÓN: Separar agregación de filtrado
   const groupedClients = useMemo(() => {
     if (activeTab !== 'clientes') return [];
+    const maestroMap = maestroData.reduce((acc: any, m) => {
+      const cid = cleanId(m.Codigo);
+      if (cid) acc[cid] = m;
+      return acc;
+    }, {} as Record<string, any>);
+
     const cMap: Record<string, any> = {};
     filteredData.forEach(d => {
       const id = String(d.solicitante || '').trim();
       if (!cMap[id]) {
         const sedeCodigo = String(d.sede || '').trim();
         const sedeMatch = sedes.find(s => s.codigo === sedeCodigo);
+        const masterClient = maestroMap[id];
         cMap[id] = {
           clientId: id,
           clientName: String(d.nombreCliente || 'SIN NOMBRE'),
           sedeNombre: sedeMatch?.nombre || sedeCodigo || 'SIN SEDE',
           ruta: String(d.ruta || 'S/R').trim(),
+          neveras: masterClient ? getCensoNevera(masterClient) : 0,
           monetary: 0, cf: 0, cu: 0
         };
       }
@@ -190,7 +201,7 @@ const AnalyticsProPage: FC = () => {
       cMap[id].cu += d.totalCU || 0;
     });
     return Object.values(cMap);
-  }, [filteredData, activeTab, sedes]);
+  }, [filteredData, activeTab, sedes, maestroData]);
 
   const clientMetrics = useMemo(() => {
     let res = [...groupedClients];

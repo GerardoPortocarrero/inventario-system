@@ -7,7 +7,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { useData } from '../context/DataContext';
 import { SPINNER_VARIANTS } from '../constants';
 import useMediaQuery from '../hooks/useMediaQuery';
-import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy, FaBox, FaSlidersH } from 'react-icons/fa';
+import { FaWarehouse, FaFilter, FaGlassMartiniAlt, FaChevronRight, FaSyncAlt, FaCalendarAlt, FaExclamationTriangle, FaCopy, FaBox, FaSlidersH, FaCheck, FaTimes } from 'react-icons/fa';
 import { BiFridge } from 'react-icons/bi';
 import html2canvas from 'html2canvas';
 import GlobalSpinner from '../components/GlobalSpinner';
@@ -140,6 +140,7 @@ const SupervisorPage: FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
   const [expandedRutas, setExpandedRutas] = useState<Record<string, boolean>>({});
+  const [expandedRutasCob, setExpandedRutasCob] = useState<Record<string, boolean>>({});
 
   // Efectos para persistencia
   useEffect(() => { localStorage.setItem('sup_selectedSedeId', selectedSedeId); }, [selectedSedeId]);
@@ -659,6 +660,25 @@ const SupervisorPage: FC = () => {
           const rAll = new Set<string>();
           const rTipos: Record<string, Set<string>> = {};
 
+          const rClientes: Record<string, any> = {};
+          maestroData.forEach(m => {
+            const cid = cleanId(m.Codigo);
+            if (!cid) return;
+            const loc = String(m.Loc || 'OTRO').trim();
+            if (loc !== locId) return;
+            const msa = String(m['Mesa Com'] || m['MESA COM'] || 'SIN MESA').trim();
+            if (msa !== mesaId) return;
+            const rt = String(m['Ruta com'] || m['RUTA COM'] || 'SIN RUTA').trim();
+            if (rt !== rutaId) return;
+            if (!validClients.has(cid)) return;
+
+            rClientes[cid] = {
+              nombre: m.Cliente || 'SIN NOMBRE',
+              neveras: getCensoNevera(m),
+              marcas: {}
+            };
+          });
+
           Object.entries(ruta.clientes || {}).forEach(([cid, cliente]: [string, any]) => {
             if (!validClients.has(cid)) return;
 
@@ -671,6 +691,19 @@ const SupervisorPage: FC = () => {
               addTotal(rTotal, c.marcaId, c.cf, c.cu);
               addTotal(mesaTotal, c.marcaId, c.cf, c.cu);
               addTotal(locTotal, c.marcaId, c.cf, c.cu);
+
+              if (!rClientes[cid]) {
+                const master = maestroData.find(x => cleanId(x.Codigo) === cid);
+                rClientes[cid] = {
+                  nombre: master?.Cliente || cliente.nombre || 'SIN NOMBRE',
+                  neveras: getCensoNevera(master),
+                  marcas: {}
+                };
+              }
+              if (!rClientes[cid].marcas[c.marcaId]) rClientes[cid].marcas[c.marcaId] = { cf: 0, cu: 0 };
+              rClientes[cid].marcas[c.marcaId].cf += c.cf;
+              rClientes[cid].marcas[c.marcaId].cu += c.cu;
+
               const tipoId = marcas.find(m => m.id === c.marcaId)?.tipoBebidaId;
               if (tipoId && !tiposSeen.includes(tipoId)) tiposSeen.push(tipoId);
             });
@@ -696,7 +729,8 @@ const SupervisorPage: FC = () => {
             rutasOut[rutaId] = {
               total: rTotal,
               totalClientesRuta: totRuta,
-              cliConVentaPorTipo: toCliConVenta(rTipos)
+              cliConVentaPorTipo: toCliConVenta(rTipos),
+              clientes: rClientes
             };
           }
         });
@@ -1158,19 +1192,77 @@ const SupervisorPage: FC = () => {
                           </div>
                           <div className="px-2 px-md-3">
                             {Object.entries(mesa.rutas || {}).map(([rutaName, ruta]: [string, any]) => {
+                              const rutaKey = `${loc.id}-${mesaName}-${rutaName}`;
+                              const isRutaExpanded = expandedRutasCob[rutaKey];
                               const rSum = groupSumCob(ruta.total, firstTipo.brandIds);
                               const rHas = groupHasCob(ruta.total, firstTipo.brandIds);
                               const rCli = ruta.cliConVentaPorTipo?.[firstTipo.tipoId] || 0;
                               const rPct = ruta.totalClientesRuta > 0 ? Math.round((rCli * 100) / ruta.totalClientesRuta) : 0;
                               return (
-                                <div key={rutaName} className="ruta-card-compact mb-1">
-                                  <div className="ruta-main-row d-flex justify-content-between align-items-center px-2 py-1">
-                                    <span className="r-label"><FaChevronRight size={10} /> RUTA {rutaName}</span>
+                                <div key={rutaName} className="ruta-card-compact mb-1" style={{ backgroundColor: isRutaExpanded ? 'rgba(244, 0, 9, 0.03)' : 'var(--theme-background-primary)' }}>
+                                  <div
+                                    className="d-flex justify-content-between align-items-center px-2 py-1"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => setExpandedRutasCob(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] }))}
+                                  >
+                                    <div className="d-flex align-items-center gap-2">
+                                      <FaChevronRight size={10} style={{ transform: isRutaExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', color: 'var(--color-red-primary)' }} />
+                                      <span className="r-label fw-black text-uppercase" style={{ color: 'var(--color-red-primary)' }}>RUTA {rutaName}</span>
+                                    </div>
                                     <div className="d-flex gap-2 align-items-center">
                                       <span className={rHas ? 'text-success fw-bold' : 'text-secondary opacity-25'} style={{ fontSize: '0.7rem' }}>{rSum.cf.toFixed(1)}/{rSum.cu.toFixed(2)}</span>
                                       <span className={rHas ? 'text-info fw-bold' : 'text-secondary opacity-25'} style={{ fontSize: '0.7rem' }}>{rCli}/{ruta.totalClientesRuta} ({rPct}%)</span>
                                     </div>
                                   </div>
+
+                                  {isRutaExpanded && (
+                                    <div style={{ borderTop: '1px solid var(--theme-table-border-color)', marginTop: '8px' }}>
+                                      {Object.entries(ruta.clientes || {})
+                                        .sort((a: any, b: any) => a[1].nombre.localeCompare(b[1].nombre))
+                                        .map(([clientId, client]: [string, any]) => {
+                                          const cVals = firstTipo.brandIds.reduce((acc: { cf: number; cu: number }, bId: string) => {
+                                            const b = client.marcas[bId];
+                                            if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
+                                            return acc;
+                                          }, { cf: 0, cu: 0 });
+                                          const cHasData = firstTipo.brandIds.some(bId => client.marcas[bId] !== undefined);
+                                          return (
+                                            <div key={`${rutaKey}-${clientId}`} style={{ borderTop: '1px solid var(--theme-table-border-color)', padding: '10px 12px', backgroundColor: 'var(--theme-background-primary)' }}>
+                                              <div className="d-flex justify-content-between align-items-center mb-1">
+                                                <span className="fw-black text-uppercase" style={{ fontSize: '0.8rem', color: 'var(--theme-text-primary)' }}>{client.nombre}</span>
+                                                <div className="d-flex align-items-center gap-2">
+                                                  <span className="text-secondary fw-bold" style={{ fontSize: '0.60rem' }}>ID: {clientId}</span>
+                                                  <span
+                                                    className="d-flex align-items-center gap-1 fw-black"
+                                                    style={{ fontSize: '0.7rem', color: client.neveras > 0 ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)', opacity: client.neveras > 0 ? 1 : 0.4 }}
+                                                    title={`Neveras: ${client.neveras}`}
+                                                  >
+                                                    <BiFridge size={13} />
+                                                    {client.neveras}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                              <div className="d-flex align-items-center justify-content-between">
+                                                <div className="d-flex align-items-center gap-1">
+                                                  <span style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)' }}>CF:</span>
+                                                  <span className={cHasData ? 'text-success' : 'text-secondary opacity-25'} style={{ fontSize: '0.75rem' }}>{cVals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                                  <span className="text-secondary opacity-50 mx-1" style={{ fontSize: '0.65rem' }}>/</span>
+                                                  <span style={{ fontSize: '0.65rem', color: 'var(--theme-text-secondary)' }}>CU:</span>
+                                                  <span className={cHasData ? 'text-warning' : 'text-secondary opacity-25'} style={{ fontSize: '0.75rem' }}>{cVals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                                </div>
+                                                <div>
+                                                  {cHasData ? (
+                                                    <FaCheck className="text-success" size={14} />
+                                                  ) : (
+                                                    <FaTimes className="text-danger" size={12} />
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1230,34 +1322,99 @@ const SupervisorPage: FC = () => {
                                     );
                                   })}
                                 </tr>
-                                {rutas.map(([rutaName, ruta]: [string, any]) => (
-                                  <tr key={rutaName}>
-                                    <td className="sticky-column text-start ps-5 py-2" style={{ backgroundColor: 'var(--theme-background-secondary)', zIndex: 10 }}>
-                                      <span className="fw-bold text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>{rutaName}</span>
-                                    </td>
-                                    {typeColumnHeadersCob.map((tipo) => {
-                                      const s = groupSumCob(ruta.total, tipo.brandIds);
-                                      const has = groupHasCob(ruta.total, tipo.brandIds);
-                                      const cli = ruta.cliConVentaPorTipo?.[tipo.tipoId] || 0;
-                                      const pct = ruta.totalClientesRuta > 0 ? Math.round((cli * 100) / ruta.totalClientesRuta) : 0;
-                                      return (
-                                        <Fragment key={`${rutaName}-${tipo.tipoId}`}>
-                                          <td className="text-center py-2 fw-bold" style={{ fontSize: '0.85rem', backgroundColor: has ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
-                                            <span className={has ? 'text-success' : 'text-secondary opacity-25'}>{s.cf.toFixed(1)}</span>
-                                            <span className="mx-2 text-secondary opacity-50">/</span>
-                                            <span className={has ? 'text-warning' : 'text-secondary opacity-25'}>{s.cu.toFixed(2)}</span>
-                                          </td>
-                                          <td className="text-center py-2 fw-bold brand-separator" style={{ fontSize: '0.85rem', backgroundColor: has ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
-                                            <span className={has ? 'text-info' : 'text-secondary opacity-25'}>
-                                              {cli} <span className="text-secondary opacity-50 mx-1">/</span> {ruta.totalClientesRuta}
-                                              <span className="text-secondary ms-1" style={{ fontSize: '0.65rem' }}>({pct}%)</span>
-                                            </span>
-                                          </td>
-                                        </Fragment>
-                                      );
-                                    })}
-                                  </tr>
-                                ))}
+                                 {rutas.map(([rutaName, ruta]: [string, any]) => {
+                                   const rutaKey = `${loc.id}-${mesaName}-${rutaName}`;
+                                   const isRutaExpanded = expandedRutasCob[rutaKey];
+                                   return (
+                                     <Fragment key={rutaName}>
+                                       <tr
+                                         onClick={() => setExpandedRutasCob(prev => ({ ...prev, [rutaKey]: !prev[rutaKey] }))}
+                                         style={{ cursor: 'pointer' }}
+                                       >
+                                         <td className="sticky-column text-start ps-5 py-2" style={{ backgroundColor: 'var(--theme-background-secondary)', zIndex: 10 }}>
+                                           <div className="d-flex align-items-center gap-2">
+                                             <FaChevronRight size={10} style={{ transform: isRutaExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.1s', color: 'var(--color-red-primary)' }} />
+                                             <span className="fw-bold text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>RUTA {rutaName}</span>
+                                           </div>
+                                         </td>
+                                         {typeColumnHeadersCob.map((tipo) => {
+                                           const s = groupSumCob(ruta.total, tipo.brandIds);
+                                           const has = groupHasCob(ruta.total, tipo.brandIds);
+                                           const cli = ruta.cliConVentaPorTipo?.[tipo.tipoId] || 0;
+                                           const pct = ruta.totalClientesRuta > 0 ? Math.round((cli * 100) / ruta.totalClientesRuta) : 0;
+                                           return (
+                                             <Fragment key={`${rutaName}-${tipo.tipoId}`}>
+                                               <td className="text-center py-2 fw-bold" style={{ fontSize: '0.85rem', backgroundColor: has ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
+                                                 <span className={has ? 'text-success' : 'text-secondary opacity-25'}>{s.cf.toFixed(1)}</span>
+                                                 <span className="mx-2 text-secondary opacity-50">/</span>
+                                                 <span className={has ? 'text-warning' : 'text-secondary opacity-25'}>{s.cu.toFixed(2)}</span>
+                                               </td>
+                                               <td className="text-center py-2 fw-bold brand-separator" style={{ fontSize: '0.85rem', backgroundColor: has ? 'rgba(244, 0, 9, 0.03)' : 'transparent' }}>
+                                                 <span className={has ? 'text-info' : 'text-secondary opacity-25'}>
+                                                   {cli} <span className="text-secondary opacity-50 mx-1">/</span> {ruta.totalClientesRuta}
+                                                   <span className="text-secondary ms-1" style={{ fontSize: '0.65rem' }}>({pct}%)</span>
+                                                 </span>
+                                               </td>
+                                             </Fragment>
+                                           );
+                                         })}
+                                       </tr>
+                                       {isRutaExpanded && Object.entries(ruta.clientes || {})
+                                         .sort((a: any, b: any) => a[1].nombre.localeCompare(b[1].nombre))
+                                         .map(([clientId, client]: [string, any]) => (
+                                           <tr key={`${rutaKey}-${clientId}`}>
+                                             <td className="ps-4 py-2 sticky-column" style={{ backgroundColor: 'var(--theme-background-primary)', zIndex: 10, paddingLeft: '60px' }}>
+                                               <div className="d-flex flex-column">
+                                                 <div className="d-flex justify-content-between align-items-center mb-1">
+                                                   <span className="fw-black text-danger" style={{ fontSize: '0.65rem', opacity: 0.9 }}>RUTA: {rutaName}</span>
+                                                   <div className="d-flex align-items-center gap-2">
+                                                     <span className="text-secondary fw-bold" style={{ fontSize: '0.6rem' }}>ID: {clientId}</span>
+                                                     <span
+                                                       className="d-flex align-items-center gap-1 fw-black"
+                                                       style={{ fontSize: '0.7rem', color: client.neveras > 0 ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)', opacity: client.neveras > 0 ? 1 : 0.4 }}
+                                                       title={`Neveras: ${client.neveras}`}
+                                                     >
+                                                       <BiFridge size={13} />
+                                                       {client.neveras}
+                                                     </span>
+                                                   </div>
+                                                 </div>
+                                                 <span className="fw-black text-uppercase" style={{ fontSize: '0.9rem', color: 'var(--theme-text-primary)', letterSpacing: '0.5px', lineHeight: '1.1' }}>
+                                                   {client.nombre}
+                                                 </span>
+                                               </div>
+                                             </td>
+                                             {typeColumnHeadersCob.map((tipo) => {
+                                               const vals = tipo.brandIds.reduce((acc: { cf: number; cu: number }, bId: string) => {
+                                                 const b = client.marcas[bId];
+                                                 if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
+                                                 return acc;
+                                               }, { cf: 0, cu: 0 });
+                                               const hasData = tipo.brandIds.some(bId => client.marcas[bId] !== undefined);
+                                               return (
+                                                 <Fragment key={`${rutaKey}-${clientId}-${tipo.tipoId}`}>
+                                                   <td className="text-center align-middle fw-black" style={{ fontSize: '0.95rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent', transition: 'background-color 0.2s' }}>
+                                                     <span className={hasData ? 'text-success' : 'text-secondary opacity-25'}>{vals.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                                     <span className="mx-2 text-secondary opacity-25">/</span>
+                                                     <span className={hasData ? 'text-warning' : 'text-secondary opacity-25'}>{vals.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                                   </td>
+                                                   <td className="text-center align-middle brand-separator" style={{ fontSize: '0.95rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent' }}>
+                                                     <div className={hasData ? '' : 'opacity-25'}>
+                                                       {hasData ? (
+                                                         <FaCheck className="text-success" size={18} />
+                                                       ) : (
+                                                         <FaTimes className="text-danger" size={16} />
+                                                       )}
+                                                     </div>
+                                                   </td>
+                                                 </Fragment>
+                                               );
+                                             })}
+                                           </tr>
+                                         ))}
+                                     </Fragment>
+                                   );
+                                 })}
                               </Fragment>
                             );
                           })}
