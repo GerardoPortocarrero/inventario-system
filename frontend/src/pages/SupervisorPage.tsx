@@ -1332,10 +1332,8 @@ const SupervisorPage: FC = () => {
                                          style={{ cursor: 'pointer' }}
                                        >
                                          <td className="sticky-column text-start ps-5 py-2" style={{ backgroundColor: 'var(--theme-background-secondary)', zIndex: 10 }}>
-                                           <div className="d-flex align-items-center gap-2">
-                                             <FaChevronRight size={10} style={{ transform: isRutaExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.1s', color: 'var(--color-red-primary)' }} />
-                                             <span className="fw-bold text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>RUTA {rutaName}</span>
-                                           </div>
+                                           <FaChevronRight size={10} style={{ transform: isRutaExpanded ? 'rotate(90deg)' : 'none', color: 'var(--theme-text-primary)' }} />
+                                           <span className="fw-bold text-uppercase" style={{ fontSize: '0.75rem', letterSpacing: '1px' }}>{rutaName}</span>
                                          </td>
                                          {typeColumnHeadersCob.map((tipo) => {
                                            const s = groupSumCob(ruta.total, tipo.brandIds);
