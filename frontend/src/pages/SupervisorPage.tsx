@@ -682,12 +682,9 @@ const SupervisorPage: FC = () => {
           Object.entries(ruta.clientes || {}).forEach(([cid, cliente]: [string, any]) => {
             if (!validClients.has(cid)) return;
 
-            let hasCoverage = false;
-            const tiposSeen: string[] = [];
             Object.values(cliente.materiales || {}).forEach((mat: any) => {
               const c = calcMat(mat);
               if (!c) return;
-              hasCoverage = true;
               addTotal(rTotal, c.marcaId, c.cf, c.cu);
               addTotal(mesaTotal, c.marcaId, c.cf, c.cu);
               addTotal(locTotal, c.marcaId, c.cf, c.cu);
@@ -703,15 +700,25 @@ const SupervisorPage: FC = () => {
               if (!rClientes[cid].marcas[c.marcaId]) rClientes[cid].marcas[c.marcaId] = { cf: 0, cu: 0 };
               rClientes[cid].marcas[c.marcaId].cf += c.cf;
               rClientes[cid].marcas[c.marcaId].cu += c.cu;
-
-              const tipoId = marcas.find(m => m.id === c.marcaId)?.tipoBebidaId;
-              if (tipoId && !tiposSeen.includes(tipoId)) tiposSeen.push(tipoId);
             });
+          });
 
-            if (hasCoverage) {
+          Object.entries(rClientes).forEach(([cid, client]) => {
+            let totalCU = 0;
+            Object.values(client.marcas || {}).forEach((b: any) => { totalCU += b.cu || 0; });
+            client.totalCU = totalCU;
+            client.isCovered = !filterNeverasCob || totalCU > 4;
+
+            const hasCoverage = Object.keys(client.marcas || {}).length > 0;
+            if (hasCoverage && client.isCovered) {
               rAll.add(cid);
               mesaAll.add(cid);
               locAll.add(cid);
+              const tiposSeen = new Set<string>();
+              Object.keys(client.marcas || {}).forEach(mId => {
+                const tipoId = marcas.find(m => m.id === mId)?.tipoBebidaId;
+                if (tipoId) tiposSeen.add(tipoId);
+              });
               tiposSeen.forEach(tipoId => {
                 if (!rTipos[tipoId]) rTipos[tipoId] = new Set();
                 rTipos[tipoId].add(cid);
@@ -1225,7 +1232,7 @@ const SupervisorPage: FC = () => {
                                             if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
                                             return acc;
                                           }, { cf: 0, cu: 0 });
-                                          const cHasData = firstTipo.brandIds.some(bId => client.marcas[bId] !== undefined);
+                                           const cHasData = firstTipo.brandIds.some(bId => client.marcas[bId] !== undefined) && (client.isCovered !== false);
                                           return (
                                             <div key={`${rutaKey}-${clientId}`} style={{ borderTop: '1px solid var(--theme-table-border-color)', padding: '10px 12px', backgroundColor: 'var(--theme-background-primary)' }}>
                                               <div className="d-flex justify-content-between align-items-center mb-1">
@@ -1388,7 +1395,7 @@ const SupervisorPage: FC = () => {
                                                  if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
                                                  return acc;
                                                }, { cf: 0, cu: 0 });
-                                               const hasData = tipo.brandIds.some(bId => client.marcas[bId] !== undefined);
+                                                 const hasData = tipo.brandIds.some(bId => client.marcas[bId] !== undefined) && (client.isCovered !== false);
                                                return (
                                                  <Fragment key={`${rutaKey}-${clientId}-${tipo.tipoId}`}>
                                                    <td className="text-center align-middle fw-black" style={{ fontSize: '0.95rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent', transition: 'background-color 0.2s' }}>

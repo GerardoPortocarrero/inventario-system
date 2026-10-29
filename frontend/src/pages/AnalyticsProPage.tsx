@@ -274,10 +274,6 @@ const AnalyticsProPage: FC = () => {
       }
     });
 
-    // Trackear clientes únicos por ruta+tipo
-    const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
-    const routeAllClients: Record<string, Set<string>> = {};
-
     // 2. Llenar con ventas (solo para clientes válidos)
     filteredData.forEach(d => {
       const cid = String(d.solicitante || '').trim();
@@ -307,8 +303,42 @@ const AnalyticsProPage: FC = () => {
         if (!matrix[mid].total[marcaId]) matrix[mid].total[marcaId] = { cf: 0, cu: 0 };
         matrix[mid].total[marcaId].cf += m.cf || 0;
         matrix[mid].total[marcaId].cu += m.cu || 0;
+      });
+    });
 
-        // Clientes únicos por ruta+tipo
+    // Determinar isCovered por cliente (requiere CU > 4 si filterNeveras está activo)
+    Object.values(matrix).forEach((mesa: any) => {
+      Object.values(mesa.rutas || {}).forEach((ruta: any) => {
+        Object.entries(ruta.clientes || {}).forEach(([, client]: [any, any]) => {
+          let totalCU = 0;
+          Object.values(client.marcas || {}).forEach((b: any) => {
+            totalCU += b.cu || 0;
+          });
+          client.totalCU = totalCU;
+          client.isCovered = !filterNeveras || totalCU > 4;
+        });
+      });
+    });
+
+    // Trackear clientes únicos por ruta+tipo (solo si isCovered es true)
+    const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
+    const routeAllClients: Record<string, Set<string>> = {};
+
+    filteredData.forEach(d => {
+      const cid = String(d.solicitante || '').trim();
+      if (!validClients.has(cid)) return;
+
+      const { rid, mid } = clientMeta[cid];
+      if (!matrix[mid] || !matrix[mid].rutas[rid]) return;
+      const clientObj = matrix[mid].rutas[rid].clientes[cid];
+      if (filterNeveras && (!clientObj || !clientObj.isCovered)) return;
+
+      (d.materiales || []).forEach((m: any) => {
+        const p = prodMap[String(m.sku).trim()];
+        if (!p || !selectedMarcasCobertura.includes(p.marcaId)) return;
+        if (selectedProductosCobertura.length > 0 && !selectedProductosCobertura.includes(String(m.sku).trim())) return;
+
+        const marcaId = p.marcaId;
         const tipoId = marcasMap[marcaId]?.tipoBebidaId;
         if (tipoId) {
           if (!routeAllClients[rid]) routeAllClients[rid] = new Set();
