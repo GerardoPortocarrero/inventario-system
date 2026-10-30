@@ -315,7 +315,7 @@ const AnalyticsProPage: FC = () => {
             totalCU += b.cu || 0;
           });
           client.totalCU = totalCU;
-          client.isCovered = !filterNeveras || totalCU > 4;
+          client.isCovered = !filterNeveras || totalCU > 6;
         });
       });
     });

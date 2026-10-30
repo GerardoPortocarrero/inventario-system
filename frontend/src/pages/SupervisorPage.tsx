@@ -707,7 +707,7 @@ const SupervisorPage: FC = () => {
             let totalCU = 0;
             Object.values(client.marcas || {}).forEach((b: any) => { totalCU += b.cu || 0; });
             client.totalCU = totalCU;
-            client.isCovered = !filterNeverasCob || totalCU > 4;
+            client.isCovered = !filterNeverasCob || totalCU > 6;
 
             const hasCoverage = Object.keys(client.marcas || {}).length > 0;
             if (hasCoverage && client.isCovered) {
