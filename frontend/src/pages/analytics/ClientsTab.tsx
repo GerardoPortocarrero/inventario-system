@@ -2,6 +2,7 @@ import type { FC } from 'react';
 import { memo, useState, useEffect } from 'react';
 import { Table, Button } from 'react-bootstrap';
 import SearchInput from '../../components/SearchInput';
+import { BiFridge } from 'react-icons/bi';
 
 interface ClientsTabProps {
   clientSearch: string;
@@ -35,6 +36,7 @@ const ClientsTab: FC<ClientsTabProps> = memo(({
     { label: '$', key: 'monetary' },
     { label: 'CF', key: 'cf' },
     { label: 'CU', key: 'cu' },
+    { label: 'NEVERAS', key: 'neveras' },
   ];
 
   return (
@@ -101,6 +103,12 @@ const ClientsTab: FC<ClientsTabProps> = memo(({
                         <div style={{ fontSize: '0.55rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase' }}>CU</div>
                         <div className="fw-black text-warning" style={{ fontSize: '0.8rem' }}>{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</div>
                       </div>
+                      <div className="text-center">
+                        <div style={{ fontSize: '0.55rem', color: 'var(--theme-text-secondary)', textTransform: 'uppercase' }}>NEVERAS</div>
+                        <div className="fw-black d-flex align-items-center justify-content-center gap-1" style={{ fontSize: '0.8rem', color: r.neveras > 0 ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)', opacity: r.neveras > 0 ? 1 : 0.4 }}>
+                          <BiFridge size={13} /> {r.neveras}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -116,6 +124,7 @@ const ClientsTab: FC<ClientsTabProps> = memo(({
                   <SortHeader label="V. MONETARIO ($)" sortKey="monetary" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
                   <SortHeader label="VOLUMEN (CF)" sortKey="cf" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
                   <SortHeader label="VOLUMEN (CU)" sortKey="cu" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
+                  <SortHeader label="NEVERAS" sortKey="neveras" currentSort={clientSort} onSort={(k: string) => handleSort(k, setClientSort)} align="end" />
                 </tr>
               </thead>
               <tbody>
@@ -131,7 +140,12 @@ const ClientsTab: FC<ClientsTabProps> = memo(({
                     </td>
                     <td className="text-end align-middle fw-black text-info">${r.monetary.toLocaleString()}</td>
                     <td className="text-end align-middle fw-black text-success">{r.cf.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                    <td className="text-end align-middle fw-black text-warning pe-4">{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                    <td className="text-end align-middle fw-black text-warning">{r.cu.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                    <td className="text-end align-middle fw-black pe-4" style={{ color: r.neveras > 0 ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)', opacity: r.neveras > 0 ? 1 : 0.4 }}>
+                      <span className="d-inline-flex align-items-center gap-1">
+                        <BiFridge size={14} /> {r.neveras}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -21,6 +21,9 @@ import ProductsTab from './analytics/ProductsTab';
 
 registerLocale('es', es);
 
+const cleanId = (id: any) => String(id || '').trim().replace(/^0+/, '');
+const getCensoNevera = (m: any): number => Number(m.CensoNevera ?? m.Censo_Nevera) || 0;
+
 const AnalyticsProPage: FC = () => {
   const { sedes, marcas, beverageTypes } = useData();
   const isMobile = useMediaQuery('(max-width: 991px)');
@@ -171,17 +174,25 @@ const AnalyticsProPage: FC = () => {
   // OPTIMIZACIÓN: Separar agregación de filtrado
   const groupedClients = useMemo(() => {
     if (activeTab !== 'clientes') return [];
+    const maestroMap = maestroData.reduce((acc: any, m) => {
+      const cid = cleanId(m.Codigo);
+      if (cid) acc[cid] = m;
+      return acc;
+    }, {} as Record<string, any>);
+
     const cMap: Record<string, any> = {};
     filteredData.forEach(d => {
       const id = String(d.solicitante || '').trim();
       if (!cMap[id]) {
         const sedeCodigo = String(d.sede || '').trim();
         const sedeMatch = sedes.find(s => s.codigo === sedeCodigo);
+        const masterClient = maestroMap[id];
         cMap[id] = {
           clientId: id,
           clientName: String(d.nombreCliente || 'SIN NOMBRE'),
           sedeNombre: sedeMatch?.nombre || sedeCodigo || 'SIN SEDE',
           ruta: String(d.ruta || 'S/R').trim(),
+          neveras: masterClient ? getCensoNevera(masterClient) : 0,
           monetary: 0, cf: 0, cu: 0
         };
       }
@@ -190,7 +201,7 @@ const AnalyticsProPage: FC = () => {
       cMap[id].cu += d.totalCU || 0;
     });
     return Object.values(cMap);
-  }, [filteredData, activeTab, sedes]);
+  }, [filteredData, activeTab, sedes, maestroData]);
 
   const clientMetrics = useMemo(() => {
     let res = [...groupedClients];
@@ -263,10 +274,6 @@ const AnalyticsProPage: FC = () => {
       }
     });
 
-    // Trackear clientes únicos por ruta+tipo
-    const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
-    const routeAllClients: Record<string, Set<string>> = {};
-
     // 2. Llenar con ventas (solo para clientes válidos)
     filteredData.forEach(d => {
       const cid = String(d.solicitante || '').trim();
@@ -296,8 +303,42 @@ const AnalyticsProPage: FC = () => {
         if (!matrix[mid].total[marcaId]) matrix[mid].total[marcaId] = { cf: 0, cu: 0 };
         matrix[mid].total[marcaId].cf += m.cf || 0;
         matrix[mid].total[marcaId].cu += m.cu || 0;
+      });
+    });
 
-        // Clientes únicos por ruta+tipo
+    // Determinar isCovered por cliente (requiere CU > 4 si filterNeveras está activo)
+    Object.values(matrix).forEach((mesa: any) => {
+      Object.values(mesa.rutas || {}).forEach((ruta: any) => {
+        Object.entries(ruta.clientes || {}).forEach(([, client]: [any, any]) => {
+          let totalCU = 0;
+          Object.values(client.marcas || {}).forEach((b: any) => {
+            totalCU += b.cu || 0;
+          });
+          client.totalCU = totalCU;
+          client.isCovered = !filterNeveras || totalCU > 6;
+        });
+      });
+    });
+
+    // Trackear clientes únicos por ruta+tipo (solo si isCovered es true)
+    const routeTypeClients: Record<string, Record<string, Set<string>>> = {};
+    const routeAllClients: Record<string, Set<string>> = {};
+
+    filteredData.forEach(d => {
+      const cid = String(d.solicitante || '').trim();
+      if (!validClients.has(cid)) return;
+
+      const { rid, mid } = clientMeta[cid];
+      if (!matrix[mid] || !matrix[mid].rutas[rid]) return;
+      const clientObj = matrix[mid].rutas[rid].clientes[cid];
+      if (filterNeveras && (!clientObj || !clientObj.isCovered)) return;
+
+      (d.materiales || []).forEach((m: any) => {
+        const p = prodMap[String(m.sku).trim()];
+        if (!p || !selectedMarcasCobertura.includes(p.marcaId)) return;
+        if (selectedProductosCobertura.length > 0 && !selectedProductosCobertura.includes(String(m.sku).trim())) return;
+
+        const marcaId = p.marcaId;
         const tipoId = marcasMap[marcaId]?.tipoBebidaId;
         if (tipoId) {
           if (!routeAllClients[rid]) routeAllClients[rid] = new Set();

@@ -461,7 +461,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                   if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
                                   return acc;
                                 }, { cf: 0, cu: 0 });
-                                const cHasData = tipo.brandIds.some(bId => client.marcas[bId] !== undefined);
+                                 const cHasData = tipo.brandIds.some(bId => client.marcas[bId] !== undefined) && (client.isCovered !== false);
                                 return (
                                   <div key={`${mesaId}-${rutaId}-${clientId}`} style={{ borderTop: '1px solid var(--theme-table-border-color)', padding: '10px 12px', backgroundColor: 'var(--theme-background-primary)' }}>
                                     <div className="d-flex justify-content-between align-items-center mb-1">
@@ -656,7 +656,7 @@ const CoberturaTab: FC<CoberturaTabProps> = memo(({
                                       if (b) { acc.cf += b.cf || 0; acc.cu += b.cu || 0; }
                                       return acc;
                                     }, { cf: 0, cu: 0 });
-                                    const hasData = brandIds.some(bId => client.marcas[bId] !== undefined);
+                                     const hasData = brandIds.some(bId => client.marcas[bId] !== undefined) && (client.isCovered !== false);
                                     return (
                                       <Fragment key={`${rutaKey}-${clientId}-${tipoId}`}>
                                         <td className="text-center align-middle fw-black" style={{ fontSize: '0.95rem', backgroundColor: hasData ? 'rgba(244, 0, 9, 0.08)' : 'transparent', transition: 'background-color 0.2s' }}>
